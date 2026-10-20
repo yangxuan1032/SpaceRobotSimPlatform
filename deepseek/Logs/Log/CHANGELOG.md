@@ -115,3 +115,14 @@
 - 摘要：计划从 deepseek/Log/Plan 迁移到 deepseek/Logs/Plan；脚本迁到 tools/ai 并全部支持 -Model；AGENTS.md 重写为模型无关规则，新增 CLAUDE.md/GEMINI.md/.cursorrules/Copilot 入口；新增 ai-models.json 注册表与模型脚手架；CMake/VSCode 构建与编译缓存改由 SRSP_AI_MODEL 解析；删除 deepseek/Scripts 与 deepseek/Log。
 - 验证：隔离根目录测试 claude/gpt/gemini 命名空间、别名归一与未设置模型报错；10 个 JSON 解析通过；Markdown 相对链接 0 失效；CMake 未安装，preset 与 guard 仅做静态检查。
 - 关联计划：`deepseek/Logs/Plan/2026-10-20-agent-workspace-config.md`
+
+### V6 — 重命名工作区并同步 GitHub
+
+- 类型：重构
+- 文件：
+  - `AGENTS.md`
+  - `README.md`
+  - `docs/05-msys2-dev-environment.md`
+  - `deepseek/Logs/Log/CHANGELOG.md`
+- 摘要：将工作区根目录由 SpaceRobotSimPlantform 重命名为 SpaceRobotSimPlatform；更新 AGENTS、README、docs/05 中的绝对与相对路径；初始化 Git 仓库、关联 GitHub origin，并以远端 main 为父提交推送完整基线。
+- 验证：git push 成功 518bd6b..9428239（main）；远端 main 指向基线提交；旧名称引用检查为 0；目录重命名在本条目提交推送后执行。
