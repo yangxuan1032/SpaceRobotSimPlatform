@@ -1,0 +1,47 @@
+# Per-model cache roots (one namespace per AI model)
+/*/Temp/*
+!/*/Temp/.gitkeep
+!/*/Temp/README.md
+
+# Safety net when a build runs without SRSP_AI_MODEL
+/Temp/
+
+# Personal agent overrides
+AGENTS.local.md
+CLAUDE.local.md
+
+# Build outputs
+build/
+dist/
+out/
+stage/
+.cache/
+compile_commands.json
+
+# IDE / editor
+.vs/
+*.user
+*.suo
+.vscode/ipch/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.python-version
+
+# Runtime artifacts
+runs/
+*.mcap
+*.srpkg
+*.pdb
+*.ilk
+*.obj
+*.o
+*.dSYM/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

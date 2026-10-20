@@ -1,0 +1,119 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 27,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/$env{SRSP_AI_MODEL}/Temp/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "SRSP_BUILD_EXAMPLES": "ON",
+        "CMAKE_CXX_FLAGS": "-ffp-contract=off"
+      }
+    },
+    {
+      "name": "win-ucrt64-debug",
+      "displayName": "Windows UCRT64 Debug (GCC)",
+      "description": "Requires MSYS2 UCRT64; launch from the MSYS2 shell or tools/env/launch-vscode.ps1",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/gcc.exe",
+        "CMAKE_CXX_COMPILER": "C:/msys64/ucrt64/bin/g++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/ninja.exe"
+      }
+    },
+    {
+      "name": "win-ucrt64-release",
+      "displayName": "Windows UCRT64 Release (GCC)",
+      "inherits": "win-ucrt64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Linux GCC Debug",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-gcc-release",
+      "displayName": "Linux GCC Release",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-clang-asan",
+      "displayName": "Linux Clang ASan + UBSan",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS": "-ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address,undefined"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-ucrt64-debug",
+      "configurePreset": "win-ucrt64-debug"
+    },
+    {
+      "name": "win-ucrt64-release",
+      "configurePreset": "win-ucrt64-release"
+    },
+    {
+      "name": "linux-gcc-debug",
+      "configurePreset": "linux-gcc-debug"
+    },
+    {
+      "name": "linux-gcc-release",
+      "configurePreset": "linux-gcc-release"
+    },
+    {
+      "name": "linux-clang-asan",
+      "configurePreset": "linux-clang-asan"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "win-ucrt64-debug",
+      "configurePreset": "win-ucrt64-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "win-ucrt64-release",
+      "configurePreset": "win-ucrt64-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "configurePreset": "linux-gcc-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "linux-gcc-release",
+      "configurePreset": "linux-gcc-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "linux-clang-asan",
+      "configurePreset": "linux-clang-asan",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

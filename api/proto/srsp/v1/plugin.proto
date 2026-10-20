@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package srsp.v1;
+
+option cc_enable_arenas = true;
+option java_package = "org.srsp.api.v1";
+option csharp_namespace = "Srsp.Api.V1";
+
+// ---------------------------------------------------------------------------
+// Common
+// ---------------------------------------------------------------------------
+
+message Empty {}
+
+message SemVer {
+  uint32 major = 1;
+  uint32 minor = 2;
+  uint32 patch = 3;
+  string prerelease = 4;
+}
+
+message Error {
+  int32 code = 1;
+  string message = 2;
+  string detail_json = 3;
+}
+
+// Reference to a bulk buffer living in a named shared-memory segment.
+// `shm_name` is empty when `inline_data` carries the payload instead.
+message BlobRef {
+  string shm_name = 1;
+  uint64 offset = 2;
+  uint64 length = 3;
+  string schema_id = 4;
+  string schema_hash = 5;
+  uint64 generation = 6;
+}
+
+message Capability {
+  string name = 1;           // "srsp.dynamics/solver"
+  uint32 version_major = 2;
+  uint32 version_minor = 3;
+  string alias = 4;          // method prefix, e.g. "dynamics"
+  string schema_hash = 5;
+}
+
+// ---------------------------------------------------------------------------
+// Plugin runtime (used identically for in-process `call` and sidecar gRPC)
+// ---------------------------------------------------------------------------
+
+message PluginDescriptor {
+  string id = 1;
+  SemVer version = 2;
+  string api = 3;
+  repeated Capability capabilities = 4;
+  repeated string methods = 5;
+  string build_info_json = 6;
+}
+
+message InvokeRequest {
+  string method = 1;   // "dynamics.step", "core.describe", ...
+  bytes payload = 2;   // encoded request message
+  string schema_id = 3;
+}
+
+message InvokeResponse {
+  Error error = 1;
+  bytes payload = 2;
+  string schema_id = 3;
+}
+
+message HandshakeRequest {
+  string token = 1;
+  string manifest_digest = 2;
+  uint32 host_abi_major = 3;
+  uint32 host_abi_minor = 4;
+}
+
+message HandshakeReply {
+  string plugin_id = 1;
+  string api = 2;
+  repeated Capability capabilities = 3;
+  string transport = 4;
+}
+
+message PingRequest {
+  uint64 step_index = 1;
+}
+
+message PingReply {
+  bool ok = 1;
+  double t_tai = 2;
+  uint64 step_index = 3;
+  uint64 rss_bytes = 4;
+}
+
+message CheckpointRequest {}
+
+message BlobReply {
+  BlobRef blob = 1;
+  bytes inline_data = 2;
+}
+
+message RestoreRequest {
+  BlobRef blob = 1;
+  bytes inline_data = 2;
+}
+
+message ShutdownRequest {
+  uint32 timeout_ms = 1;
+}
+
+message AttachShmRequest {
+  string name = 1;
+  uint64 size = 2;
+  string role = 3;  // "producer" | "consumer" | "both"
+}
+
+service PluginRuntime {
+  rpc Handshake(HandshakeRequest) returns (HandshakeReply);
+  rpc AttachShm(AttachShmRequest) returns (Empty);
+  rpc Invoke(InvokeRequest) returns (InvokeResponse);
+  rpc Checkpoint(CheckpointRequest) returns (BlobReply);
+  rpc Restore(RestoreRequest) returns (Empty);
+  rpc Ping(PingRequest) returns (PingReply);
+  rpc Shutdown(ShutdownRequest) returns (Empty);
+}
+
+// ---------------------------------------------------------------------------
+// Hot-path messages (sidecar transport; in-process plugins receive the same
+// structures through their generated C++ bindings)
+// ---------------------------------------------------------------------------
+
+message StepRequest {
+  double t_tai = 1;
+  double dt = 2;
+  uint64 step_index = 3;
+  BlobRef state = 4;
+  repeated double commands = 5;
+}
+
+message StepResult {
+  Error error = 1;
+  uint32 substeps = 2;
+  double kinetic_energy = 3;
+  double potential_energy = 4;
+  double momentum_norm = 5;
+}
+
+message StateRequest {
+  string view = 1;  // "bodies", "joints", "actuators", "meta"
+}
+
+message ConfigRequest {
+  string json = 1;
+}

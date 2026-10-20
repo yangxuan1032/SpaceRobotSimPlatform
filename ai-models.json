@@ -1,0 +1,81 @@
+{
+  "schema": "srsp.ai-models/1",
+  "description": "AI model namespaces for this workspace. Every model writes caches, plans and logs under <project-root>/<slug>/ only.",
+  "models": [
+    {
+      "slug": "deepseek",
+      "display": "DeepSeek",
+      "aliases": ["deepseek", "deepseek-chat", "deepseek-r1", "deepseek-v3", "deepseek-v3.1"]
+    },
+    {
+      "slug": "claude",
+      "display": "Claude",
+      "aliases": ["claude", "anthropic", "claude-sonnet", "claude-opus", "claude-haiku"]
+    },
+    {
+      "slug": "gpt",
+      "display": "GPT / OpenAI",
+      "aliases": ["gpt", "openai", "chatgpt", "gpt-4", "gpt-4o", "gpt-5", "codex"]
+    },
+    {
+      "slug": "gemini",
+      "display": "Gemini",
+      "aliases": ["gemini", "google-gemini", "bard"]
+    },
+    {
+      "slug": "qwen",
+      "display": "Qwen",
+      "aliases": ["qwen", "tongyi", "qwen-max", "qwen3", "通义千问"]
+    },
+    {
+      "slug": "glm",
+      "display": "GLM / Zhipu",
+      "aliases": ["glm", "chatglm", "zhipu", "glm-4", "智谱"]
+    },
+    {
+      "slug": "llama",
+      "display": "Llama",
+      "aliases": ["llama", "meta-llama", "llama3", "llama4"]
+    },
+    {
+      "slug": "mistral",
+      "display": "Mistral",
+      "aliases": ["mistral", "mixtral", "codestral"]
+    },
+    {
+      "slug": "grok",
+      "display": "Grok",
+      "aliases": ["grok", "xai"]
+    },
+    {
+      "slug": "kimi",
+      "display": "Kimi / Moonshot",
+      "aliases": ["kimi", "moonshot", "月之暗面"]
+    },
+    {
+      "slug": "doubao",
+      "display": "Doubao",
+      "aliases": ["doubao", "volcengine", "豆包"]
+    },
+    {
+      "slug": "ernie",
+      "display": "ERNIE / Wenxin",
+      "aliases": ["ernie", "wenxin", "文心一言"]
+    },
+    {
+      "slug": "agent",
+      "display": "Other / Unknown model",
+      "aliases": ["agent", "other", "unknown"]
+    },
+    {
+      "slug": "ci",
+      "display": "CI / Automation (non-model namespace)",
+      "aliases": ["ci", "automation", "pipeline"]
+    },
+    {
+      "slug": "local",
+      "display": "Local developer (non-model namespace)",
+      "aliases": ["local", "developer", "dev"]
+    }
+  ]
+}
