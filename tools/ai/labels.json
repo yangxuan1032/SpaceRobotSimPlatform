@@ -1,0 +1,25 @@
+{
+  "colon": "：",
+  "dash": "—",
+  "type": "类型",
+  "files": "文件",
+  "summary": "摘要",
+  "verification": "验证",
+  "plan": "关联计划",
+  "types": {
+    "add": "新增",
+    "modify": "修改",
+    "delete": "删除",
+    "refactor": "重构",
+    "optimize": "优化",
+    "docs": "文档",
+    "config": "配置"
+  },
+  "statuses": {
+    "planning": "规划中",
+    "confirmed": "已确认",
+    "in-progress": "实施中",
+    "done": "已完成",
+    "abandoned": "已废弃"
+  }
+}

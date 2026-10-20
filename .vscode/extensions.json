@@ -1,0 +1,17 @@
+{
+  "recommendations": [
+    "ms-vscode.cmake-tools",
+    "llvm-vs-code-extensions.vscode-clangd",
+    "ms-vscode.cpptools",
+    "cheshirekow.cmake-format",
+    "ms-python.python",
+    "zxh404.vscode-proto3",
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+    "bierner.markdown-mermaid",
+    "github.vscode-github-actions"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.cpptools-extension-pack"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "../../api/schema/plugin-manifest.schema.json",
+  "schema": "srsp.plugin/1",
+  "id": "org.srsp.examples.hello",
+  "name": "Hello Plugin",
+  "version": "0.1.0",
+  "api": "1.0",
+  "kind": ["controller"],
+  "description": "Minimal in-process plugin used to verify the C ABI and the host loader.",
+  "vendor": {
+    "name": "SRSP Team",
+    "contact": "dev@example.org"
+  },
+  "license": "Apache-2.0",
+  "transport": {
+    "type": "inproc",
+    "library": {
+      "windows-x86_64": "bin/srsp_hello.dll",
+      "linux-x86_64": "bin/srsp_hello.so"
+    },
+    "symbol": "srsp_plugin_query"
+  },
+  "capabilities": [
+    {
+      "name": "srsp.control/controller",
+      "version": "1.0",
+      "alias": "controller"
+    }
+  ],
+  "requires": [],
+  "platforms": ["windows-x86_64", "linux-x86_64"],
+  "permissions": ["log"]
+}

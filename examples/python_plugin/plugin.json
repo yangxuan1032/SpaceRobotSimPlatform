@@ -1,0 +1,26 @@
+{
+  "$schema": "../../api/schema/plugin-manifest.schema.json",
+  "schema": "srsp.plugin/1",
+  "id": "org.srsp.examples.python_controller",
+  "name": "Python PD Controller (example)",
+  "version": "0.1.0",
+  "api": "1.0",
+  "kind": ["controller"],
+  "description": "Example sidecar plugin. Requires the srsp Python SDK (planned for M2).",
+  "license": "Apache-2.0",
+  "transport": {
+    "type": "sidecar",
+    "command": "python -m srsp_bridge --plugin ${PLUGIN_ID} --endpoint ${ENDPOINT} --token ${TOKEN} --shm ${SHM}",
+    "working_dir": "."
+  },
+  "capabilities": [
+    {
+      "name": "srsp.control/controller",
+      "version": "1.0",
+      "alias": "controller"
+    }
+  ],
+  "requires": ["srsp.dynamics/solver@>=1.0 <2.0"],
+  "platforms": ["windows-x86_64", "linux-x86_64"],
+  "permissions": ["log"]
+}

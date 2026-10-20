@@ -1,0 +1,74 @@
+# SRSP MSYS2 package set (UCRT64)
+# One package per line. Lines starting with '#' and blank lines are ignored.
+# Consumed by tools/env/bootstrap-msys2.sh and tools/env/check-msys2-packages.sh.
+
+# --- toolchain -------------------------------------------------------------
+base-devel
+git
+mingw-w64-ucrt-x86_64-toolchain
+mingw-w64-ucrt-x86_64-cmake
+mingw-w64-ucrt-x86_64-ninja
+mingw-w64-ucrt-x86_64-ccache
+mingw-w64-ucrt-x86_64-pkgconf
+mingw-w64-ucrt-x86_64-gdb
+mingw-w64-ucrt-x86_64-clang
+mingw-w64-ucrt-x86_64-clang-tools-extra
+mingw-w64-ucrt-x86_64-doxygen
+mingw-w64-ucrt-x86_64-graphviz
+
+# --- math / core -----------------------------------------------------------
+mingw-w64-ucrt-x86_64-eigen3
+mingw-w64-ucrt-x86_64-boost
+mingw-w64-ucrt-x86_64-protobuf
+mingw-w64-ucrt-x86_64-grpc
+mingw-w64-ucrt-x86_64-arrow
+mingw-w64-ucrt-x86_64-zstd
+mingw-w64-ucrt-x86_64-lz4
+mingw-w64-ucrt-x86_64-sqlite3
+mingw-w64-ucrt-x86_64-openssl
+mingw-w64-ucrt-x86_64-curl
+mingw-w64-ucrt-x86_64-nlohmann-json
+mingw-w64-ucrt-x86_64-tomlplusplus
+mingw-w64-ucrt-x86_64-yaml-cpp
+mingw-w64-ucrt-x86_64-spdlog
+mingw-w64-ucrt-x86_64-fmt
+
+# --- gui / rendering -------------------------------------------------------
+mingw-w64-ucrt-x86_64-qt6-base
+mingw-w64-ucrt-x86_64-qt6-declarative
+mingw-w64-ucrt-x86_64-qt6-svg
+mingw-w64-ucrt-x86_64-qt6-tools
+mingw-w64-ucrt-x86_64-sdl2
+mingw-w64-ucrt-x86_64-vulkan-headers
+mingw-w64-ucrt-x86_64-vulkan-loader
+mingw-w64-ucrt-x86_64-shaderc
+mingw-w64-ucrt-x86_64-glslang
+mingw-w64-ucrt-x86_64-freetype
+mingw-w64-ucrt-x86_64-libpng
+mingw-w64-ucrt-x86_64-libjpeg-turbo
+mingw-w64-ucrt-x86_64-tiff
+mingw-w64-ucrt-x86_64-assimp
+
+# --- sensors / io ----------------------------------------------------------
+mingw-w64-ucrt-x86_64-opencv
+mingw-w64-ucrt-x86_64-ffmpeg
+mingw-w64-ucrt-x86_64-tinyxml2
+
+# --- robotics / models (optional at build time) ---------------------------
+mingw-w64-ucrt-x86_64-urdfdom
+mingw-w64-ucrt-x86_64-sdformat
+mingw-w64-ucrt-x86_64-fcl
+mingw-w64-ucrt-x86_64-ccd
+mingw-w64-ucrt-x86_64-console-bridge
+mingw-w64-ucrt-x86_64-qhull
+
+# --- python (sidecar development) -----------------------------------------
+mingw-w64-ucrt-x86_64-python
+mingw-w64-ucrt-x86_64-python-numpy
+mingw-w64-ucrt-x86_64-pybind11
+mingw-w64-ucrt-x86_64-python-pip
+
+# --- testing ---------------------------------------------------------------
+mingw-w64-ucrt-x86_64-catch2
+mingw-w64-ucrt-x86_64-benchmark
+mingw-w64-ucrt-x86_64-gtest

@@ -1,0 +1,58 @@
+{
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": true,
+  "cmake.copyCompileCommands": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/compile_commands.json",
+  "cmake.generator": "Ninja",
+  "cmake.parallelJobs": 0,
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp",
+    "--background-index",
+    "--clang-tidy",
+    "--header-insertion=never",
+    "--completion-style=detailed"
+  ],
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "files.eol": "\n",
+  "files.encoding": "utf8",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "terminal.integrated.defaultProfile.windows": "MSYS2 UCRT64",
+  "terminal.integrated.profiles.windows": {
+    "MSYS2 UCRT64": {
+      "path": "C:\\msys64\\usr\\bin\\bash.exe",
+      "args": ["--login", "-i"],
+      "env": {
+        "MSYSTEM": "UCRT64",
+        "CHERE_INVOKING": "1"
+      }
+    }
+  },
+  "windows": {
+    "cmake.cmakePath": "C:/msys64/ucrt64/bin/cmake.exe",
+    "clangd.path": "C:/msys64/ucrt64/bin/clangd.exe",
+    "cmake.environment": {
+      "PATH": "C:\\msys64\\ucrt64\\bin;${env:PATH}",
+      "TEMP": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/tmp",
+      "TMP": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/tmp",
+      "CCACHE_DIR": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/cache/ccache",
+      "PIP_CACHE_DIR": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/cache/pip",
+      "PYTHONPYCACHEPREFIX": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/cache/pycache"
+    }
+  },
+  "linux": {
+    "cmake.cmakePath": "/usr/bin/cmake"
+  },
+  "search.exclude": {
+    "**/build": true,
+    "**/dist": true,
+    "**/*/Temp": true,
+    "**/compile_commands.json": true
+  },
+  "files.watcherExclude": {
+    "**/build/**": true,
+    "**/dist/**": true,
+    "**/*/Temp/**": true
+  }
+}
