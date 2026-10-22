@@ -13,15 +13,36 @@
       "binaryDir": "${sourceDir}/$env{SRSP_AI_MODEL}/Temp/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "SRSP_BUILD_EXAMPLES": "ON",
+        "SRSP_BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "base-gcc",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
         "CMAKE_CXX_FLAGS": "-ffp-contract=off"
+      }
+    },
+    {
+      "name": "base-msvc",
+      "hidden": true,
+      "inherits": "base"
+    },
+    {
+      "name": "base-vcpkg",
+      "hidden": true,
+      "inherits": "base-msvc",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
       }
     },
     {
       "name": "win-ucrt64-debug",
       "displayName": "Windows UCRT64 Debug (GCC)",
       "description": "Requires MSYS2 UCRT64; launch from the MSYS2 shell or tools/env/launch-vscode.ps1",
-      "inherits": "base",
+      "inherits": "base-gcc",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/gcc.exe",
@@ -38,9 +59,43 @@
       }
     },
     {
+      "name": "win-msvc-debug",
+      "displayName": "Windows MSVC Debug",
+      "description": "Requires Visual Studio 2022+ (vcvars environment); no third-party deps. FP contraction stays at the compiler default until a per-platform FP policy is decided",
+      "inherits": "base-msvc",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "win-msvc-release",
+      "displayName": "Windows MSVC Release",
+      "inherits": "win-msvc-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "win-vcpkg-debug",
+      "displayName": "Windows MSVC Debug (vcpkg)",
+      "description": "Requires Visual Studio 2022+ and VCPKG_ROOT; resolves vcpkg.json dependencies",
+      "inherits": "base-vcpkg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "win-vcpkg-release",
+      "displayName": "Windows MSVC Release (vcpkg)",
+      "inherits": "win-vcpkg-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
       "name": "linux-gcc-debug",
       "displayName": "Linux GCC Debug",
-      "inherits": "base",
+      "inherits": "base-gcc",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -48,7 +103,7 @@
     {
       "name": "linux-gcc-release",
       "displayName": "Linux GCC Release",
-      "inherits": "base",
+      "inherits": "base-gcc",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -56,7 +111,7 @@
     {
       "name": "linux-clang-asan",
       "displayName": "Linux Clang ASan + UBSan",
-      "inherits": "base",
+      "inherits": "base-gcc",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "clang",
@@ -75,6 +130,22 @@
     {
       "name": "win-ucrt64-release",
       "configurePreset": "win-ucrt64-release"
+    },
+    {
+      "name": "win-msvc-debug",
+      "configurePreset": "win-msvc-debug"
+    },
+    {
+      "name": "win-msvc-release",
+      "configurePreset": "win-msvc-release"
+    },
+    {
+      "name": "win-vcpkg-debug",
+      "configurePreset": "win-vcpkg-debug"
+    },
+    {
+      "name": "win-vcpkg-release",
+      "configurePreset": "win-vcpkg-release"
     },
     {
       "name": "linux-gcc-debug",
@@ -98,6 +169,26 @@
     {
       "name": "win-ucrt64-release",
       "configurePreset": "win-ucrt64-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "win-msvc-debug",
+      "configurePreset": "win-msvc-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "win-msvc-release",
+      "configurePreset": "win-msvc-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "win-vcpkg-debug",
+      "configurePreset": "win-vcpkg-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "win-vcpkg-release",
+      "configurePreset": "win-vcpkg-release",
       "output": { "outputOnFailure": true }
     },
     {

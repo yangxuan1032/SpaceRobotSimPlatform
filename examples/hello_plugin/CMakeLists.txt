@@ -1,6 +1,16 @@
 add_library(srsp_hello_plugin MODULE plugin.cpp)
 target_link_libraries(srsp_hello_plugin PRIVATE SRSP::api)
 
+# Plugins must be self-contained so a host built with a different toolchain
+# can load them (see docs/02-plugin-contract.md and 06-packaging.md):
+# static-link the C/C++ runtime on every toolchain.
+if(MINGW)
+  target_link_options(srsp_hello_plugin PRIVATE -static-libgcc -static-libstdc++)
+elseif(MSVC)
+  set_property(TARGET srsp_hello_plugin PROPERTY
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 set_target_properties(srsp_hello_plugin PROPERTIES
   PREFIX ""
   OUTPUT_NAME "srsp_hello"

@@ -37,6 +37,10 @@ double SRSP_CALL host_time_tai(void* user) {
   return static_cast<DemoHost*>(user)->sim_time;
 }
 
+int64_t SRSP_CALL host_time_tai_ns(void* user) {
+  return static_cast<int64_t>(static_cast<DemoHost*>(user)->sim_time * 1e9);
+}
+
 srsp_status SRSP_CALL host_alloc(void* /*user*/, uint64_t size, uint64_t alignment,
                                  void** out) {
   if (out == nullptr) {
@@ -171,7 +175,8 @@ int main(int argc, char** argv) {
                         host_free,
                         host_publish,
                         host_shm_map,
-                        host_shm_unmap};
+                        host_shm_unmap,
+                        host_time_tai_ns};
 
   LibraryHandle library = open_library(path);
   if (library == nullptr) {
