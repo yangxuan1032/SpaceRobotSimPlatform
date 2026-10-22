@@ -134,6 +134,8 @@ pacman -Q | wc -l
 
 同一实测中**仍未安装**的项：Boost、Arrow、OpenCV、FFmpeg、Assimp、SDL2/Vulkan 等可选依赖；MSYS 层 `base-devel`/`git`；`VCPKG_ROOT` 未配置（`win-vcpkg-*` 预设待启用）。
 
+**Python 归属**：schema 样例校验由 MSYS2 UCRT64 的 Python 驱动（隐藏预设 `win-python` 显式设置 `Python3_EXECUTABLE=C:/msys64/ucrt64/bin/python.exe`，`jsonschema` 由 pacman 包 `python-jsonschema` 提供），不再依赖系统安装的 Windows Python；Linux 预设仍走系统 `python3`，缺少 `jsonschema` 时该测试自动跳过。
+
 ---
 
 ## 3. 环境变量与启动方式

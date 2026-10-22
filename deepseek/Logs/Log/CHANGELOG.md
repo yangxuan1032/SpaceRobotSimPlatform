@@ -206,3 +206,13 @@
 - 摘要：按规划安装 M0 依赖：protobuf 35.1、gRPC 1.82、Qt6 6.11.1（base+tools，含 qmake6/windeployqt6）、Eigen3、python-pip、benchmark；清理重复/非必要项：clang-21 家族（clang/lld/llvm/compiler-rt，约 7.1 GiB）、MSYS 层重复 cmake 4.3.4 及其孤儿依赖（cppdap/libarchive/librhash/libuv/pkgconf/jsoncpp）；packages.txt 补 compiler-rt；05 基线更新。
 - 验证：集成 smoke：临时工程同时 find_package Qt6/protobuf/gRPC/Eigen3 并链接运行通过（Qt 6.11.1、gRPC 1.82.0、Eigen trace 正确）；清理后四端 ctest 各 3/3 通过（GCC / Clang-UCRT64 / Clang-CLANG64 / MSVC 19.50）；schema 样例 10/10 通过；无孤儿包残留；ucrt64 3.55 GB、clang64 1.87 GB（清理前 8.97 GB）。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
+
+### V8 — schema 测试改用 MSYS2 UCRT64 Python 驱动
+
+- 类型：配置
+- 文件：
+  - `CMakePresets.json`
+  - `docs/05-msys2-dev-environment.md`
+- 摘要：新增隐藏预设 win-python（Python3_EXECUTABLE=C:/msys64/ucrt64/bin/python.exe），所有 Windows 预设改为多重继承 [原有基类, win-python]，使 schema 样例校验由 pacman 管理的 UCRT64 Python + python-jsonschema 驱动，消除对系统 Windows Python 的依赖；Linux 预设仍用系统 python3 并在缺 jsonschema 时自动跳过。
+- 验证：四个 Windows 预设的 CMakeCache 中 Python3_EXECUTABLE 均为 C:/msys64/ucrt64/bin/python.exe；ctest -V 显示测试命令使用该解释器并 10/10 通过；四端矩阵各 3/3 通过（GCC/Clang-UCRT64/Clang-CLANG64/MSVC）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
