@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "srsp",
+  "version-string": "0.1.0",
+  "description": "SRSP dependencies for the MSVC toolchain preset (win-msvc-*). Keep in sync with tools/env/packages.txt (MSYS2) and the apt list in docs/05.",
+  "dependencies": [
+    "protobuf",
+    "grpc",
+    "catch2",
+    "nlohmann-json",
+    "fmt",
+    "spdlog"
+  ]
+}
