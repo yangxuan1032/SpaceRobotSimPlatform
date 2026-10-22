@@ -130,7 +130,9 @@ pkg-config --modversion eigen3
 pacman -Q | wc -l
 ```
 
-本机基线（2026-10-22 实测）：GCC 16.1.0、Python 3.14.6、CMake 4.4.0、Ninja 1.13.2、ccache 4.13.6、Catch2 3.15.2、jsonschema 4.26.0（Windows Python）已安装；Visual Studio Community 2026（MSVC 19.50）可用，`win-msvc-*` 预设已验证；MSYS2 仓库中 Qt 6.11.2、gRPC 1.82.0 可安装；`VCPKG_ROOT` 未配置，`win-vcpkg-*` 预设待启用。
+本机基线（2026-10-22 实测）：GCC 16.1.0、Clang 22.1.8（UCRT64，含 clangd/clang-tidy/compiler-rt）、Python 3.14.6 + pip 26.1.2、CMake 4.4.0、Ninja 1.13.2、ccache 4.13.6、Catch2 3.15.2、protobuf 35.1、gRPC 1.82.0、Qt 6.11.1、Eigen3、benchmark 均已安装；CLANG64 保留 clang 22 + libc++ + lld + lldb（仅验证层，1.87 GB）；Visual Studio Community 2026（MSVC 19.50）可用，`win-msvc-*` 预设已验证。四套工具链（GCC / Clang-UCRT64 / Clang-CLANG64 / MSVC）各自 `ctest` 3/3 通过。已清理的重复项：clang-21 家族（约 7.1 GiB）、MSYS 层重复 cmake 4.3.4 及其孤儿依赖；清理后 `ucrt64` 3.55 GB、`clang64` 1.87 GB。
+
+同一实测中**仍未安装**的项：Boost、Arrow、OpenCV、FFmpeg、Assimp、SDL2/Vulkan 等可选依赖；MSYS 层 `base-devel`/`git`；`VCPKG_ROOT` 未配置（`win-vcpkg-*` 预设待启用）。
 
 ---
 
@@ -332,12 +334,21 @@ CMake 目标命名：
 | `win-ucrt64-release` | Windows 发布（`-O2 -DNDEBUG`，`-ffp-contract=off`） |
 | `win-msvc-debug` / `win-msvc-release` | Windows MSVC（VS 2022+ vcvars 环境，无第三方依赖；用于跨编译器验证） |
 | `win-vcpkg-debug` / `win-vcpkg-release` | Windows MSVC + vcpkg（需要 `VCPKG_ROOT`，解析根目录 `vcpkg.json`） |
+| `win-ucrt64-clang-debug` / `-release` | Windows UCRT64 + Clang（同一份 libstdc++，可与 GCC 产物互链；用于 ABI 断言、clang-tidy、ASan） |
+| `win-clang64-debug` | Windows CLANG64 + libc++（**仅验证层**，产物不分发；cmake/ninja 复用 UCRT64；test 预设自带 `clang64/bin` 到 PATH 以解析 libc++ 运行库） |
 | `linux-gcc-debug` / `linux-gcc-release` | Linux 构建 |
 | `linux-clang-asan` | Linux ASan + UBSan |
 
 > Windows 下的 MinGW 消毒器支持有限，暂不提供；内存错误优先在 Linux ASan 作业中发现。
 
 MSVC 预设（`win-msvc-*` / `win-vcpkg-*`）需要 VS 2022+ 的开发环境（`vcvars64.bat`），编译器通过 `CC=cl`、`CXX=cl` 指定——注意：当 MSYS2 的 `bin` 在 `PATH` 中靠前时，CMake 会优先选到 `cc/c++` 而非 `cl`，务必在 vcvars 环境中显式设置这两个变量。跨工具链混载见 02 文档 §4.1「插件自包含」。
+
+**MSYS2 多环境隔离规则（强制）**：
+
+1. `PATH` 中一次只放一个 MSYS2 环境的 `bin`（UCRT64 / CLANG64 / MSYS 互斥）——同名 DLL（`zlib1.dll`、`libpng16.dll` 等）会按 `PATH` 顺序被错误加载；
+2. 预设一律写死编译器绝对路径，不依赖 `PATH` 决定；
+3. UCRT64 与 CLANG64 的 C++ 运行时不同（libstdc++ vs libc++），**禁止互链 C++ 目标**，只允许纯 C ABI 插件加载或边车；
+4. MSYS 子系统只跑脚本（bash/pacman/make），不产出可交付二进制。
 
 要点：
 
