@@ -1,0 +1,29 @@
+{
+  "schema": "srsp.plugin/1",
+  "id": "org.srsp.dynamics.rigid",
+  "name": "Rigid Multibody Dynamics",
+  "version": "0.2.0",
+  "api": "1.0",
+  "kind": ["dynamics"],
+  "description": "In-house rigid-body solver with force-model aggregation.",
+  "vendor": { "name": "SRSP Team" },
+  "license": "Apache-2.0",
+  "transport": {
+    "type": "inproc",
+    "library": {
+      "windows-x86_64-ucrt64": "bin/ucrt64/srsp_dynamics_rigid.dll",
+      "linux-x86_64-gcc": "lib/gcc/libsrsp_dynamics_rigid.so",
+      "windows-x86_64": "bin/legacy/srsp_dynamics_rigid.dll"
+    }
+  },
+  "capabilities": [
+    { "name": "srsp.dynamics/solver", "version": "1.0", "alias": "dynamics" },
+    { "name": "srsp.dynamics/force", "version": "1.0", "alias": "force" }
+  ],
+  "requires": ["srsp.time@>=1.0 <2.0"],
+  "optional_requires": ["srsp.env/gravity@^1.0"],
+  "platforms": ["windows-x86_64", "linux-x86_64"],
+  "permissions": ["log"],
+  "config_schema": "schema/config.schema.json",
+  "entry": { "init_timeout_ms": 5000, "thread_safe": ["core.describe"] }
+}

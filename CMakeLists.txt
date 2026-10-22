@@ -23,6 +23,7 @@ target_include_directories(srsp_api INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/api/i
 target_compile_features(srsp_api INTERFACE cxx_std_20)
 
 option(SRSP_BUILD_EXAMPLES "Build the example plugins and host" ON)
+option(SRSP_BUILD_TESTS "Build the test suite" ON)
 option(SRSP_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
 enable_testing()
@@ -31,8 +32,11 @@ if(SRSP_BUILD_EXAMPLES)
   add_subdirectory(examples/hello_plugin)
 endif()
 
-# Placeholder: core, plugins, apps and tests are added milestone by milestone.
+if(SRSP_BUILD_TESTS)
+  add_subdirectory(tests)
+endif()
+
+# Placeholder: core, plugins and apps are added milestone by milestone.
 # add_subdirectory(core)
 # add_subdirectory(plugins)
 # add_subdirectory(apps)
-# add_subdirectory(tests)

@@ -1,0 +1,23 @@
+{
+  "schema": "srsp.plugin/1",
+  "id": "org.srsp.examples.hello",
+  "name": "Hello Example",
+  "version": "0.1.0",
+  "api": "1.0",
+  "kind": ["controller"],
+  "description": "Minimal in-process example plugin using legacy toolchain-agnostic library tags.",
+  "vendor": { "name": "SRSP Team" },
+  "license": "Apache-2.0",
+  "transport": {
+    "type": "inproc",
+    "library": {
+      "windows-x86_64": "bin/srsp_hello.dll",
+      "linux-x86_64": "lib/libsrsp_hello.so"
+    },
+    "symbol": "srsp_plugin_query"
+  },
+  "capabilities": [
+    { "name": "srsp.control/controller", "version": "1.0", "alias": "controller" }
+  ],
+  "platforms": ["windows-x86_64", "linux-x86_64"]
+}

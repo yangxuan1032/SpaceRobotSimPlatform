@@ -67,9 +67,25 @@
       "properties": {
         "type": { "enum": ["inproc", "sidecar"] },
         "library": {
-          "description": "Platform tag to relative library path (inproc only).",
+          "description": "Platform tag to relative library path (inproc only). Tags are either legacy 'os-arch' (toolchain-agnostic, kept for compatibility) or 'os-arch-toolchain' (preferred). Resolution: the loader picks the most specific matching tag (os-arch-toolchain first), then falls back to the bare os-arch tag. Toolchain-specific binaries are required because MSVC and MinGW C++ runtime dependencies are incompatible.",
           "type": "object",
           "minProperties": 1,
+          "propertyNames": {
+            "enum": [
+              "windows-x86_64",
+              "windows-aarch64",
+              "linux-x86_64",
+              "linux-aarch64",
+              "macos-aarch64",
+              "windows-x86_64-ucrt64",
+              "windows-x86_64-msvc",
+              "windows-x86_64-clang-cl",
+              "linux-x86_64-gcc",
+              "linux-x86_64-clang",
+              "linux-aarch64-gcc",
+              "macos-aarch64-apple-clang"
+            ]
+          },
           "additionalProperties": { "type": "string" }
         },
         "symbol": { "type": "string", "default": "srsp_plugin_query" },

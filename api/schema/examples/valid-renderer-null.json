@@ -1,0 +1,24 @@
+{
+  "schema": "srsp.plugin/1",
+  "id": "org.srsp.render.null",
+  "name": "Null Renderer",
+  "version": "0.1.0",
+  "api": "1.0",
+  "kind": ["renderer"],
+  "description": "Headless renderer stub used by CI and server deployments.",
+  "vendor": { "name": "SRSP Team" },
+  "license": "Apache-2.0",
+  "transport": {
+    "type": "inproc",
+    "library": {
+      "windows-x86_64-ucrt64": "bin/ucrt64/srsp_render_null.dll",
+      "windows-x86_64-msvc": "bin/msvc/srsp_render_null.dll",
+      "linux-x86_64-gcc": "lib/gcc/libsrsp_render_null.so"
+    }
+  },
+  "capabilities": [
+    { "name": "srsp.render/renderer", "version": "1.0", "alias": "renderer" }
+  ],
+  "platforms": ["windows-x86_64", "linux-x86_64"],
+  "entry": { "init_timeout_ms": 1000 }
+}

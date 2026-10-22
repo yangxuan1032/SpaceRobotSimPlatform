@@ -13,6 +13,10 @@
  *     `host->alloc` and must be released with `host->free` by the caller.
  *   - Plugin methods are invoked on the simulation thread unless the manifest
  *     lists them under `entry.thread_safe`.
+ *   - Bitfields are forbidden; enums have a fixed 32-bit representation.
+ *   - Struct layout must be identical on MSVC, GCC and Clang (x86-64), so a
+ *     plugin built with one toolchain can be hosted by another; this is
+ *     enforced by tests/abi/layout_static_assert.cpp on every CI build.
  *
  * ABI version: 1.0
  */
@@ -98,6 +102,10 @@ typedef struct srsp_error {
 
 typedef void (SRSP_CALL* srsp_log_fn)(void* user, int32_t level, srsp_str message);
 typedef double (SRSP_CALL* srsp_time_fn)(void* user);
+/* TAI nanoseconds relative to the J2000.0 epoch (see docs/03-data-contracts.md
+ * section 2.3). Preferred over the double-seconds form, which loses resolution
+ * (~0.1 us by 2026) as the epoch distance grows. */
+typedef int64_t (SRSP_CALL* srsp_time_ns_fn)(void* user);
 typedef srsp_status (SRSP_CALL* srsp_alloc_fn)(void* user, uint64_t size,
                                                uint64_t alignment, void** out);
 typedef void (SRSP_CALL* srsp_free_fn)(void* user, void* ptr);
@@ -123,6 +131,10 @@ typedef struct srsp_host_v1 {
 
   srsp_shm_map_fn shm_map;
   srsp_shm_unmap_fn shm_unmap;
+
+  /* Appended in ABI 1.0 (2026-10-22). Before use, check
+   * struct_size >= offsetof(srsp_host_v1, time_tai_ns) + sizeof(time_tai_ns). */
+  srsp_time_ns_fn time_tai_ns;
 } srsp_host_v1;
 
 /* ------------------------------------------------------------------------- */

@@ -1,0 +1,27 @@
+{
+  "schema": "srsp.plugin/1",
+  "id": "org.srsp.env.spice",
+  "name": "SPICE Ephemeris",
+  "version": "0.3.1",
+  "api": "1.0",
+  "kind": ["environment"],
+  "description": "NAIF CSPICE ephemeris, lighting and eclipse. Ships per-toolchain binaries on Windows.",
+  "vendor": { "name": "SRSP Team", "contact": "dev@example.org" },
+  "license": "Apache-2.0",
+  "transport": {
+    "type": "inproc",
+    "library": {
+      "windows-x86_64-ucrt64": "bin/ucrt64/srsp_env_spice.dll",
+      "windows-x86_64-msvc": "bin/msvc/srsp_env_spice.dll",
+      "linux-x86_64-gcc": "lib/gcc/libsrsp_env_spice.so"
+    },
+    "symbol": "srsp_plugin_query"
+  },
+  "capabilities": [
+    { "name": "srsp.env/ephemeris", "version": "1.0", "alias": "ephemeris" },
+    { "name": "srsp.env/lighting", "version": "1.0", "alias": "lighting" }
+  ],
+  "requires": ["srsp.frames@>=1.0 <2.0"],
+  "platforms": ["windows-x86_64", "linux-x86_64"],
+  "permissions": ["filesystem.read:data/kernels", "log"]
+}
