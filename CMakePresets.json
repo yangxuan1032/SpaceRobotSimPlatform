@@ -47,10 +47,17 @@
       }
     },
     {
+      "name": "win-python",
+      "hidden": true,
+      "cacheVariables": {
+        "Python3_EXECUTABLE": "C:/msys64/ucrt64/bin/python.exe"
+      }
+    },
+    {
       "name": "win-ucrt64-debug",
       "displayName": "Windows UCRT64 Debug (GCC)",
       "description": "Requires MSYS2 UCRT64; launch from the MSYS2 shell or tools/env/launch-vscode.ps1",
-      "inherits": "base-gcc",
+      "inherits": ["base-gcc", "win-python"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/gcc.exe",
@@ -70,7 +77,7 @@
       "name": "win-msvc-debug",
       "displayName": "Windows MSVC Debug",
       "description": "Requires Visual Studio 2022+ (vcvars environment); no third-party deps. FP contraction stays at the compiler default until a per-platform FP policy is decided",
-      "inherits": "base-msvc",
+      "inherits": ["base-msvc", "win-python"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -87,7 +94,7 @@
       "name": "win-vcpkg-debug",
       "displayName": "Windows MSVC Debug (vcpkg)",
       "description": "Requires Visual Studio 2022+ and VCPKG_ROOT; resolves vcpkg.json dependencies",
-      "inherits": "base-vcpkg",
+      "inherits": ["base-vcpkg", "win-python"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -104,7 +111,7 @@
       "name": "win-ucrt64-clang-debug",
       "displayName": "Windows UCRT64 Debug (Clang, libstdc++)",
       "description": "Clang from the UCRT64 environment: links the same libstdc++ as the GCC preset, so C++ objects stay ABI-compatible. Second compiler for layout asserts, clang-tidy and ASan",
-      "inherits": "base-clang",
+      "inherits": ["base-clang", "win-python"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/clang.exe",
@@ -124,7 +131,7 @@
       "name": "win-clang64-debug",
       "displayName": "Windows CLANG64 Debug (libc++, verification only)",
       "description": "CLANG64 environment (libc++ / libunwind runtime). Verification and sanitizer tier only: never ship these binaries. cmake/ninja are reused from UCRT64",
-      "inherits": "base-clang",
+      "inherits": ["base-clang", "win-python"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "C:/msys64/clang64/bin/clang.exe",
