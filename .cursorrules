@@ -1,5 +1,0 @@
-Read AGENTS.md first. It is the single source of truth for this workspace.
-
-Use the namespace of the model you actually run as (see ai-models.json): claude, gpt, gemini, qwen, glm, llama, mistral, grok, kimi, doubao, ernie, or agent.
-
-Never write caches, plans or logs into another model's directory. Pass -Model <slug> to every script under tools/ai/.

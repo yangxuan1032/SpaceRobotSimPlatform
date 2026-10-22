@@ -162,9 +162,7 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 | 工具/模型 | 入口文件 | 说明 |
 |---|---|---|
 | Codex、DSH、多数 agent | `AGENTS.md` | 本文件，直接生效 |
-| Claude Code | `CLAUDE.md` | 转发到本文件；Claude 使用 `claude` 命名空间 |
-| Gemini CLI | `GEMINI.md` | 转发到本文件；Gemini 使用 `gemini` 命名空间 |
-| Cursor | `.cursorrules` | 转发到本文件，按实际模型选择命名空间 |
-| GitHub Copilot | `.github/copilot-instructions.md` | 转发到本文件，按实际模型选择命名空间 |
 
-入口文件只做转发；若与本文件冲突，以本文件为准（更高优先级的系统/开发者指令除外）。
+仓库只维护 `AGENTS.md` 一个入口（2026-10-22 起移除 Claude / Gemini / Cursor / Copilot 的转发文件）。没有专用入口文件的工具直接读取本文件；命名空间仍按 `ai-models.json` 解析，当前实际使用的命名空间为 `deepseek` 与 `kimi`。
+
+若本文件与更高优先级的系统/开发者指令冲突，以后者为准。
