@@ -77,8 +77,14 @@ pacman -S --needed --noconfirm \
   mingw-w64-ucrt-x86_64-ninja \
   mingw-w64-ucrt-x86_64-ccache \
   mingw-w64-ucrt-x86_64-pkgconf \
-  mingw-w64-ucrt-x86_64-gdb
+  mingw-w64-ucrt-x86_64-gdb \
+  mingw-w64-ucrt-x86_64-clang \
+  mingw-w64-ucrt-x86_64-clang-tools-extra \
+  mingw-w64-ucrt-x86_64-compiler-rt
 ```
+
+> `clang` / `clang-tools-extra` / `compiler-rt` 提供第二编译器、clangd/clang-tidy 与 ASan；
+> 另有 CLANG64 环境（`mingw-w64-clang-x86_64-*`）仅作 libc++ 验证层，见 §7 预设表。
 
 核心库（按需分批安装）：
 
@@ -91,13 +97,14 @@ pacman -S --needed \
   mingw-w64-ucrt-x86_64-qt6-base \
   mingw-w64-ucrt-x86_64-qt6-declarative \
   mingw-w64-ucrt-x86_64-qt6-svg \
+  mingw-w64-ucrt-x86_64-qt6-tools \
   mingw-w64-ucrt-x86_64-assimp \
   mingw-w64-ucrt-x86_64-spdlog \
   mingw-w64-ucrt-x86_64-fmt \
   mingw-w64-ucrt-x86_64-nlohmann-json \
   mingw-w64-ucrt-x86_64-tomlplusplus \
   mingw-w64-ucrt-x86_64-yaml-cpp \
-  mingw-w64-ucrt-x86_64-catch2 \
+  mingw-w64-ucrt-x86_64-catch \
   mingw-w64-ucrt-x86_64-benchmark \
   mingw-w64-ucrt-x86_64-arrow \
   mingw-w64-ucrt-x86_64-zstd \

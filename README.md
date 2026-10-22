@@ -186,17 +186,32 @@ cmake --build --preset linux-gcc-debug
 
 > CMake 需 ≥ 3.27；Ubuntu 22.04 自带版本较旧，可从 Kitware APT 源安装。
 
+### 7.3 多工具链构建（可选）
+
+同一份源码可在四套工具链上构建与测试（预设见 [05 §7](docs/05-msys2-dev-environment.md)）：
+
+| 预设 | 工具链 | 用途 |
+|---|---|---|
+| `win-ucrt64-debug` | GCC 16（UCRT64） | 主工具链，发布用它 |
+| `win-ucrt64-clang-debug` | Clang 22（UCRT64，libstdc++） | 第二编译器、clang-tidy、ASan |
+| `win-clang64-debug` | Clang 22（CLANG64，libc++） | 仅验证层，产物不分发 |
+| `win-msvc-debug` | MSVC 19.50 | 生态层（Qt 官方包、vcpkg、调试器） |
+
+规则：`PATH` 一次只放一个 MSYS2 环境；MSVC 预设需在 `vcvars64.bat` 环境里设置 `CC=cl`、`CXX=cl`；跨工具链只允许纯 C ABI 插件加载，不做 C++ 混链（详见 [02 §4.1](docs/02-plugin-contract.md)）。
+
 ---
 
 ## 8. 环境验证状态
 
 | 项 | 状态 |
 |---|---|
-| GCC 16.1.0（MSYS2 UCRT64） | ✅ 本机已验证，示例插件编译运行通过 |
-| Python 3.14.6（UCRT64） | ✅ 本机已安装 |
-| CMake 4.4.0 / Ninja 1.13.2 / ccache 4.13.6 / Catch2 3.15.2 | ✅ 已安装（2026-10-22，`pacman`），构建与 ctest 全过 |
-| MSVC 19.50（VS Community 2026） | ✅ 本机已验证：`win-msvc-debug` 构建/测试全过；GCC↔MSVC 插件互载冒烟通过 |
-| Qt 6.11.2 / gRPC 1.82（MSYS2 仓库） | ✅ 仓库可安装（`pacman -S`） |
+| GCC 16.1.0（MSYS2 UCRT64） | ✅ 已验证：构建 + ctest 3/3 |
+| Clang 22.1.8（MSYS2 UCRT64，libstdc++） | ✅ 已验证：构建 + ctest 3/3；与 GCC 插件双向互载 |
+| Clang 22.1.8（MSYS2 CLANG64，libc++） | ✅ 仅验证层：构建 + ctest 3/3，ASan 无告警；产物不分发 |
+| MSVC 19.50（VS Community 2026） | ✅ 已验证：构建 + ctest 3/3；GCC↔MSVC 插件互载 |
+| CMake 4.4.0 / Ninja 1.13.2 / ccache 4.13.6 / Catch2 3.15.2 | ✅ 已安装（`pacman`） |
+| Qt 6.11.1 / gRPC 1.82.0 / protobuf 35.1 / Eigen3 / benchmark | ✅ 已安装并完成集成 smoke（find_package + 链接 + 运行） |
+| Python（UCRT64 3.14.6 + pip） | ✅ schema 测试由 UCRT64 Python 驱动（`win-python` 预设），系统 Windows Python 不再需要 |
 | vcpkg | ⚠️ 未安装（`VCPKG_ROOT` 未设置）；`win-vcpkg-*` 预设待启用 |
 | bgfx / CSPICE / Pinocchio / MCAP | ⚠️ MSYS2 无现成包，按 superbuild 自建（见 05 §5） |
 | Linux 构建 | 未在本机验证（无 WSL/容器） |

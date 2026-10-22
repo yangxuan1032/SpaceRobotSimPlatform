@@ -155,7 +155,7 @@ flowchart LR
 | 异常 | 插件内部异常必须在边界处捕获并转为 `srsp_status` + `srsp_error` |
 | 线程 | 除 `entry.thread_safe` 列出的方法外，仅 Sim 线程调用 |
 | 位域与枚举 | 禁止位域；枚举保持固定 32 位表示 |
-| 跨编译器布局 | 结构布局在 MSVC/GCC/Clang（x86-64）下必须一致，使不同工具链构建的宿主与插件可互相加载；由 `tests/abi/layout_static_assert.cpp` 在每次构建中强制 |
+| 跨编译器布局 | 结构布局在 MSVC/GCC/Clang（x86-64）下必须一致，使不同工具链构建的宿主与插件可互相加载；由 `tests/abi/layout_static_assert.cpp` 在每次构建中强制（2026-10-22 已在 GCC 16.1、Clang 22.1.8（libstdc++/libc++）、MSVC 19.50 通过） |
 | 插件自包含 | 插件必须静态链接其 C/C++ 运行库（MinGW `-static-libgcc -static-libstdc++`，MSVC `/MT`），否则跨工具链加载时因缺少 CRT 而失败 |
 
 ### 4.2 入口与生命周期
