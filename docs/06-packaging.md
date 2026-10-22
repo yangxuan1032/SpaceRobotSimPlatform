@@ -58,6 +58,7 @@ SRSP-1.0.0-win64/
 - **可重定位**：所有路径相对可执行文件解析，不写死安装目录；`VERSION.json` 记录构建信息。
 - **Qt 插件不与 SRSP 插件混放**：Qt 平台插件固定在 `bin/platforms`，SRSP 插件在 `plugins/`。
 - **插件依赖**：插件自带 DLL 与其同目录；加载器使用 `AddDllDirectory` 把插件目录加入搜索路径，避免全局污染。
+- **工具链分层**：进程内插件在 Windows 同时产出 `ucrt64` 与 `msvc` 两份二进制，`.srpkg` 内按 `bin/<os-arch-toolchain>/` 分层（标签与解析规则见 02 §2）；MSVC 产物随包带 `vcruntime140*.dll`/`msvcp140*.dll`（或按 02 §4.1 静态链接 CRT）。
 - **数据与程序分离**：高精度星历、重力场、地球瓦片可作为独立"数据包"安装到 `share/srsp/data/` 或 `SRSP_DATA_DIR`。
 
 Linux 布局遵循 FHS：

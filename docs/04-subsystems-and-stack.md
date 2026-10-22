@@ -303,6 +303,7 @@ MATLAB/Simulink 通过边车（MATLAB Engine 或编译为 C 共享库）；Julia
 | 领域 | 选型 | 版本基线 | Windows/MSYS2 | 备选 |
 |---|---|---|---|---|
 | 内核语言 | C++20 | GCC 13+ / Clang 17+ | ✅ GCC 16.1（本机 UCRT64） | Rust（部分插件） |
+| 备选构建工具链 | MSVC 2022+（vcpkg） | 19.50+ | ✅ VS 2026 实测（`win-msvc-*` 预设） | Clang-CL |
 | 构建 | CMake + Ninja + Presets | CMake ≥ 3.27 | ✅（需安装） | Meson（不选） |
 | 包管理 | MSYS2 pacman / apt / superbuild | — | ✅ | Conan 2（备选） |
 | 数学 | Eigen 3.4 + Sophus | 3.4 / 1.22 | 需核实 | Blaze（不选） |

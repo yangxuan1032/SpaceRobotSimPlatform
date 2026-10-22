@@ -34,6 +34,8 @@
 | 7 | 录制用 **MCAP** | 自描述、可索引、跨语言，Foxglove 可直接打开 |
 | 8 | Windows 用 **MSYS2 UCRT64** 原生构建 | 满足约束、包生态完整、产物为原生 Win64 |
 | 9 | v1 单进程，但接口按可跨进程设计 | 先交付，保留拆分为 `srspd` 服务的能力 |
+| 10 | 内核对外暴露宿主侧 C API（`core_api.h`） | Rust CLI、Python SDK、Web 服务等非 C++ 应用可嵌入内核 |
+| 11 | Windows 双工具链：UCRT64 为主、MSVC 为辅 | 插件按 `os-arch-toolchain` 分发；跨工具链只允许 C ABI 加载或边车 |
 
 ---
 
@@ -83,8 +85,9 @@ SpaceRobotSimPlatform/
 ├─ CMakeLists.txt / CMakePresets.json
 ├─ api/
 │  ├─ include/srsp/plugin_api.h      # 稳定 C ABI（v1.0）
+│  ├─ include/srsp/core_api.h        # 宿主侧 C API（draft 0.1，供 CLI/SDK 嵌入内核）
 │  ├─ proto/srsp/v1/plugin.proto     # 控制面消息与边车服务
-│  └─ schema/plugin-manifest.schema.json
+│  └─ schema/                        # JSON Schema 与清单样例（examples/）
 ├─ deepseek/                         # DeepSeek 命名空间（其他模型为 claude/、gpt/…）
 │  ├─ Temp/                          # 缓存（不纳入版本管理）
 │  └─ Logs/
@@ -97,6 +100,10 @@ SpaceRobotSimPlatform/
 ├─ examples/
 │  ├─ hello_plugin/                  # 可编译、可运行的 C++ 插件 + 宿主
 │  └─ python_plugin/                 # Python 边车插件（SDK 目标形态）
+├─ tests/
+│  ├─ abi/                           # ABI 布局 static_assert（跨编译器契约）
+│  └─ schema/                        # 清单样例校验（python + jsonschema）
+├─ vcpkg.json                        # MSVC 工具链依赖清单（win-vcpkg-* 预设）
 ├─ docs/
 └─ .vscode/
 ```
@@ -187,8 +194,10 @@ cmake --build --preset linux-gcc-debug
 |---|---|
 | GCC 16.1.0（MSYS2 UCRT64） | ✅ 本机已验证，示例插件编译运行通过 |
 | Python 3.14.6（UCRT64） | ✅ 本机已安装 |
+| CMake 4.4.0 / Ninja 1.13.2 / ccache 4.13.6 / Catch2 3.15.2 | ✅ 已安装（2026-10-22，`pacman`），构建与 ctest 全过 |
+| MSVC 19.50（VS Community 2026） | ✅ 本机已验证：`win-msvc-debug` 构建/测试全过；GCC↔MSVC 插件互载冒烟通过 |
 | Qt 6.11.2 / gRPC 1.82（MSYS2 仓库） | ✅ 仓库可安装（`pacman -S`） |
-| CMake / Ninja | ⚠️ 本机尚未安装，`bootstrap-msys2.sh` 会安装 |
+| vcpkg | ⚠️ 未安装（`VCPKG_ROOT` 未设置）；`win-vcpkg-*` 预设待启用 |
 | bgfx / CSPICE / Pinocchio / MCAP | ⚠️ MSYS2 无现成包，按 superbuild 自建（见 05 §5） |
 | Linux 构建 | 未在本机验证（无 WSL/容器） |
 | Agent 配置（AGENTS.md + tools/ai 多模型脚本） | ✅ 已启用，环境注入/计划创建/日志追加已验证 |

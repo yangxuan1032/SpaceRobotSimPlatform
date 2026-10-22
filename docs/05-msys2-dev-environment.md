@@ -130,7 +130,7 @@ pkg-config --modversion eigen3
 pacman -Q | wc -l
 ```
 
-本机基线（2026-10 实测）：GCC 16.1.0、Python 3.14.6 已安装；MSYS2 仓库中 Qt 6.11.2、gRPC 1.82.0 可安装；CMake/Ninja 尚未安装，按 §2.3 引导。
+本机基线（2026-10-22 实测）：GCC 16.1.0、Python 3.14.6、CMake 4.4.0、Ninja 1.13.2、ccache 4.13.6、Catch2 3.15.2、jsonschema 4.26.0（Windows Python）已安装；Visual Studio Community 2026（MSVC 19.50）可用，`win-msvc-*` 预设已验证；MSYS2 仓库中 Qt 6.11.2、gRPC 1.82.0 可安装；`VCPKG_ROOT` 未配置，`win-vcpkg-*` 预设待启用。
 
 ---
 
@@ -330,10 +330,14 @@ CMake 目标命名：
 |---|---|
 | `win-ucrt64-debug` | Windows 调试（Ninja + GCC，`-O0 -g`） |
 | `win-ucrt64-release` | Windows 发布（`-O2 -DNDEBUG`，`-ffp-contract=off`） |
+| `win-msvc-debug` / `win-msvc-release` | Windows MSVC（VS 2022+ vcvars 环境，无第三方依赖；用于跨编译器验证） |
+| `win-vcpkg-debug` / `win-vcpkg-release` | Windows MSVC + vcpkg（需要 `VCPKG_ROOT`，解析根目录 `vcpkg.json`） |
 | `linux-gcc-debug` / `linux-gcc-release` | Linux 构建 |
 | `linux-clang-asan` | Linux ASan + UBSan |
 
 > Windows 下的 MinGW 消毒器支持有限，暂不提供；内存错误优先在 Linux ASan 作业中发现。
+
+MSVC 预设（`win-msvc-*` / `win-vcpkg-*`）需要 VS 2022+ 的开发环境（`vcvars64.bat`），编译器通过 `CC=cl`、`CXX=cl` 指定——注意：当 MSYS2 的 `bin` 在 `PATH` 中靠前时，CMake 会优先选到 `cc/c++` 而非 `cl`，务必在 vcvars 环境中显式设置这两个变量。跨工具链混载见 02 文档 §4.1「插件自包含」。
 
 要点：
 
