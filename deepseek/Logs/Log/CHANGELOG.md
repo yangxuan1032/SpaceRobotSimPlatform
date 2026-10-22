@@ -156,3 +156,53 @@
 - 摘要：ai-models.json 为 deepseek 增加 deepseek-flash、deepseek-official 别名，使当前运行模型解析到 deepseek 命名空间（避免误建 deepseek-flash/ 目录）；deepseek/README.md 补别名清单；清理 deepseek/Temp 下编译探测残留目录。
 - 验证：ai-models.json 解析通过；Resolve-SrspAiModel -Model deepseek-flash 返回 deepseek；New-AiModelWorkspace 幂等执行无新增目录；Enter-AgentEnv 注入 SRSP_AI_MODEL=deepseek、TEMP=deepseek/Temp/tmp；Temp/Logs 八个必需路径均存在；仓库内仅 deepseek 一个模型工作区。
 - 关联计划：`deepseek/Logs/Plan/2026-10-20-agent-workspace-config.md`
+
+### V3 — 分析 Kimi 优化后的软件设计思路与开发环境构建设计
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-22-kimi-design-analysis.md`
+- 摘要：基于 4 个提交与更新后的 docs/api/预设/测试，归纳优化后的设计主线：契约双向化（core_api）、多语言政策收敛为三语言+三边界、可移植性写成 static_assert 门禁、os-arch-toolchain 分发、time_tai_ns 演进；开发环境方面分析 base/base-gcc/base-msvc/base-vcpkg 预设分层、工具链主备分级、测试即契约与依赖三层；列出 7 项风险（core_api 无实现、双份二进制、静态 CRT 隐性代价、FP 策略未定、计划与实现缺口、aarch64 未覆盖、沙箱内不可构建）与 6 条下一步。
+- 验证：计划内 9 个相对链接全部有效；结论以提交内容与文档为准；本会话构建复验受沙箱子进程管道限制未完成（configure 挂起），已在文档中如实标注，构建结论引用 kimi 会话 CHANGELOG V4 的验证记录。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-kimi-design-analysis.md`
+
+### V4 — 开发环境与编译工具链审计：修正 Catch2 包名并补基线
+
+- 类型：配置
+- 文件：
+  - `tools/env/packages.txt`
+  - `docs/05-msys2-dev-environment.md`
+- 摘要：审计本机 MSYS2/VS/Python/git 配置：修正 packages.txt 中不存在的包名 mingw-w64-ucrt-x86_64-catch2 为 catch（MSYS2 实际包名）；在 docs/05 2.4 基线补充当前未安装项（Qt6、gRPC、protobuf、Eigen、Boost、ucrt64 clang/clangd、MSYS base-devel/git、python-pip）及由此导致的 clangd 路径失效与 pip 缺失；清理 deepseek/Temp 下无 CMakeCache 的半成品构建目录。
+- 验证：包名与 pacman 本地库条目 mingw-w64-ucrt-x86_64-catch-3.15.2-1 一致；MSYS2 包库直接读取（237 条）核对；清理后 deepseek/Temp/build 无残留失败目录；未运行构建（沙箱管道限制）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-kimi-design-analysis.md`
+
+### V5 — 规划 MSYS2 多环境（UCRT64/CLANG64/MSYS）组合工具链
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
+- 摘要：评估在 MSYS2 内多环境组合编译工具链：确认 CLANG64 已装 clang 22.1.8+lld+lldb+libc+++compiler-rt（8.97G），UCRT64 无 clang；给出环境职责矩阵（UCRT64+GCC 主、UCRT64+Clang 第二编译器、CLANG64 仅验证层、MSVC 生态层、MSYS 只跑脚本）、各环境安装清单、两个新预设、五条隔离规则、五项验证与五项决策。
+- 验证：计划内 7 个相对链接全部有效；环境事实来自 pacman 本地库 237 条与目录实测（clang64 8.97G / ucrt64 2.29G）；未执行安装与构建（待评审后按其步骤执行）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
+
+### V6 — 接入 MSYS2 多环境工具链：UCRT64+Clang 与 CLANG64 验证层
+
+- 类型：配置
+- 文件：
+  - `CMakePresets.json`
+  - `docs/02-plugin-contract.md`
+  - `docs/05-msys2-dev-environment.md`
+  - `deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
+- 摘要：按 E-1~E-5 执行：安装 UCRT64 clang 22.1.8 + clang-tools-extra + compiler-rt（CLANG64 补 catch）；CMakePresets 新增 base-clang 与 win-ucrt64-clang-debug/release、win-clang64-debug（含 build/test 预设）；05 增补多环境隔离规则与预设表、更新本机基线；02 冻结清单补 Clang 证据。
+- 验证：V1 Clang(UCRT64) 构建+cTest 3/3 通过；V2 GCC↔Clang 插件双向互载 exit 0；V3 CLANG64(libc++) 构建并运行 abi_layout 通过，全套 ctest 3/3 通过（test 预设自带 PATH）；V3b 附加实验：GCC 宿主加载 clang64(libc++) 插件成功，印证"纯 C ABI + 运行库可用"即可跨环境加载；V4 CLANG64+ASan 全套 ctest 3/3 通过；V5（负例：GCC 链 CLANG64 C++ 库应失败）留待 CI。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
+
+### V7 — 安装完整工具链并清理 Windows 侧重复工具链
+
+- 类型：配置
+- 文件：
+  - `tools/env/packages.txt`
+  - `docs/05-msys2-dev-environment.md`
+- 摘要：按规划安装 M0 依赖：protobuf 35.1、gRPC 1.82、Qt6 6.11.1（base+tools，含 qmake6/windeployqt6）、Eigen3、python-pip、benchmark；清理重复/非必要项：clang-21 家族（clang/lld/llvm/compiler-rt，约 7.1 GiB）、MSYS 层重复 cmake 4.3.4 及其孤儿依赖（cppdap/libarchive/librhash/libuv/pkgconf/jsoncpp）；packages.txt 补 compiler-rt；05 基线更新。
+- 验证：集成 smoke：临时工程同时 find_package Qt6/protobuf/gRPC/Eigen3 并链接运行通过（Qt 6.11.1、gRPC 1.82.0、Eigen trace 正确）；清理后四端 ctest 各 3/3 通过（GCC / Clang-UCRT64 / Clang-CLANG64 / MSVC 19.50）；schema 样例 10/10 通过；无孤儿包残留；ucrt64 3.55 GB、clang64 1.87 GB（清理前 8.97 GB）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
