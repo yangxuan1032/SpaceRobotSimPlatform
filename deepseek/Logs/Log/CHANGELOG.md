@@ -126,3 +126,33 @@
   - `deepseek/Logs/Log/CHANGELOG.md`
 - 摘要：将工作区根目录由 SpaceRobotSimPlantform 重命名为 SpaceRobotSimPlatform；更新 AGENTS、README、docs/05 中的绝对与相对路径；初始化 Git 仓库、关联 GitHub origin，并以远端 main 为父提交推送完整基线。
 - 验证：git push 成功 518bd6b..9428239（main）；远端 main 指向基线提交；旧名称引用检查为 0；目录重命名在本条目提交推送后执行。
+
+### V7 — 修复 Enter-AgentEnv 点号引用污染调用方变量
+
+- 类型：修复
+- 文件：
+  - `tools/ai/Enter-AgentEnv.ps1`
+- 摘要：点号引用时脚本参数与内部变量会写入调用方作用域，导致调用方的 $root、$tmp、$cache 被置空；将 -Root 参数改为 -ProjectRoot（保留 Root 别名），内部临时变量统一加 srsp 前缀，行为与导出的环境变量不变。
+- 验证：调用方 $root、$tmp、$cache、$context 均保持原值；SRSP_AI_MODEL 与 TEMP/TMP/CCACHE_DIR 等注入不变；-Root 别名仍生效；未指定模型时仍按 ai-models.json 报错；PowerShell 语法解析 0 错误。
+- 关联计划：`deepseek/Logs/Plan/2026-10-20-agent-workspace-config.md`
+
+## 2026-10-22
+
+### V1 — 建立 M0 执行计划：契约冻结与骨架闭环
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+- 摘要：分析 docs/01-07 与仓库现状后给出 M0 执行计划：差距盘点（缺内核、CLI、双传输边车、CI、SRM schema，本机缺 CMake/Ninja）、6 个工作流程（环境/契约/内核/双传输/CLI+Qt/CI）、4 周排期、出口验收与 6 项待决决策。
+- 验证：计划内 14 个相对链接全部有效；10 个章节结构完整；工具链状态为 2026-10-22 实测（GCC 16.1.0、Python 3.14.6、CMake/Ninja 未安装）；沙箱实测 pacman/bash 因 signal pipe 无法启动，安装类动作需完全权限会话；未执行构建（cmake 缺失）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V2 — 注册当前模型别名并校验 deepseek 模型工作区
+
+- 类型：配置
+- 文件：
+  - `ai-models.json`
+  - `deepseek/README.md`
+- 摘要：ai-models.json 为 deepseek 增加 deepseek-flash、deepseek-official 别名，使当前运行模型解析到 deepseek 命名空间（避免误建 deepseek-flash/ 目录）；deepseek/README.md 补别名清单；清理 deepseek/Temp 下编译探测残留目录。
+- 验证：ai-models.json 解析通过；Resolve-SrspAiModel -Model deepseek-flash 返回 deepseek；New-AiModelWorkspace 幂等执行无新增目录；Enter-AgentEnv 注入 SRSP_AI_MODEL=deepseek、TEMP=deepseek/Temp/tmp；Temp/Logs 八个必需路径均存在；仓库内仅 deepseek 一个模型工作区。
+- 关联计划：`deepseek/Logs/Plan/2026-10-20-agent-workspace-config.md`

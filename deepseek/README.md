@@ -3,6 +3,8 @@
 本目录是 **DeepSeek** 在本工程的独立运行空间，受根目录 [`AGENTS.md`](../AGENTS.md) 约束。
 其他模型使用各自同级的 `<model>/` 目录（如 `claude/`、`gpt/`），互不混用。
 
+别名：`deepseek`、`deepseek-flash`、`deepseek-official`、`deepseek-chat`、`deepseek-r1`、`deepseek-v3`、`deepseek-v3.1`（唯一真源见根目录 [`ai-models.json`](../ai-models.json)）。
+
 ```
 deepseek/
 ├─ Temp/                 # 唯一缓存根（不纳入版本管理）
