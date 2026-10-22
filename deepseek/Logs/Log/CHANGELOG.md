@@ -216,3 +216,16 @@
 - 摘要：新增隐藏预设 win-python（Python3_EXECUTABLE=C:/msys64/ucrt64/bin/python.exe），所有 Windows 预设改为多重继承 [原有基类, win-python]，使 schema 样例校验由 pacman 管理的 UCRT64 Python + python-jsonschema 驱动，消除对系统 Windows Python 的依赖；Linux 预设仍用系统 python3 并在缺 jsonschema 时自动跳过。
 - 验证：四个 Windows 预设的 CMakeCache 中 Python3_EXECUTABLE 均为 C:/msys64/ucrt64/bin/python.exe；ctest -V 显示测试命令使用该解释器并 10/10 通过；四端矩阵各 3/3 通过（GCC/Clang-UCRT64/Clang-CLANG64/MSVC）。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
+
+### V9 — 文档同步：多工具链状态、安装清单与 Qt 基线
+
+- 类型：文档
+- 文件：
+  - `README.md`
+  - `docs/01-architecture.md`
+  - `docs/02-plugin-contract.md`
+  - `docs/05-msys2-dev-environment.md`
+  - `docs/06-packaging.md`
+- 摘要：按当前实况同步文档：README 环境验证表改为四工具链（GCC/Clang-UCRT64/Clang-CLANG64/MSVC）与已装依赖（Qt 6.11.1、gRPC 1.82、protobuf 35.1、Eigen3、UCRT64 Python），新增 7.3 多工具链构建小节；05 安装命令补 clang/compiler-rt 并修正 catch 包名、补 qt6-tools；01 ADR A12 扩展为多工具链；02 布局条款补 Clang 验证证据；06 补 Qt 6.11.1 与 windeployqt6 基线。
+- 验证：五个文档相对链接检查 0 失效；GCC 预设重建 + ctest 3/3 通过（文档改动无构建影响）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`

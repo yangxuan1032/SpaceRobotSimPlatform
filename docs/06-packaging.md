@@ -96,6 +96,8 @@ objdump -p srsp-studio.exe | grep "DLL Name"
 
 ### 3.2 Qt 部署
 
+本机基线 Qt 6.11.1（`mingw-w64-ucrt-x86_64-qt6-base` + `-qt6-tools`，部署工具为 `windeployqt6`）；MSVC 工具链需改用 Qt 官方 MSVC 构建或 vcpkg 的 Qt。
+
 ```bash
 windeployqt --release --no-translations --no-system-d3d-compiler \
   --dir dist/SRSP-1.0.0-win64/bin \
