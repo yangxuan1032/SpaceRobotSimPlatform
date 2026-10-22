@@ -5,7 +5,7 @@
     {
       "slug": "deepseek",
       "display": "DeepSeek",
-      "aliases": ["deepseek", "deepseek-chat", "deepseek-r1", "deepseek-v3", "deepseek-v3.1"]
+      "aliases": ["deepseek", "deepseek-chat", "deepseek-r1", "deepseek-v3", "deepseek-v3.1", "deepseek-flash", "deepseek-official"]
     },
     {
       "slug": "claude",
@@ -50,7 +50,7 @@
     {
       "slug": "kimi",
       "display": "Kimi / Moonshot",
-      "aliases": ["kimi", "moonshot", "月之暗面"]
+      "aliases": ["kimi", "moonshot", "moonshotai", "moonshotai-cn", "kimi-k2", "kimi-k3", "月之暗面"]
     },
     {
       "slug": "doubao",
