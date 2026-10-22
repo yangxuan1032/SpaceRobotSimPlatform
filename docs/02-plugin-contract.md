@@ -86,7 +86,7 @@
 | `version` | 是 | SemVer 2.0；插件自身版本 |
 | `api` | 是 | 所依赖的平台 ABI 主版本，`1.0` 表示兼容 ABI 1.x |
 | `transport.type` | 是 | `inproc` / `sidecar` |
-| `transport.library` | inproc 必填 | 按平台标签给出相对路径 |
+| `transport.library` | inproc 必填 | 按平台标签给出相对路径；标签为 `os-arch-toolchain`（如 `windows-x86_64-ucrt64`、`windows-x86_64-msvc`），旧式 `os-arch` 标签保留作别名，加载器按"最具体优先"解析；合法标签集见 `api/schema/plugin-manifest.schema.json` |
 | `transport.command` | sidecar 必填 | 启动命令模板，支持 `${ENDPOINT}`、`${TOKEN}`、`${SHM}` |
 | `capabilities[].name` | 是 | 能力 ID，含 `@` 前的主名 |
 | `capabilities[].version` | 是 | 能力契约版本 |
@@ -154,6 +154,9 @@ flowchart LR
 | 内存所有权 | 入参由调用方持有；出参由被调方用 `host->alloc` 分配，调用方用 `host->free` 释放 |
 | 异常 | 插件内部异常必须在边界处捕获并转为 `srsp_status` + `srsp_error` |
 | 线程 | 除 `entry.thread_safe` 列出的方法外，仅 Sim 线程调用 |
+| 位域与枚举 | 禁止位域；枚举保持固定 32 位表示 |
+| 跨编译器布局 | 结构布局在 MSVC/GCC/Clang（x86-64）下必须一致，使不同工具链构建的宿主与插件可互相加载；由 `tests/abi/layout_static_assert.cpp` 在每次构建中强制 |
+| 插件自包含 | 插件必须静态链接其 C/C++ 运行库（MinGW `-static-libgcc -static-libstdc++`，MSVC `/MT`），否则跨工具链加载时因缺少 CRT 而失败 |
 
 ### 4.2 入口与生命周期
 
@@ -539,8 +542,8 @@ if __name__ == "__main__":
 
 ## 12. 契约冻结清单（M0 出口条件）
 
-- [ ] `plugin_api.h` 字段与对齐在 Windows/Linux、GCC/Clang/MSVC 下一致（`static_assert` 覆盖）
-- [ ] `plugin-manifest.schema.json` 通过 10 个真实插件样例校验
+- [x] `plugin_api.h` 字段与对齐在 Windows/Linux、GCC/Clang/MSVC 下一致（`static_assert` 覆盖；`tests/abi/layout_static_assert.cpp`，2026-10-22 已在 GCC 16.1 与 MSVC 19.50 验证，Linux 端随 CI 补验）
+- [x] `plugin-manifest.schema.json` 通过 10 个真实插件样例校验（`api/schema/examples/`，6 正 4 反，`tests/schema/validate_manifest_examples.py`，2026-10-22 全过）
 - [ ] 每个能力的请求/响应消息冻结，附 3 个正例、3 个反例
 - [ ] 进程内/边车两条路径跑通同一 `hello` 插件
 - [ ] 版本协商与不兼容拒绝路径有自动化测试
