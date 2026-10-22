@@ -1,0 +1,16 @@
+{
+  "schema": "srsp.plugin/1",
+  "id": "org.example.badcap",
+  "name": "Bad Capability Name",
+  "version": "0.1.0",
+  "api": "1.0",
+  "kind": ["dynamics"],
+  "transport": {
+    "type": "inproc",
+    "library": { "linux-x86_64-gcc": "lib/libbad.so" }
+  },
+  "capabilities": [
+    { "name": "dynamics.solver", "version": "1.0", "alias": "dynamics" }
+  ],
+  "platforms": ["linux-x86_64"]
+}

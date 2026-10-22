@@ -1,0 +1,13 @@
+{
+  "schema": "srsp.plugin/1",
+  "id": "org.example.nocmd",
+  "name": "Sidecar Missing Command",
+  "version": "0.1.0",
+  "api": "1.0",
+  "kind": ["controller"],
+  "transport": { "type": "sidecar" },
+  "capabilities": [
+    { "name": "srsp.control/controller", "version": "1.0", "alias": "controller" }
+  ],
+  "platforms": ["windows-x86_64"]
+}

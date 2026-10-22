@@ -1,0 +1,20 @@
+{
+  "schema": "srsp.plugin/1",
+  "id": "org.srsp.examples.python_controller",
+  "name": "Python PD Controller",
+  "version": "0.1.0",
+  "api": "1.0",
+  "kind": ["controller"],
+  "description": "Sidecar plugin launched through srsp-bridge; transport is gRPC so no per-toolchain binary is needed.",
+  "vendor": { "name": "SRSP Team" },
+  "license": "Apache-2.0",
+  "transport": {
+    "type": "sidecar",
+    "command": "python -m srsp_bridge --plugin org.srsp.examples.python_controller --endpoint ${ENDPOINT} --token ${TOKEN} --shm ${SHM}"
+  },
+  "capabilities": [
+    { "name": "srsp.control/controller", "version": "1.0", "alias": "controller" }
+  ],
+  "platforms": ["windows-x86_64", "linux-x86_64"],
+  "permissions": ["log"]
+}
