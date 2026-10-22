@@ -229,3 +229,26 @@
 - 摘要：按当前实况同步文档：README 环境验证表改为四工具链（GCC/Clang-UCRT64/Clang-CLANG64/MSVC）与已装依赖（Qt 6.11.1、gRPC 1.82、protobuf 35.1、Eigen3、UCRT64 Python），新增 7.3 多工具链构建小节；05 安装命令补 clang/compiler-rt 并修正 catch 包名、补 qt6-tools；01 ADR A12 扩展为多工具链；02 布局条款补 Clang 验证证据；06 补 Qt 6.11.1 与 windeployqt6 基线。
 - 验证：五个文档相对链接检查 0 失效；GCC 预设重建 + ctest 3/3 通过（文档改动无构建影响）。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-msys2-multienv-toolchain-plan.md`
+
+### V10 — 规划：清理非 deepseek/kimi 的 AI Agent 入口配置
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-22-agent-config-cleanup-plan.md`
+- 摘要：盘点工程内 AI agent 配置：待删 CLAUDE.md/GEMINI.md/.cursorrules/.github/copilot-instructions.md 四个入口文件；保留 AGENTS.md、ai-models.json、tools/ai、.vscode 等通用设施与 deepseek/kimi 工作区；列出 README 与 AGENTS 的引用同步点；就 ai-models.json 是否裁剪提出 A/B 两方案（建议 A 保留注册表）。
+- 验证：计划内相对链接全部有效；清单来自实测（根目录与 .github/.vscode 列表、全仓库 grep 引用点）；未执行删除。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-agent-config-cleanup-plan.md`
+
+### V11 — 删除非 deepseek/kimi 的 AI Agent 入口配置（方案 A）
+
+- 类型：删除
+- 文件：
+  - `CLAUDE.md`
+  - `GEMINI.md`
+  - `.cursorrules`
+  - `.github/copilot-instructions.md`
+  - `README.md`
+  - `AGENTS.md`
+- 摘要：按方案 A 删除 Claude/Gemini/Cursor/Copilot 四个转发入口文件（.github 目录随之消失）；保留 AGENTS.md、ai-models.json（全量注册表）、tools/ai、.vscode 等通用设施与 deepseek/kimi 工作区；README 结构图与入口清单、AGENTS §7 入口表同步更新。
+- 验证：全仓库搜索无残留引用（仅历史日志与历史计划命中，按规则不追改）；ai-models.json 解析通过；Resolve-SrspAiModel 对 deepseek/kimi 正常；ctest 3/3 通过。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-agent-config-cleanup-plan.md`

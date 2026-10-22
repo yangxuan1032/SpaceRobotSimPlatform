@@ -80,7 +80,6 @@
 ```
 SpaceRobotSimPlatform/
 ├─ AGENTS.md                         # 模型无关的 Agent 规则（DSH/Codex 等自动加载）
-├─ CLAUDE.md / GEMINI.md             # 其他模型工具入口（转发到 AGENTS.md）
 ├─ ai-models.json                    # 模型命名空间注册表
 ├─ CMakeLists.txt / CMakePresets.json
 ├─ api/
@@ -88,7 +87,7 @@ SpaceRobotSimPlatform/
 │  ├─ include/srsp/core_api.h        # 宿主侧 C API（draft 0.1，供 CLI/SDK 嵌入内核）
 │  ├─ proto/srsp/v1/plugin.proto     # 控制面消息与边车服务
 │  └─ schema/                        # JSON Schema 与清单样例（examples/）
-├─ deepseek/                         # DeepSeek 命名空间（其他模型为 claude/、gpt/…）
+├─ deepseek/                         # DeepSeek 命名空间（Kimi 为同级 kimi/）
 │  ├─ Temp/                          # 缓存（不纳入版本管理）
 │  └─ Logs/
 │     ├─ Plan/                       # 方案与规划
@@ -116,12 +115,12 @@ SpaceRobotSimPlatform/
 
 本仓库的 agent 规则与工具是**模型无关**的：DeepSeek、Claude、GPT、Gemini、Qwen、GLM、Llama、Mistral、Grok、Kimi、Doubao、ERNIE 等均可使用，各自拥有独立命名空间。
 
-- **命名空间**：`<model>/`，唯一真源 [`ai-models.json`](ai-models.json)；例如 DeepSeek → `deepseek/`，Claude → `claude/`。
+- **命名空间**：`<model>/`，唯一真源 [`ai-models.json`](ai-models.json)；当前仓库内实际存在 `deepseek/` 与 `kimi/` 两个工作区。
 - **缓存**：`<model>/Temp/`；构建目录 `<model>/Temp/build/<preset>`。
 - **计划**：`<model>/Logs/Plan/YYYY-MM-DD-<slug>.md`。
 - **日志**：`<model>/Logs/Log/CHANGELOG.md`，按日期分组、同日 `V1/V2/...`，只记日期不记时间。
 - **共享脚本**：[`tools/ai/`](tools/ai/README.md)，全部通过 `-Model <slug>` 或 `SRSP_AI_MODEL` 解析命名空间。
-- **入口文件**：[`AGENTS.md`](AGENTS.md)（DSH/Codex）、[`CLAUDE.md`](CLAUDE.md)、[`GEMINI.md`](GEMINI.md)、[`.cursorrules`](.cursorrules)、[Copilot 指令](.github/copilot-instructions.md)。
+- **入口文件**：只保留 [`AGENTS.md`](AGENTS.md)（DSH/Codex 等直接读取；无专用入口的工具同样读取本文件）。
 
 ```powershell
 # Windows PowerShell 默认策略可能拦截本地脚本，按需仅对当前进程放开
