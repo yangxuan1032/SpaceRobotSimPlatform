@@ -39,6 +39,14 @@
       }
     },
     {
+      "name": "base-clang",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-ffp-contract=off"
+      }
+    },
+    {
       "name": "win-ucrt64-debug",
       "displayName": "Windows UCRT64 Debug (GCC)",
       "description": "Requires MSYS2 UCRT64; launch from the MSYS2 shell or tools/env/launch-vscode.ps1",
@@ -90,6 +98,38 @@
       "inherits": "win-vcpkg-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "win-ucrt64-clang-debug",
+      "displayName": "Windows UCRT64 Debug (Clang, libstdc++)",
+      "description": "Clang from the UCRT64 environment: links the same libstdc++ as the GCC preset, so C++ objects stay ABI-compatible. Second compiler for layout asserts, clang-tidy and ASan",
+      "inherits": "base-clang",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/clang.exe",
+        "CMAKE_CXX_COMPILER": "C:/msys64/ucrt64/bin/clang++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/ninja.exe"
+      }
+    },
+    {
+      "name": "win-ucrt64-clang-release",
+      "displayName": "Windows UCRT64 Release (Clang, libstdc++)",
+      "inherits": "win-ucrt64-clang-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "win-clang64-debug",
+      "displayName": "Windows CLANG64 Debug (libc++, verification only)",
+      "description": "CLANG64 environment (libc++ / libunwind runtime). Verification and sanitizer tier only: never ship these binaries. cmake/ninja are reused from UCRT64",
+      "inherits": "base-clang",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "C:/msys64/clang64/bin/clang.exe",
+        "CMAKE_CXX_COMPILER": "C:/msys64/clang64/bin/clang++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/ninja.exe"
       }
     },
     {
@@ -148,6 +188,18 @@
       "configurePreset": "win-vcpkg-release"
     },
     {
+      "name": "win-ucrt64-clang-debug",
+      "configurePreset": "win-ucrt64-clang-debug"
+    },
+    {
+      "name": "win-ucrt64-clang-release",
+      "configurePreset": "win-ucrt64-clang-release"
+    },
+    {
+      "name": "win-clang64-debug",
+      "configurePreset": "win-clang64-debug"
+    },
+    {
       "name": "linux-gcc-debug",
       "configurePreset": "linux-gcc-debug"
     },
@@ -189,6 +241,24 @@
     {
       "name": "win-vcpkg-release",
       "configurePreset": "win-vcpkg-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "win-ucrt64-clang-debug",
+      "configurePreset": "win-ucrt64-clang-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "win-ucrt64-clang-release",
+      "configurePreset": "win-ucrt64-clang-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "win-clang64-debug",
+      "configurePreset": "win-clang64-debug",
+      "environment": {
+        "PATH": "C:/msys64/clang64/bin;$penv{PATH}"
+      },
       "output": { "outputOnFailure": true }
     },
     {

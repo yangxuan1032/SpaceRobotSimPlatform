@@ -13,6 +13,7 @@ mingw-w64-ucrt-x86_64-pkgconf
 mingw-w64-ucrt-x86_64-gdb
 mingw-w64-ucrt-x86_64-clang
 mingw-w64-ucrt-x86_64-clang-tools-extra
+mingw-w64-ucrt-x86_64-compiler-rt
 mingw-w64-ucrt-x86_64-doxygen
 mingw-w64-ucrt-x86_64-graphviz
 
@@ -69,6 +70,7 @@ mingw-w64-ucrt-x86_64-pybind11
 mingw-w64-ucrt-x86_64-python-pip
 
 # --- testing ---------------------------------------------------------------
-mingw-w64-ucrt-x86_64-catch2
+# Catch2 v3 ships as package 'catch' (not 'catch2'); see docs/05 section 2.3.
+mingw-w64-ucrt-x86_64-catch
 mingw-w64-ucrt-x86_64-benchmark
 mingw-w64-ucrt-x86_64-gtest

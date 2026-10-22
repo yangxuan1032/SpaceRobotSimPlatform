@@ -542,7 +542,7 @@ if __name__ == "__main__":
 
 ## 12. 契约冻结清单（M0 出口条件）
 
-- [x] `plugin_api.h` 字段与对齐在 Windows/Linux、GCC/Clang/MSVC 下一致（`static_assert` 覆盖；`tests/abi/layout_static_assert.cpp`，2026-10-22 已在 GCC 16.1 与 MSVC 19.50 验证，Linux 端随 CI 补验）
+- [x] `plugin_api.h` 字段与对齐在 Windows/Linux、GCC/Clang/MSVC 下一致（`static_assert` 覆盖；`tests/abi/layout_static_assert.cpp`，2026-10-22 已在 GCC 16.1、Clang 22.1.8（libstdc++ 与 libc++ 两种运行时）与 MSVC 19.50 验证，Linux 端随 CI 补验）
 - [x] `plugin-manifest.schema.json` 通过 10 个真实插件样例校验（`api/schema/examples/`，6 正 4 反，`tests/schema/validate_manifest_examples.py`，2026-10-22 全过）
 - [ ] 每个能力的请求/响应消息冻结，附 3 个正例、3 个反例
 - [ ] 进程内/边车两条路径跑通同一 `hello` 插件
