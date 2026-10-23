@@ -1,21 +1,22 @@
 # M0 执行计划：契约冻结与骨架闭环
 
 - 日期：2026-10-22
-- 状态：规划中
+- 状态：实施中（环境与契约部分已完成，内核/CLI/双传输/CI 待建；2026-10-23 回填）
 - 提出人：用户
 - 关联文档：[README](../../../README.md)、[01 总体架构](../../../docs/01-architecture.md)、[02 插件契约](../../../docs/02-plugin-contract.md)、[03 数据契约](../../../docs/03-data-contracts.md)、[04 技术栈](../../../docs/04-subsystems-and-stack.md)、[05 MSYS2 环境](../../../docs/05-msys2-dev-environment.md)、[06 打包](../../../docs/06-packaging.md)、[07 路线图](../../../docs/07-roadmap-risks.md)、[架构与技术栈规划](2026-10-20-srsp-architecture.md)
 
 ## 1. 背景与目标
 
-`docs/07` §3 把 M0 定义为「契约与走通骨架」，当前仓库正处在 M0 之前：架构文档 01–07 与 `api/` 契约草案已经在库，`examples/hello_plugin` 也在 CHANGELOG V1 中记录过 GCC 16.1.0 编译并运行通过。但真正的 M0 链路还没闭合——
+`docs/07` §3 把 M0 定义为「契约与走通骨架」。截至 **2026-10-23**，环境与契约两层已经落地，差距集中在实现层：
 
-- 没有内核（无 `src/`）：注册表、调度、插件宿主、诊断全部缺失；
-- 没有 `srsp-cli`：`demo` / `validate` 这些验收命令不存在；
-- 双传输只完成了一半：C++ 进程内 hello 有，Python 边车只是「目标形态」的注释性示例，且显式不参与构建；
-- 没有 CI（`.github` 下只有 Copilot 说明）；
-- 本机 `cmake` / `ninja` 未安装（`docs/05` §2.4 已如实记录），所以连现有构建都无法复验。
+- ✅ **环境**：CMake 4.4.0 / Ninja 1.13.2 / Catch2 / Clang 22.1.8 / Qt 6.11.1 / gRPC 1.82 / protobuf 35.1 / Eigen3 已装；四套工具链（GCC、Clang-UCRT64、Clang-CLANG64、MSVC）各自 `ctest` 3/3；
+- ✅ **契约**：ABI 布局断言（`tests/abi`）、manifest 10 样例（`api/schema/examples` + jsonschema 校验）、宿主侧 `core_api.h` v0 已落地；
+- ❌ **没有内核**（无 `src/`）：注册表、调度、插件宿主、诊断全部缺失；
+- ❌ **没有 `srsp-cli`**：`demo` / `validate` 这些验收命令不存在；
+- ❌ **双传输只完成了一半**：C++ 进程内 hello 有，Python 边车仍是「目标形态」示例，不参与构建；
+- ❌ **没有 CI**：`.github/` 已随 Agent 入口清理移除。
 
-**目标**：4 周内达成 `docs/07` §3 的 M0 出口判据——新成员按 README 从零构建成功（≤30 分钟）、CI 绿（Windows + Linux）、双传输 demo 可复现且输出一致。
+**目标**：达成 `docs/07` §3 的 M0 出口判据——新成员按 README 从零构建成功（≤30 分钟）、CI 绿（Windows + Linux）、双传输 demo 可复现且输出一致。
 
 ## 2. 现状盘点（差距分析）
 
@@ -156,11 +157,13 @@ T5 Qt（独立）        T6 CI（贯穿）
 
 ## 6. 首批可执行动作（72 小时内）
 
-1. `pacman -S --needed mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-ccache mingw-w64-ucrt-x86_64-catch2 mingw-w64-ucrt-x86_64-gdb`；
-2. 用 `win-ucrt64-debug` 预设配置 + 构建 + `ctest`，把耗时写进执行记录；
-3. 建 `src/core`、`apps/cli`、`tests/{unit,abi,conformance}` 目录与最小 CMake 接入，顶层打开 `add_subdirectory`；
-4. 起草 `api/schema/srm.schema.json`（先覆盖浮基 + 关节 + 传感器安装三类节点）；
-5. 起草 `.github/workflows/ci.yml` 的 windows-msys2 job，先只跑 hello 用例。
+| # | 动作 | 状态 |
+|---|---|---|
+| 1 | `pacman` 安装 CMake / Ninja / ccache / Catch2 / gdb（`catch` 而非 `catch2`） | ✅ 2026-10-22 完成 |
+| 2 | 用 `win-ucrt64-debug` 预设配置 + 构建 + `ctest`，记录耗时 | ✅ 完成（配置 ~4 s，构建 ~10 s，ctest 3/3） |
+| 3 | 建 `src/core`、`apps/cli`、`tests/{unit,abi,conformance}` 目录与最小 CMake 接入 | ⏳ 部分：`tests/abi`、`tests/schema` 已建；`src/core`、`apps/cli`、`tests/unit` 未建 |
+| 4 | 起草 `api/schema/srm.schema.json`（浮基 + 关节 + 传感器安装三类节点） | ❌ 未开始 |
+| 5 | 起草 `.github/workflows/ci.yml` 的 windows-msys2 job | ❌ 未开始 |
 
 ## 7. 风险与待确认
 
@@ -188,7 +191,13 @@ T5 Qt（独立）        T6 CI（贯穿）
 
 | 日期 | 动作 | 结果 |
 |---|---|---|
-| 2026-10-22 | 依据 docs/01–07 与仓库实际状态建立计划 | 待执行 |
+| 2026-10-22 | 依据 docs/01–07 与仓库实际状态建立计划 | 完成 |
+| 2026-10-22 | 阶段 0：安装 CMake 4.4.0 / Ninja 1.13.2 / ccache / Catch2；`win-ucrt64-debug` 配置+构建+ctest | 3/3 通过 |
+| 2026-10-22 | 阶段 1（部分）：ABI 增补 + 布局断言、manifest schema 工具链标签 + 10 样例、`core_api.h` v0 | GCC/MSVC/Clang×2 验证通过 |
+| 2026-10-22 | 阶段 2/3 前置：Clang（UCRT64/CLANG64）与 MSVC 预设；四端 ctest 各 3/3；清理 7.1 GiB 重复工具链 | 完成 |
+| 2026-10-23 | 清理 `deepseek/Temp/tmp` 三处探测残留（git-askpass / toolchain-probe / sentinel） | tmp 归零 |
+| 2026-10-23 | 状态回填：本文档改「实施中」，同步 §1 现状、§6 首批动作状态 | 本次 |
+| 2026-10-23 | 阶段 1 收尾：T1.4 版本协商测试（`tests/unit/abi_negotiation.cpp`）、T1.5 错误码表（`api/error_codes.md`） | 四端各 4/4 通过；docs/02 §12 完成 4/6 |
 
 ## 10. 修订记录
 
@@ -196,3 +205,4 @@ T5 Qt（独立）        T6 CI（贯穿）
 |---|---|---|
 | 2026-10-22 | V1 | 初稿：现状盘点、6 个工作流、4 周排期、出口验收与决策项 |
 | 2026-10-22 | V2 | 补充沙箱实测：`pacman`/`bash` 无法在 DSH 沙箱内启动，安装类动作需完全权限会话 |
+| 2026-10-23 | V3 | 状态改为「实施中」；回填 §1 现状、§6 动作状态与执行记录 |

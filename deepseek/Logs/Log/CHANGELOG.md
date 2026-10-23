@@ -252,3 +252,28 @@
 - 摘要：按方案 A 删除 Claude/Gemini/Cursor/Copilot 四个转发入口文件（.github 目录随之消失）；保留 AGENTS.md、ai-models.json（全量注册表）、tools/ai、.vscode 等通用设施与 deepseek/kimi 工作区；README 结构图与入口清单、AGENTS §7 入口表同步更新。
 - 验证：全仓库搜索无残留引用（仅历史日志与历史计划命中，按规则不追改）；ai-models.json 解析通过；Resolve-SrspAiModel 对 deepseek/kimi 正常；ctest 3/3 通过。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-agent-config-cleanup-plan.md`
+
+## 2026-10-23
+
+### V1 — 清理 Temp 探测残留并回填 M0 计划状态
+
+- 类型：配置
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+  - `deepseek/Temp/tmp/`
+- 摘要：删除 deepseek/Temp/tmp 下三处探测残留（git-askpass、toolchain-probe、system-commandline-sentinel-files），tmp 占用归零；M0 执行计划由「规划中」改为「实施中」，回填 §1 现状（环境/契约已完成、内核/CLI/双传输/CI 待建）、§6 首批动作状态与执行记录。
+- 验证：Temp/tmp 清空，业务缓存（build 30 MB、cache 9 MB）未动；计划文件状态与执行记录与实际进度一致；相对链接仍有效。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V2 — 完成 M0 阶段 1：ABI 版本协商测试与错误码表
+
+- 类型：新增
+- 文件：
+  - `tests/unit/abi_negotiation.cpp`
+  - `tests/unit/CMakeLists.txt`
+  - `tests/CMakeLists.txt`
+  - `api/error_codes.md`
+  - `docs/02-plugin-contract.md`
+- 摘要：T1.4：新增 tests/unit/abi_negotiation.cpp，覆盖四种拒绝/兼容路径（不支持主版本返回 NULL、缺 host 服务返回 SRSP_E_INVALID_ARGUMENT、截断 host 表仍可用、未知方法返回 SRSP_E_UNSUPPORTED），并接入 ctest；T1.5：新增 api/error_codes.md（12 个错误码的触发条件、责任方、处理建议、边车映射规则），docs/02 §4.5 引用、§12 冻结清单勾销两项。
+- 验证：四套工具链各 4/4 通过（GCC、Clang-UCRT64、Clang-CLANG64、MSVC）；新测试在 GCC 与 MSVC 下均通过；docs/02 §12 现为 4/6 项完成（剩能力消息冻结、双传输 hello）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
