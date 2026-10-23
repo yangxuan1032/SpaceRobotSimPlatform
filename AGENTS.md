@@ -85,6 +85,7 @@
   ```
 
 - 计划进入实施或完成后，同步更新状态与“执行记录”，保持计划与代码一致。
+- **计划文件的 git 策略**：只提交**未执行完**的规划；状态为「已完成 / 已废弃」的规划在提交时用 `git rm` 移出版本库（历史仍可在 `git log` 中追溯），分析/调研/摘要类文档除外，详见 `tools/ai/skills/work-log/SKILL.md` §3。
 - 旧目录 `deepseek/Log/Plan/` 已废弃，不得再写入；历史计划已迁移到 `deepseek/Logs/Plan/`。
 
 ---
@@ -119,7 +120,7 @@
 - 不伪造验证结果；受环境限制无法验证时如实说明（例如沙箱禁止命名管道导致 MSYS2 bash 无法启动）。
 - 中文用于文档与交流；**代码注释（含 Doxygen、行内注释、CMake/YAML/Schema 描述）与 commit message 一律英文**，文件名用英文。
 - 新增或修改模块时，公共接口与实现的变量/函数必须写 Doxygen（`@brief/@param/@return`），验收标准见 `tools/ai/skills/module-build/SKILL.md`。
-- **提交与推送必须先征得用户同意**：未明确同意不得 `git commit` / `git push`；多次未提交的修改在获准后按时间顺序编号提交，规则见 `tools/ai/skills/work-log/SKILL.md`。
+- **提交与推送必须先征得用户同意**：未明确同意不得 `git commit` / `git push`；需要沙箱升级时逐次申请、一次一命令，规则见 `tools/ai/skills/work-log/SKILL.md`；多次未提交的修改在获准后按时间顺序编号提交。
 - 共享 PowerShell 脚本保持 **ASCII 源码**，中文文案放在 `tools/ai/labels.json`（UTF-8 数据文件）；避免 Windows PowerShell 5.1 把无 BOM 的 UTF-8 源码按 ANSI 解析。
 - 执行策略拦截脚本时，仅对当前进程放开（不修改系统设置）：
 

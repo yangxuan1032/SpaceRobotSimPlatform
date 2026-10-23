@@ -57,7 +57,7 @@ tools/ai/
 |---|---|---|
 | [`skills/module-build/SKILL.md`](skills/module-build/SKILL.md) | 建/改模块 | Doxygen 必写；注释英文；构建与注释扫描作验收 |
 | [`skills/module-test/SKILL.md`](skills/module-test/SKILL.md) | 单元/集成测试 | 单元 `<model>/ModuleTest/unit/`、集成 `<model>/ModuleTest/integration/`；ctest 注册 |
-| [`skills/work-log/SKILL.md`](skills/work-log/SKILL.md) | 日志与提交 | 固定格式；提交/推送先征询；多次修改按序号批量提交（英文提交信息） |
+| [`skills/work-log/SKILL.md`](skills/work-log/SKILL.md) | 日志与提交 | 固定格式；提交/推送先征询；需要沙箱升级时逐次申请；已执行规划移出版本库；多次修改按序号批量提交（英文提交信息） |
 
 ## 常用命令
 
