@@ -277,3 +277,12 @@
 - 摘要：T1.4：新增 tests/unit/abi_negotiation.cpp，覆盖四种拒绝/兼容路径（不支持主版本返回 NULL、缺 host 服务返回 SRSP_E_INVALID_ARGUMENT、截断 host 表仍可用、未知方法返回 SRSP_E_UNSUPPORTED），并接入 ctest；T1.5：新增 api/error_codes.md（12 个错误码的触发条件、责任方、处理建议、边车映射规则），docs/02 §4.5 引用、§12 冻结清单勾销两项。
 - 验证：四套工具链各 4/4 通过（GCC、Clang-UCRT64、Clang-CLANG64、MSVC）；新测试在 GCC 与 MSVC 下均通过；docs/02 §12 现为 4/6 项完成（剩能力消息冻结、双传输 hello）。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V3 — 整理架构与数据交互总览文档
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-23-architecture-summary.md`
+- 摘要：依据 docs/01-07 与 api/ 现状输出一页式架构摘要：分层（L0-L3）与内核模块、宏步运行时与快照/背压、插件能力与生命周期、主机↔插件的 C ABI 与边车 gRPC 协议、插件间只经数据总线的交互（话题表与数据流）、标准数据格式（单位/坐标系/TAI 时间、SRM、Arrow 状态表、BlobRef、场景/渲染协议、传感器帧、项目文件、MCAP、版本演进），并附实现进度对照。
+- 验证：计划内相对链接全部有效；内容与 docs/01-07、api/plugin_api.h、api/core_api.h、api/error_codes.md 一致；未改动代码。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-architecture-summary.md`
