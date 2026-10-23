@@ -286,3 +286,12 @@
 - 摘要：依据 docs/01-07 与 api/ 现状输出一页式架构摘要：分层（L0-L3）与内核模块、宏步运行时与快照/背压、插件能力与生命周期、主机↔插件的 C ABI 与边车 gRPC 协议、插件间只经数据总线的交互（话题表与数据流）、标准数据格式（单位/坐标系/TAI 时间、SRM、Arrow 状态表、BlobRef、场景/渲染协议、传感器帧、项目文件、MCAP、版本演进），并附实现进度对照。
 - 验证：计划内相对链接全部有效；内容与 docs/01-07、api/plugin_api.h、api/core_api.h、api/error_codes.md 一致；未改动代码。
 - 关联计划：`deepseek/Logs/Plan/2026-10-23-architecture-summary.md`
+
+### V4 — 调研机器人/空间环境/航天器仿真软件现状
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-23-simulator-landscape.md`
+- 摘要：按四类（通用机器人、空间机器人/OOS、轨道与 GNC、地球可视化）检索并整理 2026 年主流仿真软件：A 类 MuJoCo/MJX、Isaac Sim+Isaac Lab、Gazebo、Drake 等；B 类 Space ROS、mjorbit、OnOrbitROS；C 类 STK、GMAT、Orekit、Basilisk、Tudat、Nyx、FreeFlyer；给出横向对比矩阵与 Basilisk 对 GMAT/Orekit 的米级精度参考，结论是 SRSP 的差异化应压在确定性回放、空间环境+双原点可视化、能力寻址插件三点，而非 GPU-RL 吞吐。
+- 验证：内部相对链接 0 失效；外部来源均给出可访问链接（arXiv 2609.08010、NASA NTRS、Isaac Lab 文档、Gazebo releases、Basilisk 精度对比页、Nyx 论文等）；未改动代码。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-simulator-landscape.md`
