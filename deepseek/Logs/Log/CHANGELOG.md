@@ -365,3 +365,37 @@
 - 摘要：按方案执行：新增规划与执行两条工作流（触发/步骤/门禁/产物/失败处理）；新增 module-build（Doxygen 强制、注释英文、构建与 CJK 扫描验收）、module-test（<model>/ModuleTest/{unit,integration}、用例与 CMake 接入规范）、work-log（日志格式、提交/推送征询、多次修改的编号批量提交）；AGENTS §4 补三条硬规则并新增 §8 工作流与技能索引；tools/ai/README 增加工作流与技能章节。
 - 验证：5 个新文件与 2 处文档更新完成；AGENTS 6 个链接、tools/ai/README 15 个链接、新文件内部链接均 0 失效；未改动代码，构建与测试状态不变；按新规则本次未 commit/push，已向用户提交提交计划征询。
 - 关联计划：`deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
+
+### V11 — 工作日志技能增加临时操作权限申请协议
+
+- 类型：文档
+- 文件：
+  - `tools/ai/skills/work-log/SKILL.md`
+  - `AGENTS.md`
+  - `tools/ai/README.md`
+- 摘要：work-log 技能新增 §3 临时操作权限：区分 A 业务授权（commit/push）与 B 沙箱执行授权（单命令 danger-full-access 升级），给出申请模板、可行性边界（agent 不能自授权/不能持久化/审批 never 时自动拒绝）、四类阻塞与回退（sh.exe 管道、拒绝、无凭据、非快进）、五条禁止；AGENTS §4 与 tools/ai/README 同步引用。
+- 验证：三份文件链接校验 0 失效；协议与 DSH 实际机制一致（本会话已实测：升级需用户确认、never 时拒绝、sh.exe 管道不可用需 GIT_ASKPASS）；未改动代码；按规则未提交，等待用户同意。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
+
+### V12 — 工作日志技能增加计划文件 git 策略
+
+- 类型：文档
+- 文件：
+  - `tools/ai/skills/work-log/SKILL.md`
+  - `AGENTS.md`
+  - `tools/ai/README.md`
+- 摘要：work-log 新增 §3 计划文件 git 策略：Planning/Confirmed/In-progress 入库，已完成/已废弃用 git rm 移出版本库（历史保留），分析/调研/摘要类豁免；给出带锚点的判定命令（修正了'实施中（…已完成…）'被误判的问题）；AGENTS §2 与 tools/ai/README 同步引用。
+- 验证：修正后的判定命令重扫 13 份计划：4 份命中（agent-workspace-config、srsp-architecture、agent-config-cleanup-plan、agent-workflow-skill-design），2 份实施中与 3 份知识资产正确保留；三份文档链接 0 失效；尚未执行 git rm，等待用户同意。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
+
+### V13 — 按计划文件 git 策略移出 4 份已执行计划
+
+- 类型：删除
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-20-agent-workspace-config.md`
+  - `deepseek/Logs/Plan/2026-10-20-srsp-architecture.md`
+  - `deepseek/Logs/Plan/2026-10-22-agent-config-cleanup-plan.md`
+  - `deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
+- 摘要：按 work-log §3 计划文件 git 策略，将状态为「已完成」的 4 份可执行规划用 git rm 移出版本库；分析/调研/摘要类文档（architecture-summary、simulator-landscape、kimi-design-analysis、design-review）与未执行完的计划（M0、msys2 多环境、multilang、extension-roadmap、roadmap-optimization）保留。
+- 验证：Plan 目录剩余 6 份计划 + README，分类与策略一致；被移出文件仍可通过 git log/git show 追溯；本次仅执行 git rm，未 commit/push（等待用户同意）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
