@@ -117,7 +117,9 @@
 - 不删除用户内容；确需删除或覆盖时，在日志中说明原因。
 - 验证优先级：单元测试/构建 > JSON/YAML/脚本解析 > 链接与路径检查 > 人工核对。
 - 不伪造验证结果；受环境限制无法验证时如实说明（例如沙箱禁止命名管道导致 MSYS2 bash 无法启动）。
-- 中文用于文档与交流，代码标识符、提交信息、文件名用英文。
+- 中文用于文档与交流；**代码注释（含 Doxygen、行内注释、CMake/YAML/Schema 描述）与 commit message 一律英文**，文件名用英文。
+- 新增或修改模块时，公共接口与实现的变量/函数必须写 Doxygen（`@brief/@param/@return`），验收标准见 `tools/ai/skills/module-build/SKILL.md`。
+- **提交与推送必须先征得用户同意**：未明确同意不得 `git commit` / `git push`；多次未提交的修改在获准后按时间顺序编号提交，规则见 `tools/ai/skills/work-log/SKILL.md`。
 - 共享 PowerShell 脚本保持 **ASCII 源码**，中文文案放在 `tools/ai/labels.json`（UTF-8 数据文件）；避免 Windows PowerShell 5.1 把无 BOM 的 UTF-8 源码按 ANSI 解析。
 - 执行策略拦截脚本时，仅对当前进程放开（不修改系统设置）：
 
@@ -166,3 +168,23 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 仓库只维护 `AGENTS.md` 一个入口（2026-10-22 起移除 Claude / Gemini / Cursor / Copilot 的转发文件）。没有专用入口文件的工具直接读取本文件；命名空间仍按 `ai-models.json` 解析，当前实际使用的命名空间为 `deepseek` 与 `kimi`。
 
 若本文件与更高优先级的系统/开发者指令冲突，以后者为准。
+
+---
+
+## 8. 工作流与技能（模型无关）
+
+两条工作流与三个基础技能位于 `tools/ai/`，任何模型都可使用：
+
+| 名称 | 路径 | 用途 |
+|---|---|---|
+| 规划工作流 | [`tools/ai/workflows/planner.md`](tools/ai/workflows/planner.md) | 需求 → 差距分析 → 计划落盘 → 决策清单 |
+| 执行工作流 | [`tools/ai/workflows/executor.md`](tools/ai/workflows/executor.md) | 按计划实施 → 构建/测试 → 日志 → 征询提交 |
+| 模块构建技能 | [`tools/ai/skills/module-build/SKILL.md`](tools/ai/skills/module-build/SKILL.md) | 建/改模块；Doxygen 强制；注释英文 |
+| 模块测试技能 | [`tools/ai/skills/module-test/SKILL.md`](tools/ai/skills/module-test/SKILL.md) | 单元测试 `<model>/ModuleTest/unit/`、集成测试 `<model>/ModuleTest/integration/` |
+| 工作日志技能 | [`tools/ai/skills/work-log/SKILL.md`](tools/ai/skills/work-log/SKILL.md) | 日志格式；提交/推送征询；多次修改的编号批量提交 |
+
+约定：
+
+- 先规划后执行：没有计划文件不得直接写实现（小修除外，需在回复中说明）；
+- 技能中的验收命令由执行者自证，结果写进日志「验证」字段；
+- 技能与工作流本身变更需走同样流程（计划 → 实施 → 日志 → 征询提交）。
