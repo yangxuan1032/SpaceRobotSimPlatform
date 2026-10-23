@@ -449,3 +449,15 @@
 - 摘要：T2.4：Diagnostics（severity/code/message/context、JSON 单行渲染含转义、容量上限、可选 sink）；T2.3 后半：Scheduler（固定步长宏步循环、暂停时发 debug 诊断、run(n) 返回实际执行步数）；新增 9 个用例（diagnostics 5、scheduler 4）。内核骨架 T2.1–T2.4 全部完成。
 - 验证：UCRT64 GCC 9/9、UCRT64 Clang 9/9、CLANG64 4/4、MSVC 4/4；模块测试共 5 套件 27 个 TEST_CASE；新增源码 CJK 0；构建产物在 deepseek/Temp/build/<preset>。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V17 — 新增开发问题记录 ISSUES 与技能规范
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Log/ISSUES.md`
+  - `tools/ai/skills/work-log/SKILL.md`
+  - `AGENTS.md`
+  - `tools/ai/README.md`
+- 摘要：新增 <model>/Logs/Log/ISSUES.md（与 CHANGELOG 同目录），按 P1..Pn 记录 2026-10-22/23 两天共 14 条开发问题（沙箱管道、包名、MSVC 抢占、跨工具链 CRT、Python 选择、变量污染、git 凭据/代理、提交信息拆分、BOM、扫描口径、Catch2 ABI、未构建测试注册、计划状态误判），每条含现象/根因/解决/验证；work-log 技能拆为 §2.1 变更日志与 §2.2 问题记录（触发条件、格式、必填项、复用规则）；AGENTS §3 与 tools/ai/README 同步。
+- 验证：ISSUES.md 14 条与 CHANGELOG 历史一致；四份文档链接校验 0 失效；问题条目均来自本会话实测记录。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
