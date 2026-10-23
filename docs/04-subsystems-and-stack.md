@@ -407,3 +407,5 @@ MATLAB/Simulink 通过边车（MATLAB Engine 或编译为 C 共享库）；Julia
 | 能力寻址插件 | 场景依赖能力而非插件 ID，院所既有算法（Python/MATLAB/C++）可直接接入 |
 
 对应的非目标已写入 [01 §1.3](01-architecture.md)（不做 GPU 并行 RL 训练平台），风险见 [07 R15](07-roadmap-risks.md)。
+
+调研中竞品的其余优势能力（GPU 批量并行、可微分物理、高保真接触、合成数据管线、任务级分析、FSW/HIL、地球 3D Tiles 等）已整理为**预留扩展点**，不进入 v1 实施：[07 §11](07-roadmap-risks.md) 给出能力映射与触发条件，[02 §13](02-plugin-contract.md) 给出预留能力 ID 与调用约定。

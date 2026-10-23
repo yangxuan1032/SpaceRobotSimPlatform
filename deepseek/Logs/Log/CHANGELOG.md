@@ -319,3 +319,16 @@
 - 摘要：落地 D-13~D-16：07 的 M0 去掉 Qt 空壳并加 tests/bench 骨架、M1 增加 Qt 空壳（renderer.null）、W7 互操作与对标脚本行、M2 增加容差表成文与环境对标改 Orekit/GMAT、前两周清单第 10 项纳入容差表；03 新增 2.5 精度与容差分级（L1 位级/L2 相对/L3 物理量级 + Basilisk 参考基线）；M0 计划阶段 5 标注移入 M1 并调整排期；优化方案状态改「已确认」并回填执行记录。
 - 验证：四份文档内部相对链接 0 失效；容差数字与 Basilisk 官方对比页一致（0.02-1.2 m / 7-39 m / 17-72 m）；未改动代码。
 - 关联计划：`deepseek/Logs/Plan/2026-10-23-roadmap-optimization-plan.md`
+
+### V7 — 将竞品优势能力登记为预留扩展点（不进入 v1）
+
+- 类型：文档
+- 文件：
+  - `docs/01-architecture.md`
+  - `docs/02-plugin-contract.md`
+  - `docs/04-subsystems-and-stack.md`
+  - `docs/07-roadmap-risks.md`
+  - `deepseek/Logs/Plan/2026-10-23-extension-roadmap.md`
+- 摘要：把调研中 15 项竞品优势（GPU 批量并行、可微分物理、高保真接触、柔性/流体、传感器高保真、合成数据管线、Gym 训练环境、策略部署、任务级分析、多航天器、FSW/HIL、3D Tiles、影视级渲染、生态桥接等）登记为后续优化目标：07 新增 §11（E1-E6 扩展机制 + C1-C15 映射 + 触发条件），02 新增 §13（预留能力 ID 与 reserved 调用约定：未实现返回 SRSP_E_UNSUPPORTED），01 §1.3 非目标补互操作/批量接口预留，04 §14.3 指向预留路线。
+- 验证：五份文档内部相对链接 0 失效；预留能力均为占位、无代码实现；现有 ctest 不受影响（未改代码）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-extension-roadmap.md`
