@@ -1,13 +1,22 @@
 # tools/ai — 模型无关的 Agent 工具
 
-本目录是 SRSP 工作区所有 AI 模型共享的 agent 工具与模板。每个模型的数据仍保存在各自根目录：
+本目录是 SRSP 工作区所有 AI 模型共享的 agent 工具、工作流、技能与模板。每个模型的数据仍保存在各自根目录：
 
 ```
 <project-root>/<model>/
 ├─ Temp/                 # 缓存
+├─ ModuleTest/           # 开发期测试（unit / integration）
 └─ Logs/
    ├─ Plan/
    └─ Log/CHANGELOG.md
+```
+
+```
+tools/ai/
+├─ workflows/            # 工作流（planner / executor）
+├─ skills/               # 技能（module-build / module-test / work-log）
+├─ templates/            # 计划、日志头、模型 README 模板
+└─ *.ps1                 # 环境注入、计划/日志生成、模型解析
 ```
 
 ## 模型解析
@@ -34,6 +43,21 @@
 | [`Resolve-AiModel.ps1`](Resolve-AiModel.ps1) | 被其他脚本点号引用的解析器与路径帮助函数 |
 
 中文标签与状态映射在 [`labels.json`](labels.json)；脚本本身保持纯 ASCII，兼容 Windows PowerShell 5.1。
+
+## 工作流
+
+| 文件 | 用途 |
+|---|---|
+| [`workflows/planner.md`](workflows/planner.md) | 规划：需求 → 差距分析 → 计划落盘 → 决策清单（不写实现） |
+| [`workflows/executor.md`](workflows/executor.md) | 执行：按计划实施 → 构建/测试 → 日志 → 征询提交 |
+
+## 技能
+
+| 文件 | 用途 | 关键规则 |
+|---|---|---|
+| [`skills/module-build/SKILL.md`](skills/module-build/SKILL.md) | 建/改模块 | Doxygen 必写；注释英文；构建与注释扫描作验收 |
+| [`skills/module-test/SKILL.md`](skills/module-test/SKILL.md) | 单元/集成测试 | 单元 `<model>/ModuleTest/unit/`、集成 `<model>/ModuleTest/integration/`；ctest 注册 |
+| [`skills/work-log/SKILL.md`](skills/work-log/SKILL.md) | 日志与提交 | 固定格式；提交/推送先征询；多次修改按序号批量提交（英文提交信息） |
 
 ## 常用命令
 

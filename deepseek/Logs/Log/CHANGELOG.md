@@ -332,3 +332,36 @@
 - 摘要：把调研中 15 项竞品优势（GPU 批量并行、可微分物理、高保真接触、柔性/流体、传感器高保真、合成数据管线、Gym 训练环境、策略部署、任务级分析、多航天器、FSW/HIL、3D Tiles、影视级渲染、生态桥接等）登记为后续优化目标：07 新增 §11（E1-E6 扩展机制 + C1-C15 映射 + 触发条件），02 新增 §13（预留能力 ID 与 reserved 调用约定：未实现返回 SRSP_E_UNSUPPORTED），01 §1.3 非目标补互操作/批量接口预留，04 §14.3 指向预留路线。
 - 验证：五份文档内部相对链接 0 失效；预留能力均为占位、无代码实现；现有 ctest 不受影响（未改代码）。
 - 关联计划：`deepseek/Logs/Plan/2026-10-23-extension-roadmap.md`
+
+### V8 — 规划通用 Agent 工作流与三项基础技能
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
+- 摘要：设计模型无关的 Agent 配置：两条工作流（规划 planner / 执行 executor）、三个基础技能（module-build 含 Doxygen 强制规范、module-test 规定 <model>/ModuleTest/{unit,integration} 目录与用例要求、work-log 规定日志标准格式与提交/推送征询协议及多次未提交的编号批量提交规则）；给出落地步骤、演练判据、5 项决策（F-1~F-5）。
+- 验证：计划内相对链接全部有效；方案为纯设计，未创建技能文件、未改代码；本次按新规则未执行 commit/push，等待用户同意。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
+
+### V9 — 方案补充语言规则：注释与提交信息一律英文
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
+- 摘要：按用户第 6 条需求更新 Agent 配置方案：Doxygen 与行内注释、CMake/YAML/Schema 描述、commit message 一律英文；Markdown 文档与对话保持中文。补充注释语言扫描验收（源码不出现 CJK）与决策 F-6，记录现状核对结果。
+- 验证：现有源文件（api/include、examples）与 CMakeLists/CMakePresets/manifest schema 扫描均为纯英文，规则与现状一致无需返工；本次仍未提交，等待用户同意。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
+
+### V10 — 落地通用 Agent 工作流与三项基础技能
+
+- 类型：配置
+- 文件：
+  - `tools/ai/workflows/planner.md`
+  - `tools/ai/workflows/executor.md`
+  - `tools/ai/skills/module-build/SKILL.md`
+  - `tools/ai/skills/module-test/SKILL.md`
+  - `tools/ai/skills/work-log/SKILL.md`
+  - `AGENTS.md`
+  - `tools/ai/README.md`
+- 摘要：按方案执行：新增规划与执行两条工作流（触发/步骤/门禁/产物/失败处理）；新增 module-build（Doxygen 强制、注释英文、构建与 CJK 扫描验收）、module-test（<model>/ModuleTest/{unit,integration}、用例与 CMake 接入规范）、work-log（日志格式、提交/推送征询、多次修改的编号批量提交）；AGENTS §4 补三条硬规则并新增 §8 工作流与技能索引；tools/ai/README 增加工作流与技能章节。
+- 验证：5 个新文件与 2 处文档更新完成；AGENTS 6 个链接、tools/ai/README 15 个链接、新文件内部链接均 0 失效；未改动代码，构建与测试状态不变；按新规则本次未 commit/push，已向用户提交提交计划征询。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-agent-workflow-skill-design.md`
