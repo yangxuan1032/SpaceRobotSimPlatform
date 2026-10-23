@@ -213,7 +213,7 @@ typedef struct srsp_error {
 } srsp_error;
 ```
 
-`message`/`detail_json` 由被调方持有，有效期至下一次调用或 `shutdown`；调用方需要保留时必须复制。
+`message`/`detail_json` 由被调方持有，有效期至下一次调用或 `shutdown`；调用方需要保留时必须复制。错误码语义、责任方与处理建议见 [`api/error_codes.md`](../api/error_codes.md)。
 
 ---
 
@@ -546,5 +546,5 @@ if __name__ == "__main__":
 - [x] `plugin-manifest.schema.json` 通过 10 个真实插件样例校验（`api/schema/examples/`，6 正 4 反，`tests/schema/validate_manifest_examples.py`，2026-10-22 全过）
 - [ ] 每个能力的请求/响应消息冻结，附 3 个正例、3 个反例
 - [ ] 进程内/边车两条路径跑通同一 `hello` 插件
-- [ ] 版本协商与不兼容拒绝路径有自动化测试
-- [ ] 错误码表与诊断文案评审通过
+- [x] 版本协商与不兼容拒绝路径有自动化测试（`tests/unit/abi_negotiation.cpp`：不支持的主版本返回 NULL、缺 host 服务返回 `SRSP_E_INVALID_ARGUMENT`、截断 host 表仍可用、未知方法返回 `SRSP_E_UNSUPPORTED`）
+- [x] 错误码表与诊断文案评审通过（`api/error_codes.md`：12 个错误码的触发条件、责任方与处理建议）

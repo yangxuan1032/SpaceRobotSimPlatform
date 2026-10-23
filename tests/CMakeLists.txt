@@ -1,11 +1,12 @@
 # Test suite root. Groups:
 #   abi/         C ABI layout static asserts (toolchain-portability contract)
+#   unit/        version negotiation / rejection paths (docs/02 section 6)
 #   schema/      JSON Schema example validation (python + jsonschema)
-#   unit/        Catch2 unit tests          (added with the kernel in M0)
 #   conformance/ dual-transport consistency (added in M0, phase 3)
 #   bench/       performance baselines      (added in M0, phase 2+)
 
 add_subdirectory(abi)
+add_subdirectory(unit)
 
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
