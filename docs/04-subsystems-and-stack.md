@@ -375,3 +375,35 @@ MATLAB/Simulink 通过边车（MATLAB Engine 或编译为 C 共享库）；Julia
 - C++ 标准：`-std=c++20`（禁止依赖编译器扩展）；C++23 特性需特性测试宏保护。
 - 警告：`-Wall -Wextra -Wpedantic -Wconversion`（逐步开启），CI 中 `-Werror` 仅对新增代码。
 - 浮点：禁止 `-ffast-math`；`-ffp-contract=off`（保证确定性）。
+
+---
+
+## 14. 与同类仿真工具的定位对比（2026-10）
+
+> 完整调研见 `deepseek/Logs/Plan/2026-10-23-simulator-landscape.md`。这里只保留对技术选型有约束力的结论。
+
+### 14.1 四类工具与代表实现
+
+| 类别 | 代表 | 对 SRSP 的意义 |
+|---|---|---|
+| 通用机器人仿真 | MuJoCo/MJX、Isaac Sim + Isaac Lab、Gazebo、PyBullet、Drake | 接触、GPU 并行与 RL 生态的参照；**不与它们拼训练吞吐** |
+| 空间机器人 / OOS | mjorbit（MuJoCo + 航天器扩展）、Space ROS、OnOrbitROS、Astrobee 仿真 | 最接近的竞品；mjorbit 证明「复用成熟引擎 + 空间扩展」可行 |
+| 轨道与 GNC | STK、GMAT、Orekit、Basilisk、Tudat、Nyx、FreeFlyer | 空间环境的精度基准与对照实现 |
+| 可视化 / 地球渲染 | Cesium（CesiumJS、for Unreal/Unity）、STK 可视化 | 轨道尺度渲染的参照；我们以双原点 + 反转 Z 自研 |
+
+### 14.2 对选型的约束
+
+1. **接触与柔顺不重复造轮子**：v1 自研 `dynamics.rigid` 覆盖刚性与基础接触；高保真接触走 `dynamics.mujoco` 边车（MuJoCo 3.x），并在 M1 内做原型验证。
+2. **精度对标而非自证**：环境与轨道模块的验收必须给出与 **Orekit / GMAT（或 Basilisk）** 的同工况偏差表；参考 Basilisk 公开对比的做法（同初值、同模型参数、公开米级偏差），并把脚本入库为可复现基准。
+3. **容差分级**：跨工具/跨平台只承诺米级或相对容差（Basilisk 实测：无阻力 30 天约 0.02–1.2 m，Molniya 全摄动 7–39 m，400 km 带阻力 17–72 m）；同平台同构建才承诺位级一致（`state_hash`）。
+4. **互操作优先于替代**：对外提供 MJCF / MCAP / glTF / SRM 的导入导出，让用户的既有资产（MuJoCo 模型、录制数据）能进来，而不是要求迁移。
+
+### 14.3 差异化（写入产品定位）
+
+| 差异化 | 说明 |
+|---|---|
+| 工程级确定性 | 逐宏步 `state_hash`、可复现录制、同平台位级回放 |
+| 空间尺度可视化 | 双原点 + 反转 Z + eclipse + 星表，原生支持 10⁷ m 场景 |
+| 能力寻址插件 | 场景依赖能力而非插件 ID，院所既有算法（Python/MATLAB/C++）可直接接入 |
+
+对应的非目标已写入 [01 §1.3](01-architecture.md)（不做 GPU 并行 RL 训练平台），风险见 [07 R15](07-roadmap-risks.md)。
