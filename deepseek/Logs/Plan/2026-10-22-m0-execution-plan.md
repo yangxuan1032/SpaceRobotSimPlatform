@@ -85,6 +85,8 @@ tests/conformance/                  # 双传输一致性
 | T2.4 | Diagnostics | `severity + code + message + context`，控制台 + JSON 行日志 | 结构化日志可被测试断言 |
 | T2.5 | 内核 CMake 接入 | 顶层 `add_subdirectory(src/core)`、`apps`、`tests`，替换现有占位注释 | `SRSP_BUILD_EXAMPLES=OFF` 也能独立构建内核 |
 
+> 进度（2026-10-23）：**T2.1–T2.4 全部完成**——`PluginHost`（加载/校验/生命周期）、`Registry`（插件表+能力表+优先级解析）、`TimeService`（整数纳秒固定步长）、`Scheduler`（宏步循环+暂停诊断）、`Diagnostics`（结构化记录+JSON 行+容量上限），共 5 套件 27 个 TEST_CASE；T2.5 的 `src/core` 接入已完成，`apps/cli` 待 T4。下一步：阶段 3（双传输 hello）与 T4（CLI）。
+
 ### 阶段 3：双传输 hello（5 天）
 
 | 编号 | 任务 | 要点 | 完成判据 |
@@ -200,6 +202,9 @@ T6 CI（贯穿）          （T5 Qt 已移入 M1）
 | 2026-10-23 | 清理 `deepseek/Temp/tmp` 三处探测残留（git-askpass / toolchain-probe / sentinel） | tmp 归零 |
 | 2026-10-23 | 状态回填：本文档改「实施中」，同步 §1 现状、§6 首批动作状态 | 本次 |
 | 2026-10-23 | 阶段 1 收尾：T1.4 版本协商测试（`tests/unit/abi_negotiation.cpp`）、T1.5 错误码表（`api/error_codes.md`） | 四端各 4/4 通过；docs/02 §12 完成 4/6 |
+| 2026-10-23 | 阶段 2 起步：T2.1 PluginHost + 模块测试接入（`src/core`、`deepseek/ModuleTest`） | 四端全绿（UCRT64 5/5、Clang 5/5、CLANG64 4/4、MSVC 4/4）；注释英文合规 |
+| 2026-10-23 | 阶段 2 续：T2.2 Registry + T2.3 TimeService（含 12 个新用例） | UCRT64 GCC/Clang 各 7/7；CLANG64/MSVC 各 4/4；英文注释无 CJK |
+| 2026-10-23 | 阶段 2 收尾：T2.4 Diagnostics + T2.3 宏步调度（含 9 个新用例） | UCRT64 GCC/Clang 各 9/9；CLANG64/MSVC 各 4/4；5 套件 27 用例 |
 
 ## 10. 修订记录
 

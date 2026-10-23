@@ -1,0 +1,5 @@
+add_subdirectory(diagnostics)
+add_subdirectory(plugin_host)
+add_subdirectory(registry)
+add_subdirectory(scheduler)
+add_subdirectory(time_service)

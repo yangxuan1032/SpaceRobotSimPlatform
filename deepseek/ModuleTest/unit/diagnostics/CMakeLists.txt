@@ -1,0 +1,10 @@
+add_executable(test_diagnostics test_diagnostics.cpp)
+target_link_libraries(test_diagnostics PRIVATE srsp_core Catch2::Catch2WithMain)
+add_test(NAME unit.diagnostics COMMAND test_diagnostics)
+set_tests_properties(unit.diagnostics PROPERTIES TIMEOUT 30)
+
+if(MSVC)
+  target_compile_options(test_diagnostics PRIVATE /W4)
+else()
+  target_compile_options(test_diagnostics PRIVATE -Wall -Wextra -Wpedantic)
+endif()

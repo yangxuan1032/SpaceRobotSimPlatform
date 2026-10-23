@@ -399,3 +399,53 @@
 - 摘要：按 work-log §3 计划文件 git 策略，将状态为「已完成」的 4 份可执行规划用 git rm 移出版本库；分析/调研/摘要类文档（architecture-summary、simulator-landscape、kimi-design-analysis、design-review）与未执行完的计划（M0、msys2 多环境、multilang、extension-roadmap、roadmap-optimization）保留。
 - 验证：Plan 目录剩余 6 份计划 + README，分类与策略一致；被移出文件仍可通过 git log/git show 追溯；本次仅执行 git rm，未 commit/push（等待用户同意）。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V14 — 实现内核 PluginHost 与模块测试（M0 阶段 2 起步）
+
+- 类型：新增
+- 文件：
+  - `src/core/include/srsp/core/plugin_host.hpp`
+  - `src/core/src/plugin_host.cpp`
+  - `src/core/CMakeLists.txt`
+  - `CMakeLists.txt`
+  - `deepseek/ModuleTest/CMakeLists.txt`
+  - `deepseek/ModuleTest/unit/CMakeLists.txt`
+  - `deepseek/ModuleTest/unit/plugin_host/CMakeLists.txt`
+  - `deepseek/ModuleTest/unit/plugin_host/test_plugin_host.cpp`
+  - `deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+- 摘要：T2.1：新增 srsp::core::PluginHost（加载/ABI 主版本校验/vtable struct_size 校验/init/call/checkpoint/restore/shutdown/unload，英文 Doxygen），含 LoadLibrary/dlopen 双平台实现；顶层 CMake 增加 SRSP_BUILD_CORE 与 srsp_core 静态库；接入 <model>/ModuleTest 目录（仅 UCRT64 工具链启用 Catch2 模块测试）；新增 6 个单元用例覆盖未加载调用、缺库、加载初始化调用、重复加载、checkpoint/restore、卸载后拒绝。
+- 验证：四端构建与测试：UCRT64 GCC 5/5、UCRT64 Clang 5/5、CLANG64 4/4、MSVC 4/4（模块测试按设计仅在 UCRT64 启用）；新增源码无 CJK（英文注释合规）；构建产物位于 deepseek/Temp/build/<preset>。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V15 — 实现内核 Registry 与 TimeService（M0 阶段 2 续）
+
+- 类型：新增
+- 文件：
+  - `src/core/include/srsp/core/registry.hpp`
+  - `src/core/src/registry.cpp`
+  - `src/core/include/srsp/core/time_service.hpp`
+  - `src/core/src/time_service.cpp`
+  - `src/core/CMakeLists.txt`
+  - `deepseek/ModuleTest/unit/registry/`
+  - `deepseek/ModuleTest/unit/time_service/`
+  - `deepseek/ModuleTest/unit/CMakeLists.txt`
+  - `deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+- 摘要：T2.2：Registry（插件表 + 能力表，按 name+major 解析、优先级高者胜、同优先级取先注册、注销时级联删除能力）；T2.3 时钟部分：TimeService（整数纳秒累加、暂停/恢复、步长校验、reset），为宏步调度打底；新增 12 个单元用例（registry 7、time 5）；英文 Doxygen 注释。
+- 验证：UCRT64 GCC 7/7、UCRT64 Clang 7/7、CLANG64 4/4、MSVC 4/4（模块测试仅 UCRT64 启用）；新增源码 CJK 扫描为 0；构建产物在 deepseek/Temp/build/<preset>。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V16 — 实现 Diagnostics 与宏步调度骨架（M0 阶段 2 收尾）
+
+- 类型：新增
+- 文件：
+  - `src/core/include/srsp/core/diagnostics.hpp`
+  - `src/core/src/diagnostics.cpp`
+  - `src/core/include/srsp/core/scheduler.hpp`
+  - `src/core/src/scheduler.cpp`
+  - `src/core/CMakeLists.txt`
+  - `deepseek/ModuleTest/unit/diagnostics/`
+  - `deepseek/ModuleTest/unit/scheduler/`
+  - `deepseek/ModuleTest/unit/CMakeLists.txt`
+- 摘要：T2.4：Diagnostics（severity/code/message/context、JSON 单行渲染含转义、容量上限、可选 sink）；T2.3 后半：Scheduler（固定步长宏步循环、暂停时发 debug 诊断、run(n) 返回实际执行步数）；新增 9 个用例（diagnostics 5、scheduler 4）。内核骨架 T2.1–T2.4 全部完成。
+- 验证：UCRT64 GCC 9/9、UCRT64 Clang 9/9、CLANG64 4/4、MSVC 4/4；模块测试共 5 套件 27 个 TEST_CASE；新增源码 CJK 0；构建产物在 deepseek/Temp/build/<preset>。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`

@@ -1,0 +1,10 @@
+add_executable(test_time_service test_time_service.cpp)
+target_link_libraries(test_time_service PRIVATE srsp_core Catch2::Catch2WithMain)
+add_test(NAME unit.time_service COMMAND test_time_service)
+set_tests_properties(unit.time_service PROPERTIES TIMEOUT 30)
+
+if(MSVC)
+  target_compile_options(test_time_service PRIVATE /W4)
+else()
+  target_compile_options(test_time_service PRIVATE -Wall -Wextra -Wpedantic)
+endif()

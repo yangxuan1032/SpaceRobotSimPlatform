@@ -22,11 +22,16 @@ add_library(SRSP::api ALIAS srsp_api)
 target_include_directories(srsp_api INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/api/include")
 target_compile_features(srsp_api INTERFACE cxx_std_20)
 
+option(SRSP_BUILD_CORE "Build the kernel library" ON)
 option(SRSP_BUILD_EXAMPLES "Build the example plugins and host" ON)
 option(SRSP_BUILD_TESTS "Build the test suite" ON)
 option(SRSP_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
 enable_testing()
+
+if(SRSP_BUILD_CORE)
+  add_subdirectory(src/core)
+endif()
 
 if(SRSP_BUILD_EXAMPLES)
   add_subdirectory(examples/hello_plugin)
@@ -36,7 +41,14 @@ if(SRSP_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-# Placeholder: core, plugins and apps are added milestone by milestone.
-# add_subdirectory(core)
+# Model-scoped development tests: <model>/ModuleTest (see tools/ai/skills/module-test).
+if(SRSP_BUILD_TESTS AND DEFINED ENV{SRSP_AI_MODEL} AND NOT "$ENV{SRSP_AI_MODEL}" STREQUAL "")
+  set(SRSP_MODULE_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/$ENV{SRSP_AI_MODEL}/ModuleTest")
+  if(EXISTS "${SRSP_MODULE_TEST_DIR}/CMakeLists.txt")
+    add_subdirectory("${SRSP_MODULE_TEST_DIR}" "${CMAKE_BINARY_DIR}/module_test")
+  endif()
+endif()
+
+# Placeholder: plugins and apps are added milestone by milestone.
 # add_subdirectory(plugins)
 # add_subdirectory(apps)
