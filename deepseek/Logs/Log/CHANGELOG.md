@@ -295,3 +295,15 @@
 - 摘要：按四类（通用机器人、空间机器人/OOS、轨道与 GNC、地球可视化）检索并整理 2026 年主流仿真软件：A 类 MuJoCo/MJX、Isaac Sim+Isaac Lab、Gazebo、Drake 等；B 类 Space ROS、mjorbit、OnOrbitROS；C 类 STK、GMAT、Orekit、Basilisk、Tudat、Nyx、FreeFlyer；给出横向对比矩阵与 Basilisk 对 GMAT/Orekit 的米级精度参考，结论是 SRSP 的差异化应压在确定性回放、空间环境+双原点可视化、能力寻址插件三点，而非 GPU-RL 吞吐。
 - 验证：内部相对链接 0 失效；外部来源均给出可访问链接（arXiv 2609.08010、NASA NTRS、Isaac Lab 文档、Gazebo releases、Basilisk 精度对比页、Nyx 论文等）；未改动代码。
 - 关联计划：`deepseek/Logs/Plan/2026-10-23-simulator-landscape.md`
+
+### V5 — 按调研结论更新定位与技术选型，并提出规划优化方案
+
+- 类型：文档
+- 文件：
+  - `docs/01-architecture.md`
+  - `docs/04-subsystems-and-stack.md`
+  - `docs/07-roadmap-risks.md`
+  - `deepseek/Logs/Plan/2026-10-23-roadmap-optimization-plan.md`
+- 摘要：执行调研建议：01 §1.3 非目标补「GPU 并行 RL 训练平台」；04 新增 §14 同类工具定位对比（四类代表、四条选型约束、三项差异化）；07 §5 新增 R15 竞品生态风险。另提出规划优化方案：M0 收缩（Qt 空壳移 M1）、M1 加固（可视化/录制/回放不可裁剪 + 新增 W7 互操作与基准）、M2 环境对标与容差表、M3 双轨接触与基准报告，附 D-13~D-16 决策项。
+- 验证：四份文档内部相对链接 0 失效；未改动代码；ctest 状态未受影响（仅文档）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-roadmap-optimization-plan.md`
