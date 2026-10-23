@@ -104,13 +104,15 @@ M0 只走 gRPC + inline bytes；共享内存（`BlobRef`/`AttachShm`）按 [docs
 | T4.2 | `srsp-cli schema-hash` | 对 `api/schema/**` 生成稳定哈希，供清单比对 |
 | T4.3 | 测试分组落地 | `ctest` 能按 unit / conformance / abi 分组执行 |
 
-### 阶段 5：Qt 空壳（4 天，可与阶段 3/4 并行）
+### 阶段 5：Qt 空壳（**已移出 M0 → M1**，2026-10-23 调整）
+
+> 依 [规划优化方案](2026-10-23-roadmap-optimization-plan.md) 决策 D-13：M0 不产出 Qt 空壳，避免与 M1 的最终形态（窗口 + 原生句柄 + `renderer.null`）重复建设。以下任务保留在 M1 执行。
 
 | 编号 | 任务 | 完成判据 |
 |---|---|---|
-| T5.1 | 安装 `qt6-base`（必要时 `qt6-declarative`） | CMake 能找到 Qt6 |
+| T5.1 | 安装 `qt6-base`（必要时 `qt6-declarative`） | CMake 能找到 Qt6（✅ 2026-10-22 已完成：Qt 6.11.1） |
 | T5.2 | `apps/studio`：`QMainWindow` + 原生句柄（Windows `HWND` / Linux `xcb_window_t`）导出 | 句柄传递路径有日志可查 |
-| T5.3 | 空壳内清屏/画三角形（QOpenGLWidget 占位） | 窗口可启动并显示 |
+| T5.3 | 空壳内清屏（`renderer.null` 插件 + QOpenGLWidget 占位） | 窗口可启动并显示 |
 
 bgfx 本阶段不引入：按 [docs/07](../../../docs/07-roadmap-risks.md) §5 R2，bgfx 先做 2 周 spike 再决定是否作为主渲染器，spike 放在 M1 入口。
 
@@ -129,7 +131,7 @@ T0 环境 ──▶ T2 内核 ──▶ T3 双传输 ──▶ M0 出口
    │            ▲            ▲
    └──▶ T1 契约 ┘            │
 T4 CLI ────────┴─────────────┘
-T5 Qt（独立）        T6 CI（贯穿）
+T6 CI（贯穿）          （T5 Qt 已移入 M1）
 ```
 
 ## 4. 排期（单人全职 4 周；多人可按工作流并行压缩到 3 周）
@@ -138,8 +140,8 @@ T5 Qt（独立）        T6 CI（贯穿）
 |---|---|---|
 | W1（D1–D5） | T0 环境、T1 契约、T2.1–T2.2 骨架、T6.1 CI 雏形 | 构建可复现；ABI 断言与 manifest/SRM schema 落地；插件宿主能加载 hello |
 | W2（D6–D10） | T2.3–T2.5、T3.1–T3.2、T4.1 | `srsp-cli demo --transport inproc` 跑通；边车能握手 |
-| W3（D11–D15） | T3.3–T3.4、T4.2–T4.3、T5.1–T5.2 | 双传输输出一致；CLI 校验可用；Qt 空壳成形 |
-| W4（D16–D20） | T5.3、T6.2、文档回填、出口验收 | M0 出口判据全部满足；演示脚本可复现 |
+| W3（D11–D15） | T3.3–T3.4、T4.2–T4.3 | 双传输输出一致；CLI 校验可用（原 T5.1–T5.2 已移 M1） |
+| W4（D16–D20） | T6.2、`tests/bench` 骨架、文档回填、出口验收 | M0 出口判据全部满足；演示脚本可复现 |
 
 ## 5. 交付物与验收
 

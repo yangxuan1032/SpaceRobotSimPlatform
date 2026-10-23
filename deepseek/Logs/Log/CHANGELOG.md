@@ -307,3 +307,15 @@
 - 摘要：执行调研建议：01 §1.3 非目标补「GPU 并行 RL 训练平台」；04 新增 §14 同类工具定位对比（四类代表、四条选型约束、三项差异化）；07 §5 新增 R15 竞品生态风险。另提出规划优化方案：M0 收缩（Qt 空壳移 M1）、M1 加固（可视化/录制/回放不可裁剪 + 新增 W7 互操作与基准）、M2 环境对标与容差表、M3 双轨接触与基准报告，附 D-13~D-16 决策项。
 - 验证：四份文档内部相对链接 0 失效；未改动代码；ctest 状态未受影响（仅文档）。
 - 关联计划：`deepseek/Logs/Plan/2026-10-23-roadmap-optimization-plan.md`
+
+### V6 — 按规划优化方案同步文档：M0 收缩、M1 加固、容差分级
+
+- 类型：文档
+- 文件：
+  - `docs/03-data-contracts.md`
+  - `docs/07-roadmap-risks.md`
+  - `deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+  - `deepseek/Logs/Plan/2026-10-23-roadmap-optimization-plan.md`
+- 摘要：落地 D-13~D-16：07 的 M0 去掉 Qt 空壳并加 tests/bench 骨架、M1 增加 Qt 空壳（renderer.null）、W7 互操作与对标脚本行、M2 增加容差表成文与环境对标改 Orekit/GMAT、前两周清单第 10 项纳入容差表；03 新增 2.5 精度与容差分级（L1 位级/L2 相对/L3 物理量级 + Basilisk 参考基线）；M0 计划阶段 5 标注移入 M1 并调整排期；优化方案状态改「已确认」并回填执行记录。
+- 验证：四份文档内部相对链接 0 失效；容差数字与 Basilisk 官方对比页一致（0.02-1.2 m / 7-39 m / 17-72 m）；未改动代码。
+- 关联计划：`deepseek/Logs/Plan/2026-10-23-roadmap-optimization-plan.md`
