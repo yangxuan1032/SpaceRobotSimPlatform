@@ -548,3 +548,28 @@ if __name__ == "__main__":
 - [ ] 进程内/边车两条路径跑通同一 `hello` 插件
 - [x] 版本协商与不兼容拒绝路径有自动化测试（`tests/unit/abi_negotiation.cpp`：不支持的主版本返回 NULL、缺 host 服务返回 `SRSP_E_INVALID_ARGUMENT`、截断 host 表仍可用、未知方法返回 `SRSP_E_UNSUPPORTED`）
 - [x] 错误码表与诊断文案评审通过（`api/error_codes.md`：12 个错误码的触发条件、责任方与处理建议）
+
+---
+
+## 13. 预留能力与扩展点（reserved，不实现）
+
+以下能力 ID 为**未来增强**占位（对应 [07 §11](07-roadmap-risks.md) 的 C1–C15）。它们不出现在 v1 的 manifest 样例中，也没有实现；一旦被调用必须返回 `SRSP_E_UNSUPPORTED`，并在诊断里提示所需版本。
+
+| 预留能力 ID | 对应优势 | 形态 |
+|---|---|---|
+| `srsp.dynamics/batch_solver@1` | GPU 批量并行 | 进程内或边车（MJX） |
+| `srsp.dynamics/differentiable@1` | 可微分物理 | 边车 |
+| `srsp.dynamics/contact@1`（高保真档） | 软接触/椭圆摩擦锥 | 边车（MuJoCo） |
+| `srsp.sensor/device@1`（LiDAR/事件相机档） | 传感器高保真 | 进程内或边车 |
+| `srsp.io/dataset@1` | 合成数据/标注导出 | 边车 |
+| `srsp.control/policy@1` | 策略推理（ONNX 等） | 进程内或边车 |
+| `srsp.analysis/{coverage,access,conjunction,maneuver}@1` | 任务级分析 | 进程内 |
+| `srsp.io/fsw_bridge@1`、`srsp.io/hil@1` | 飞控/HIL | 边车 |
+| `srsp.io/rosbridge@1` | ROS 2 桥接 | 边车 |
+
+**约定**：
+
+1. 预留能力只占 ID 与版本语义，**不得**提前实现半成品；
+2. 插件若要声明预留能力，manifest 中须带 `"reserved": true`（schema 允许的扩展字段）并在 `core.describe` 中如实报告 `unsupported`；
+3. 未来实现时优先走「新增能力 ID」，避免改变既有能力的语义；
+4. 宿主侧对应接口在 `core_api.h` 以注释登记（批量步进、异步任务），未实现前返回 `SRSP_E_UNSUPPORTED`。

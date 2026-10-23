@@ -222,3 +222,46 @@ ABI/数据模式 ──▶ 内核调度 ──▶ 动力学 ──▶ 传感器�
 3. 是否默认启用 MuJoCo 边车（当前：可选，默认关闭）。
 4. 是否支持 Python 3.14（当前：3.11–3.13 为支持矩阵，3.14 视依赖 wheel 情况）。
 5. 地球纹理与星历数据的默认分发方式（内置基础包 + 可选高清包）。
+
+---
+
+## 11. 对标增强与预留接口（不进入 v1 开发）
+
+> 依据 2026-10 同类工具调研（`deepseek/Logs/Plan/2026-10-23-simulator-landscape.md`）。本节列出竞品优势能力，**只保留接口与扩展点，不实现**；调用未实现的能力必须返回 `SRSP_E_UNSUPPORTED`，禁止静默成功。
+
+### 11.1 扩展机制
+
+| 编号 | 机制 | 落点 |
+|---|---|---|
+| E1 | 能力 ID 命名空间预留（占 ID 与版本语义） | 02 §13 |
+| E2 | ABI 追加位（`struct_size` 机制） | `plugin_api.h` |
+| E3 | 宿主 API 保留签名（未实现返回 `SRSP_E_UNSUPPORTED`） | `core_api.h` |
+| E4 | 数据契约预留（schema ID、`meta_json`、`BlobRef.schema_id`） | 03 |
+| E5 | 传输升级点（`step_batch`、共享内存 `AttachShm`） | 02 §7 |
+| E6 | 分发与注册（`.srpkg` 平台标签、插件仓库） | 06 |
+
+### 11.2 能力映射与目标版本
+
+| # | 竞品优势 | 预留能力 / 扩展点 | 目标版本 | 触发条件 |
+|---|---|---|---|---|
+| C1 | GPU 批量并行仿真（MJX/Isaac） | `srsp.dynamics/batch_solver@1` + 批量步进签名 | 2.0 | RL / 参数扫描吞吐需求 |
+| C2 | 可微分物理（Genesis/Brax） | `srsp.dynamics/differentiable@1` + 梯度元数据字段 | 2.x | 研究合作 |
+| C3 | 高保真接触（MuJoCo） | `dynamics.mujoco` 边车 + `contact` 能力扩展 | 1.1 | M1 边车原型达标 |
+| C4 | 柔性/绳索/流体 | SRM `flex` 段（已预留）+ `force` 扩展 | 1.1 / 2.0 | 柔性附件需求 |
+| C5 | 传感器高保真（RTX LiDAR 等） | `sensor/device@1` 多类型 + `meta_json` | 1.3 | 感知验证需求 |
+| C6 | 合成数据管线（标注/域随机化） | `srsp.io/dataset@1` + MCAP attachment | 1.3 | 数据团队需求 |
+| C7 | RL 训练环境（Gym API） | Python SDK 预留 `srsp.gym` 适配层 | 1.3 / 2.0 | 与 C1 同步 |
+| C8 | 策略部署（ONNX 等） | `srsp.control/policy@1` | 1.3 | 在环部署需求 |
+| C9 | 任务级分析（覆盖/可见性/机动/碰撞） | `srsp.analysis/{coverage,access,conjunction,maneuver}@1` | 1.2 | 任务分析需求 |
+| C10 | 高精度星历/时间 | 现有 `env.*`（M2） | v1 | 已排期 |
+| C11 | 多航天器/星座 | 场景 `entities[]`、`sim.state` 多实体 | 1.1 | 编队需求 |
+| C12 | FSW 对齐与 HIL | `srsp.io/fsw_bridge@1`、`srsp.io/hil@1`（外部时钟模式已设计） | 1.2 | 飞控合作 |
+| C13 | 地球 3D Tiles / 影像地形 | `renderer` 能力扩展 + 数据包 | 1.2 | 可视化质量要求 |
+| C14 | 影视级渲染 / 远程 Web | `renderer` 插件化 + `ui/panel@1` Web 面板 | 2.0 | 市场/演示需求 |
+| C15 | 生态（Python-first/ROS 2/插件市场） | `srsp.io/rosbridge@1`、`srsp-registry`、`srspd` | 1.2 / 2.0 | 社区或企业集成 |
+
+### 11.3 约束
+
+- 预留能力在 manifest 与文档中统一标注 `reserved`；未实现前被调用返回 `SRSP_E_UNSUPPORTED` 并在诊断中提示所需版本；
+- 预留只使用「能力 ID + ABI 追加位 + 既有字段承载」，不得为此改动已冻结的结构；
+- 触发条件未满足的能力不排期，避免范围蔓延（见 R6、R15）。
