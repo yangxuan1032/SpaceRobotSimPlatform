@@ -630,3 +630,15 @@
 - 摘要：T6：新增 .github/workflows/ci.yml（windows-ucrt64 / linux-gcc / docs 三个 job）；新增 tests/docs/check_docs.py（JSON 解析、YAML 解析、Markdown 相对链接）并注册为 ctest docs_check；修正工具链门槛使 Linux 也能构建桥接与跑单测；05 §10 改为真实工作流说明并标注验证等级。
 - 验证：本地：docs_check 通过（JSON/YAML/链接均 ok），ci.yml 可被 PyYAML 解析（3 job）；四端 20/20/10/9。GitHub Actions 实际运行未验证（无 runner），已在文档中标注。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V12 — 修正 CI 首轮失败（包名、protobuf config、预设硬编码路径）
+
+- 类型：fix
+- 文件：
+  - `.github/workflows/ci.yml`
+  - `src/bridge/CMakeLists.txt`
+  - `docs/05-msys2-dev-environment.md`
+  - `deepseek/Logs/Log/ISSUES.md`
+- 摘要：首轮 CI 两处失败修复：Linux 端更正 nlohmann 包名并让桥接在缺少 protobuf/gRPC CMake config 时优雅跳过（Ubuntu 只有 pkg-config）；Windows 端由 CI 命令行覆盖预设里的 C:/msys64 硬编码路径（编译器/Ninja/Python）。05 补充 Linux 桥接限制说明。
+- 验证：本地四端不受影响（UCRT64 20/20）；ci.yml 变更待下一轮 CI 验证；失败日志已归档到 ISSUES P13/P14。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`

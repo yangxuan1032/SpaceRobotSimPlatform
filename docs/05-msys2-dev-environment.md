@@ -446,6 +446,7 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 - 门禁：构建 + 单测 + 契约测试必须通过；性能基准仅记录趋势，回归超过 15% 时告警（基准尚未进 CI）；
 - **本地等价命令**（Windows）：`cmake --preset win-ucrt64-debug && cmake --build --preset win-ucrt64-debug && ctest --preset win-ucrt64-debug --output-on-failure`；
 - 文档检查也可单独跑：`python tests/docs/check_docs.py`（缺少 PyYAML 时只跳过 YAML 部分）。
+- **Linux 的边车桥接默认不启用**：桥接层需要 protobuf/gRPC 的 CMake config，而 Ubuntu 只提供 pkg-config 文件；Linux 端因此覆盖内核、CLI（inproc）、全部契约与文档测试，边车路径由 Windows 端覆盖（要启用需用 vcpkg/conan 的 gRPC 构建）。
 
 已验证 / 未验证（如实说明）：
 

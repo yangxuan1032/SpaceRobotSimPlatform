@@ -38,7 +38,14 @@ jobs:
             mingw-w64-ucrt-x86_64-python-yaml
 
       - name: configure
-        run: cmake --preset win-ucrt64-debug
+        run: |
+          # setup-msys2 installs outside C:/msys64, so override the paths that
+          # the local presets pin for cross-toolchain reproducibility.
+          cmake --preset win-ucrt64-debug \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DCMAKE_MAKE_PROGRAM=ninja \
+            -DPython3_EXECUTABLE="$(cygpath -w "$(which python)")"
 
       - name: build
         run: cmake --build --preset win-ucrt64-debug

@@ -2,8 +2,17 @@
 # srsp_proto: generated protobuf and gRPC stubs for the plugin runtime.
 # srsp_bridge: sidecar host (client) and sidecar server.
 #
-find_package(Protobuf CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
+# Both packages must provide CMake config files: `protobuf_generate` comes from
+# Protobuf's own config, and gRPC::grpc++ from gRPC's. Distributions that only
+# ship pkg-config files (for example Ubuntu's libprotobuf-dev) cannot be used,
+# so the bridge degrades to "disabled" instead of failing configuration.
+#
+find_package(Protobuf CONFIG QUIET)
+find_package(gRPC CONFIG QUIET)
+if(NOT Protobuf_FOUND OR NOT gRPC_FOUND)
+  message(STATUS "protobuf/gRPC CMake config not found; the sidecar bridge is disabled")
+  return()
+endif()
 
 set(SRSP_PROTO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../api/proto")
 set(SRSP_PROTO_FILE "${SRSP_PROTO_ROOT}/srsp/v1/plugin.proto")

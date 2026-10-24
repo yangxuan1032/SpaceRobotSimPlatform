@@ -215,3 +215,16 @@
 - 根因：门槛写成 `CMAKE_CXX_COMPILER MATCHES "ucrt64"`，本意是「Windows 上避开 CLANG64/MSVC」，但把 Linux 也排除了。
 - 解决：条件改为「非 Windows，或 Windows 且编译器在 ucrt64」，即 `NOT WIN32 OR ... MATCHES "ucrt64"`；单元测试用 `MSVC OR (WIN32 AND NOT ...ucrt64)`。
 - 验证：Windows 四端行为不变（20/20/10/9）；Linux 端待首轮 CI 验证。
+### P13 — CI 首轮失败：Ubuntu 包名与 protobuf CMake config
+
+- 现象：`linux / GCC` job 两轮失败：(1) `E: Unable to locate package libnlohmann-json3-dev`；(2) `Could not find a package configuration file provided by "Protobuf"`。
+- 根因：Debian/Ubuntu 的包名是 `nlohmann-json3-dev`（无 lib 前缀）；且 Ubuntu 的 `libprotobuf-dev` 只提供 pkg-config，不带 `protobuf-config.cmake`，`find_package(Protobuf CONFIG REQUIRED)` 必然失败。
+- 解决：更正包名；`src/bridge/CMakeLists.txt` 改为 QUIET 查找并在缺失时优雅跳过（提示原因），Linux 因此覆盖除边车外的全部测试。
+- 验证：Linux 配置不再中断（待下一轮 CI 确认）；本地桥接仍启用、20/20 通过。
+
+### P14 — CI 首轮失败：预设硬编码 `C:/msys64` 路径
+
+- 现象：`windows / UCRT64` job 报 `Running 'C:/msys64/ucrt64/bin/ninja.exe' '--version' failed`。
+- 根因：`win-ucrt64-debug` 预设把编译器、Ninja、Python 固定到 `C:/msys64/...`，而 `setup-msys2` 把工具链装在 runner 的临时目录。
+- 解决：CI 的 configure 步骤用命令行覆盖 `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER`/`CMAKE_MAKE_PROGRAM`/`Python3_EXECUTABLE`（Python 用 `cygpath -w` 转换）；本地预设保持不变以维持跨工具链可复现。
+- 验证：本地仍 20/20；CI 待下一轮确认。
