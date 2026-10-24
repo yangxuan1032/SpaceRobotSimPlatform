@@ -4,7 +4,16 @@
  */
 #include <srsp/core/plugin_host.hpp>
 
+#if defined(SRSP_HAVE_MANIFEST)
+#  include <nlohmann/json.hpp>
+#endif
+
 #include <cstdint>
+#include <cstdlib>
+#include <exception>
+#include <filesystem>
+#include <fstream>
+#include <string>
 #include <utility>
 
 #if defined(_WIN32)
@@ -126,6 +135,7 @@ srsp_status PluginHost::load(std::string_view library_path,
 
   library_ = handle;
   plugin_ = plugin;
+  plugin_id_.clear();
   initialized_ = false;
   return SRSP_OK;
 }
@@ -136,6 +146,7 @@ void PluginHost::unload() noexcept {
   }
   initialized_ = false;
   plugin_ = nullptr;
+  plugin_id_.clear();
   if (library_ != nullptr) {
     close_library(static_cast<LibraryHandle>(library_));
     library_ = nullptr;
@@ -195,6 +206,92 @@ srsp_status PluginHost::restore(srsp_bytes in, srsp_error* err) noexcept {
     return SRSP_E_UNSUPPORTED;
   }
   return plugin_->restore(plugin_->self, in, err);
+}
+
+srsp_status PluginHost::load_with_manifest(std::string_view manifest_path,
+                                           srsp_error* err) noexcept {
+#if !defined(SRSP_HAVE_MANIFEST)
+  (void)manifest_path;
+  set_error(err, SRSP_E_UNSUPPORTED,
+            "manifest parsing is unavailable in this build");
+  return SRSP_E_UNSUPPORTED;
+#else
+  if (plugin_ != nullptr) {
+    set_error(err, SRSP_E_INVALID_STATE, "a plugin is already loaded");
+    return SRSP_E_INVALID_STATE;
+  }
+  if (manifest_path.empty()) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT, "manifest path is empty");
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+
+  const std::filesystem::path manifest_file{std::string(manifest_path)};
+  std::ifstream input(manifest_file, std::ios::binary);
+  if (!input) {
+    set_error(err, SRSP_E_NOT_FOUND, "plugin manifest does not exist");
+    return SRSP_E_NOT_FOUND;
+  }
+
+  nlohmann::json document;
+  try {
+    input >> document;
+  } catch (const std::exception&) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT, "plugin manifest is not valid JSON");
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+
+  if (!document.is_object() || !document.contains("id") ||
+      !document.contains("api") || !document.contains("transport")) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT,
+              "plugin manifest lacks id, api or transport");
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+
+  const std::string id = document["id"].get<std::string>();
+  const std::string api = document["api"].get<std::string>();
+  if (id.empty() || api.empty()) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT, "plugin manifest has empty id or api");
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+
+  const unsigned long manifest_major = std::strtoul(api.c_str(), nullptr, 10);
+  if (manifest_major != SRSP_ABI_MAJOR) {
+    set_error(err, SRSP_E_VERSION_MISMATCH,
+              "manifest api major does not match the host ABI");
+    return SRSP_E_VERSION_MISMATCH;
+  }
+
+  const auto& transport = document["transport"];
+  if (!transport.is_object() || !transport.contains("library") ||
+      !transport["library"].is_object()) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT,
+              "plugin manifest lacks transport.library");
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+
+  const auto& libraries = transport["library"];
+#if defined(_WIN32)
+  const char* platform_key = "windows-x86_64";
+#else
+  const char* platform_key = "linux-x86_64";
+#endif
+  if (!libraries.contains(platform_key)) {
+    set_error(err, SRSP_E_NOT_FOUND,
+              "manifest has no library entry for this platform");
+    return SRSP_E_NOT_FOUND;
+  }
+
+  std::filesystem::path library{std::string(libraries[platform_key].get<std::string>())};
+  if (library.is_relative()) {
+    library = manifest_file.parent_path() / library;
+  }
+
+  const srsp_status status = load(library.string(), err);
+  if (status == SRSP_OK) {
+    plugin_id_ = id;
+  }
+  return status;
+#endif
 }
 
 }  // namespace srsp::core

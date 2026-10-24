@@ -32,6 +32,18 @@
 #define SRSP_CORE_API_MAJOR 0u
 #define SRSP_CORE_API_MINOR 1u
 
+/* Library export/import. The kernel defines SRSP_CORE_BUILD when compiling;
+ * applications consuming the DLL must not define it. */
+#if defined(_WIN32)
+#  if defined(SRSP_CORE_BUILD)
+#    define SRSP_CORE_API __declspec(dllexport)
+#  else
+#    define SRSP_CORE_API __declspec(dllimport)
+#  endif
+#else
+#  define SRSP_CORE_API __attribute__((visibility("default")))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -61,49 +73,57 @@ typedef struct srsp_context_config {
 typedef uint64_t srsp_subscription; /* 0 = invalid */
 
 /* Version as (major << 16) | minor. */
-SRSP_EXPORT uint32_t SRSP_CALL srsp_core_api_version(void);
+SRSP_CORE_API uint32_t SRSP_CALL srsp_core_api_version(void);
 
 /* Lifecycle. `config` may be NULL for defaults. */
-SRSP_EXPORT srsp_status SRSP_CALL srsp_context_create(
+SRSP_CORE_API srsp_status SRSP_CALL srsp_context_create(
     const srsp_context_config* config, srsp_context** out, srsp_error* err);
-SRSP_EXPORT void SRSP_CALL srsp_context_destroy(srsp_context* ctx);
+SRSP_CORE_API void SRSP_CALL srsp_context_destroy(srsp_context* ctx);
 
 /* Project load/unload (see docs/03-data-contracts.md section 8). */
-SRSP_EXPORT srsp_status SRSP_CALL srsp_load_project(srsp_context* ctx,
+SRSP_CORE_API srsp_status SRSP_CALL srsp_load_project(srsp_context* ctx,
                                                     srsp_str path,
                                                     srsp_error* err);
-SRSP_EXPORT srsp_status SRSP_CALL srsp_unload_project(srsp_context* ctx,
+SRSP_CORE_API srsp_status SRSP_CALL srsp_unload_project(srsp_context* ctx,
                                                       srsp_error* err);
 
+/* Direct plugin load by library path (M0 convenience; project load resolves
+ * the plugin set from the project file in M1). Added 2026-10-24, draft 0.1. */
+SRSP_CORE_API srsp_status SRSP_CALL srsp_load_plugin(srsp_context* ctx,
+                                                     srsp_str library_path,
+                                                     srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_unload_plugin(srsp_context* ctx,
+                                                       srsp_error* err);
+
 /* Simulation clock control. */
-SRSP_EXPORT srsp_status SRSP_CALL srsp_start(srsp_context* ctx, srsp_error* err);
-SRSP_EXPORT srsp_status SRSP_CALL srsp_pause(srsp_context* ctx, srsp_error* err);
-SRSP_EXPORT srsp_status SRSP_CALL srsp_step(srsp_context* ctx, uint64_t steps,
+SRSP_CORE_API srsp_status SRSP_CALL srsp_start(srsp_context* ctx, srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_pause(srsp_context* ctx, srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_step(srsp_context* ctx, uint64_t steps,
                                             srsp_error* err);
-SRSP_EXPORT int64_t SRSP_CALL srsp_time_tai_ns(const srsp_context* ctx);
+SRSP_CORE_API int64_t SRSP_CALL srsp_time_tai_ns(const srsp_context* ctx);
 
 /* Immutable snapshot of the current state as Arrow IPC bytes. Release with
  * srsp_buffer_release. */
-SRSP_EXPORT srsp_status SRSP_CALL srsp_get_snapshot(srsp_context* ctx,
+SRSP_CORE_API srsp_status SRSP_CALL srsp_get_snapshot(srsp_context* ctx,
                                                     srsp_buffer* out,
                                                     srsp_error* err);
-SRSP_EXPORT void SRSP_CALL srsp_buffer_release(srsp_context* ctx,
+SRSP_CORE_API void SRSP_CALL srsp_buffer_release(srsp_context* ctx,
                                                srsp_buffer* buffer);
 
 /* Topic subscription (docs/03 section 5). Wildcards follow the topic rules. */
-SRSP_EXPORT srsp_status SRSP_CALL srsp_subscribe(srsp_context* ctx,
+SRSP_CORE_API srsp_status SRSP_CALL srsp_subscribe(srsp_context* ctx,
                                                  srsp_str topic,
                                                  srsp_event_fn callback,
                                                  void* user,
                                                  srsp_subscription* out,
                                                  srsp_error* err);
-SRSP_EXPORT srsp_status SRSP_CALL srsp_unsubscribe(srsp_context* ctx,
+SRSP_CORE_API srsp_status SRSP_CALL srsp_unsubscribe(srsp_context* ctx,
                                                    srsp_subscription id,
                                                    srsp_error* err);
 
 /* Generic capability passthrough: same method+payload semantics as the plugin
  * ABI `call` and the sidecar `Invoke` RPC. */
-SRSP_EXPORT srsp_status SRSP_CALL srsp_plugin_call(srsp_context* ctx,
+SRSP_CORE_API srsp_status SRSP_CALL srsp_plugin_call(srsp_context* ctx,
                                                    srsp_str plugin_id,
                                                    srsp_str method,
                                                    srsp_bytes request,

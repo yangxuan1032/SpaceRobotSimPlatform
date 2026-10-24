@@ -41,4 +41,16 @@ if(TARGET srsp_sidecar AND DEFINED Python3_EXECUTABLE)
   set_tests_properties(integration.cli_demo_sidecar_python PROPERTIES
     TIMEOUT 180
     PASS_REGULAR_EXPRESSION "\"lang\":[ ]?\"python\"")
+
+  # Fault injection: the sidecar fails the first Invoke; the CLI must restart
+  # it once and then succeed (M0 T3.3).
+  add_test(NAME integration.cli_demo_sidecar_restart
+    COMMAND srsp_cli demo --transport sidecar
+            --sidecar-exe "${Python3_EXECUTABLE}"
+            --sidecar-script "${CMAKE_SOURCE_DIR}/tools/sidecar/srsp_sidecar.py"
+            --plugin $<TARGET_FILE:srsp_hello_plugin>)
+  set_tests_properties(integration.cli_demo_sidecar_restart PROPERTIES
+    TIMEOUT 180
+    ENVIRONMENT "SRSP_SIDECAR_FAULT=first-invoke"
+    PASS_REGULAR_EXPRESSION "restarting the sidecar once")
 endif()

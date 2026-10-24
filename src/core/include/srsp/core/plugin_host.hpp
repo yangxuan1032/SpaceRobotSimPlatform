@@ -52,6 +52,23 @@ class PluginHost {
    */
   srsp_status load(std::string_view library_path, srsp_error* err) noexcept;
 
+  /**
+   * @brief Loads the plugin described by an SRSP manifest (`plugin.json`).
+   *
+   * The manifest is the source of truth for the plugin id and the ABI major
+   * version; its `transport.library` entry selects the library for the current
+   * platform. Validation happens before the library is opened, so a mismatch
+   * never loads foreign code.
+   *
+   * @param manifest_path Path to `plugin.json`.
+   * @param err Optional error details.
+   * @return SRSP_OK, SRSP_E_NOT_FOUND (manifest or library missing),
+   *         SRSP_E_INVALID_ARGUMENT (required fields missing),
+   *         SRSP_E_VERSION_MISMATCH (manifest or plugin rejects the ABI).
+   */
+  srsp_status load_with_manifest(std::string_view manifest_path,
+                                 srsp_error* err) noexcept;
+
   /** @brief Calls `shutdown` (if initialised) and unloads the library. */
   void unload() noexcept;
 
@@ -63,6 +80,11 @@ class PluginHost {
 
   /** @brief Returns the validated vtable, or nullptr when not loaded. */
   [[nodiscard]] const srsp_plugin_v1* plugin() const noexcept { return plugin_; }
+
+  /** @brief Plugin id from the manifest; empty when loaded by raw path. */
+  [[nodiscard]] const std::string& plugin_id() const noexcept {
+    return plugin_id_;
+  }
 
   /**
    * @brief Initialises the plugin with a JSON configuration.
@@ -91,6 +113,7 @@ class PluginHost {
   srsp_host_v1 host_{};
   void* library_ = nullptr;
   const srsp_plugin_v1* plugin_ = nullptr;
+  std::string plugin_id_;
   bool initialized_ = false;
 };
 

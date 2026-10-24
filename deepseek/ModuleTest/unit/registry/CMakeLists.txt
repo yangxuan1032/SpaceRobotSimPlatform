@@ -1,5 +1,5 @@
 add_executable(test_registry test_registry.cpp)
-target_link_libraries(test_registry PRIVATE srsp_core Catch2::Catch2WithMain)
+target_link_libraries(test_registry PRIVATE srsp_kernel Catch2::Catch2WithMain)
 add_test(NAME unit.registry COMMAND test_registry)
 set_tests_properties(unit.registry PROPERTIES TIMEOUT 30)
 
