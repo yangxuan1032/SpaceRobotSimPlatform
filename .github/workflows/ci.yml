@@ -59,7 +59,7 @@ jobs:
             cmake ninja-build g++ pkg-config \
             python3 python3-jsonschema python3-yaml \
             libprotobuf-dev protobuf-compiler protobuf-compiler-grpc \
-            libgrpc++-dev libnlohmann-json3-dev catch2
+            libgrpc++-dev nlohmann-json3-dev catch2
 
       - name: configure
         run: cmake --preset linux-gcc-debug
