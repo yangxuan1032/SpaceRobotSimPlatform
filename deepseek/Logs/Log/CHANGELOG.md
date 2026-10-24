@@ -492,3 +492,56 @@
 - 摘要：按用户要求把多机器人协同从 C11 预留提升为 v1 交付：01 新增 6.6（按 robot_id 字典序的确定性调度、协同层在单体之后、链路消息排序、随机源派生、schedule_order 记录；链路模型与能力边界）并澄清 1.3 仅分布式集群为非目标；02 能力表新增 coordinator 与 link，预留表补 thermal；03 话题表新增 team.state/link.message、场景新增 teams[] 与 thermal 预留段；07 M2/M3 增加协同交付与验收、C11 更新、新增 C16 热网络预留与风险 R16。
 - 验证：五份文档内部链接 0 失效；方案文档含范围界定/验收指标/风险；未改代码，构建状态不变。
 - 关联计划：`deepseek/Logs/Plan/2026-10-24-multi-robot-collaboration.md`
+
+### V3 — 实现 gRPC 边车桥接与双传输一致性测试（M0 T3 起步）
+
+- 类型：新增
+- 文件：
+  - `src/bridge/CMakeLists.txt`
+  - `src/bridge/include/srsp/bridge/sidecar_host.hpp`
+  - `src/bridge/include/srsp/bridge/sidecar_server.hpp`
+  - `src/bridge/src/sidecar_host.cpp`
+  - `src/bridge/src/sidecar_server.cpp`
+  - `CMakeLists.txt`
+  - `deepseek/ModuleTest/integration/CMakeLists.txt`
+  - `deepseek/ModuleTest/integration/sidecar/CMakeLists.txt`
+  - `deepseek/ModuleTest/integration/sidecar/test_sidecar_roundtrip.cpp`
+  - `deepseek/Logs/Log/ISSUES.md`
+- 摘要：新增 srsp_proto（protoc 生成 C++ 与 gRPC 桩）与 srsp_bridge：SidecarServer 把进程内插件暴露为 PluginRuntime gRPC 服务（handshake token/ABI 校验、invoke、ping、checkpoint/restore、shutdown，AttachShm 返回 UNIMPLEMENTED），SidecarHost 为客户端（deadline、错误映射）；新增一致性测试：同一插件经 inproc 与 sidecar 调用返回逐字节一致；桥接层限定 UCRT64（CLANG64 会误抓 UCRT64 头文件，MSVC 无 gRPC）；ISSUES 补 P3–P5。
+- 验证：四端：UCRT64 GCC 14/14、UCRT64 Clang 14/14、CLANG64 8/8、MSVC 8/8；一致性测试实测 inproc 与 sidecar 载荷相同；新增源码无 CJK。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V4 — CLI 支持 sidecar 传输并自动拉起边车进程（M0 T3.1）
+
+- 类型：新增
+- 文件：
+  - `apps/sidecar/main.cpp`
+  - `apps/sidecar/CMakeLists.txt`
+  - `apps/CMakeLists.txt`
+  - `apps/cli/main.cpp`
+  - `apps/cli/CMakeLists.txt`
+  - `CMakeLists.txt`
+  - `src/bridge/include/srsp/bridge/sidecar_process.hpp`
+  - `src/bridge/src/sidecar_process.cpp`
+  - `src/bridge/CMakeLists.txt`
+  - `deepseek/ModuleTest/integration/cli/CMakeLists.txt`
+  - `deepseek/Logs/Log/ISSUES.md`
+- 摘要：新增 srsp-sidecar（把插件暴露为 gRPC 服务，绑定临时端口并打印 READY <port>）与 SidecarProcess（Windows CreatePipe/CreateProcess、POSIX pipe/fork，带超时逐字节读取就绪行）；srsp-cli demo --transport sidecar 现自动拉起边车、握手、调用并回收进程；移除旧的 reserved 用例，新增 integration.cli_demo_sidecar（与 inproc 同断言）；顶层 CMake 顺序调整为 core→bridge→apps 以便 apps 判断目标；ISSUES 补 P6。
+- 验证：四端：UCRT64 GCC 14/14、UCRT64 Clang 14/14、CLANG64 7/7、MSVC 7/7；sidecar 路径实测输出与 inproc 相同的载荷；无 CJK。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V5 — 新增 Python 边车与跨语言调用（M0 T3.2）
+
+- 类型：新增
+- 文件：
+  - `tools/sidecar/srsp_sidecar.py`
+  - `tools/sidecar/generated/srsp/v1/plugin_pb2.py`
+  - `tools/sidecar/generated/srsp/v1/plugin_pb2_grpc.py`
+  - `tools/sidecar/generated/srsp/__init__.py`
+  - `tools/sidecar/generated/srsp/v1/__init__.py`
+  - `apps/cli/main.cpp`
+  - `deepseek/ModuleTest/integration/cli/CMakeLists.txt`
+  - `deepseek/Logs/Log/ISSUES.md`
+- 摘要：通过 pacman 安装 python-grpcio/grpcio-tools（1.82.0，规避 PEP 668），用 grpc_tools.protoc 生成 Python 桩；新增 tools/sidecar/srsp_sidecar.py：PluginRuntime 服务（token/ABI 握手、core.ping/describe/update、Ping、Checkpoint/Restore、Shutdown、AttachShm 返回 UNIMPLEMENTED），绑定临时端口后打印 READY；CLI 增加 --sidecar-script 以支持 python.exe + 脚本形式拉起；新增 integration.cli_demo_sidecar_python。
+- 验证：四端：UCRT64 GCC 15/15、UCRT64 Clang 15/15、CLANG64 7/7、MSVC 7/7；Python 边车实测返回 lang=python；ISSUES 补 P7。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`

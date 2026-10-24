@@ -144,3 +144,41 @@
 - 解决：参数里的 JSON 片段改用单引号字符串，或不写引号（只描述“正则匹配通过”）。
 - 验证：日志脚本正常追加。
 - 关联：`CHANGELOG.md` 2026-10-24 条目。
+
+### P3 — 边车测试进程内初始化失败
+
+- 现象：`test_sidecar_roundtrip` 打印 `FAIL: inproc init failed`，但 CLI 加载同一插件正常。
+- 根因：测试里的 `srsp_host_v1` 只设置了 `struct_size`，`alloc`/`free` 为空；插件的 `init` 校验必需服务，直接拒绝。
+- 解决：测试补齐 `log/time/alloc/free/publish/shm_*` 全套服务，与 CLI 保持一致。
+- 验证：测试通过，inproc 与 sidecar 返回逐字节一致。
+
+### P4 — 使用了不存在的错误码 `SRSP_E_UNAVAILABLE`
+
+- 现象：编译报 `'SRSP_E_UNAVAILABLE' was not declared in this scope`。
+- 根因：错误码表只有 12 个（`INVALID_ARGUMENT`…`INTERNAL`），没有 `UNAVAILABLE`；写代码时按习惯臆造。
+- 解决：传输超时/不可达统一映射到 `SRSP_E_TIMEOUT`，连接前未就绪用 `SRSP_E_NOT_READY`。
+- 验证：编译通过，四端测试全绿。
+- 关联：`api/error_codes.md`。
+
+### P5 — CLANG64 下 gRPC 桥接抓到 UCRT64 头文件
+
+- 现象：CLANG64 构建 `test_sidecar_roundtrip` 报 `<cstddef> tried including <stddef.h> but didn't find libc++'s <stddef.h>`。
+- 根因：`find_package(gRPC)` 在 CLANG64 预设下找到了 UCRT64 的 gRPC，其导入目标带 `-isystem C:/msys64/ucrt64/include`，与 libc++ 的标准库头冲突。
+- 解决：桥接层加工具链门槛（仅 `CMAKE_CXX_COMPILER` 含 `ucrt64` 时启用），CLANG64/MSVC 显式跳过并打印原因。
+- 验证：UCRT64 GCC/Clang 各 14/14，CLANG64 8/8，MSVC 8/8。
+- 关联：`CHANGELOG.md` 2026-10-24 V3。
+
+### P6 — CMake 子目录顺序导致目标判断失效
+
+- 现象：`apps/CMakeLists.txt` 里 `if(TARGET srsp_bridge)` 恒为假，边车程序与 CLI 的 sidecar 支持被静默跳过。
+- 根因：顶层 `add_subdirectory(apps)` 写在 `add_subdirectory(src/bridge)` 之前，判断时目标尚未定义。
+- 解决：调整顶层顺序为 core → bridge → apps，并在注释中说明原因。
+- 验证：`srsp-sidecar` 生成、`integration.cli_demo_sidecar` 通过（CLI 拉起子进程并拿到 `{"ok":true}`）。
+- 关联：`CHANGELOG.md` 2026-10-24 V4。
+### P7 — 断言 JSON 时忽略空白导致测试误判
+
+- 现象：Python 边车返回 `{"ok": true, "lang": "python"}`，断言正则 `"lang":"python"` 匹配失败，测试报 Failed 但功能正常。
+- 根因：`json.dumps` 默认分隔符是 `", "` 与 `": "`，与 C++ 侧手工拼的紧凑 JSON 不同。
+- 解决：正则改为允许可选空格（`"lang":[ ]?"python"`）；并在测试说明里约定“断言 JSON 字段而非字节”。
+- 验证：`integration.cli_demo_sidecar_python` 通过；四端 15/15、15/15、7/7、7/7。
+- 关联：`CHANGELOG.md` 2026-10-24 V5。
