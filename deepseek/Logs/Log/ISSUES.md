@@ -124,3 +124,23 @@
 - 解决：改为 `^- 状态：\s*(已完成|已废弃)`，只看状态关键字；分析/调研/摘要类文档按文件名豁免。
 - 验证：13 份计划重扫，4 份命中、9 份保留，与策略一致。
 - 关联：`work-log` §3。
+
+---
+
+## 2026-10-24
+
+### P1 — printf 输出二进制缓冲区触发类型冲突
+
+- 现象：`main.cpp` 编译报 `conditional expression between distinct pointer types 'uint8_t*' and 'const char*' lacks a cast`。
+- 根因：`srsp_buffer::data` 是 `uint8_t*`，与字符串字面量混用在条件表达式里；GCC 拒绝隐式转换（MSVC 更宽松，容易漏掉）。
+- 解决：先用 `reinterpret_cast<const char*>` 转换，再参与条件表达式与 `%.*s` 输出。
+- 验证：四端构建通过，`integration.cli_demo_inproc` 的 PASS_REGULAR_EXPRESSION 命中。
+- 关联：`CHANGELOG.md` 2026-10-24 条目。
+
+### P2 — PowerShell 双引号字符串里的 JSON 片段被拆成参数
+
+- 现象：调用 `Append-ChangeLog.ps1` 时报 `Cannot find drive. A drive with the name 'ok\' does not exist`。
+- 根因：PowerShell 双引号字符串用反引号转义，`\"` 不生效，`{"ok":true}` 提前终止字符串并产生额外参数。
+- 解决：参数里的 JSON 片段改用单引号字符串，或不写引号（只描述“正则匹配通过”）。
+- 验证：日志脚本正常追加。
+- 关联：`CHANGELOG.md` 2026-10-24 条目。

@@ -461,3 +461,34 @@
 - 摘要：新增 <model>/Logs/Log/ISSUES.md（与 CHANGELOG 同目录），按 P1..Pn 记录 2026-10-22/23 两天共 14 条开发问题（沙箱管道、包名、MSVC 抢占、跨工具链 CRT、Python 选择、变量污染、git 凭据/代理、提交信息拆分、BOM、扫描口径、Catch2 ABI、未构建测试注册、计划状态误判），每条含现象/根因/解决/验证；work-log 技能拆为 §2.1 变更日志与 §2.2 问题记录（触发条件、格式、必填项、复用规则）；AGENTS §3 与 tools/ai/README 同步。
 - 验证：ISSUES.md 14 条与 CHANGELOG 历史一致；四份文档链接校验 0 失效；问题条目均来自本会话实测记录。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+## 2026-10-24
+
+### V1 — 实现 srsp-cli 与 CLI 集成测试（M0 T4 起步）
+
+- 类型：新增
+- 文件：
+  - `apps/CMakeLists.txt`
+  - `apps/cli/CMakeLists.txt`
+  - `apps/cli/main.cpp`
+  - `CMakeLists.txt`
+  - `deepseek/ModuleTest/CMakeLists.txt`
+  - `deepseek/ModuleTest/integration/CMakeLists.txt`
+  - `deepseek/ModuleTest/integration/cli/CMakeLists.txt`
+  - `deepseek/Logs/Log/ISSUES.md`
+- 摘要：新增 srsp-cli：version 与 demo --transport inproc --plugin <path> [--method]；sidecar 传输按 T3 预留并返回 SRSP_E_UNSUPPORTED（退出码 3），不伪装可用；顶层 CMake 增加 SRSP_BUILD_APPS 与 apps 子目录；新增 integration 测试层（不依赖 Catch2、全工具链可跑）：version、inproc 调用、未知方法失败、sidecar 预留共 4 个用例；ISSUES 补 2026-10-24 两条（uint8_t 指针条件表达式、PowerShell 引号拆分参数）。
+- 验证：四端通过：UCRT64 GCC/Clang 各 13/13（4 契约 + 4 集成 + 5 单元套件），CLANG64/MSVC 各 8/8；新增源码无 CJK；CLI 实测输出被 PASS_REGULAR_EXPRESSION 匹配。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V2 — 将多机器人协同纳入 v1 并同步设计文档
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-24-multi-robot-collaboration.md`
+  - `docs/01-architecture.md`
+  - `docs/02-plugin-contract.md`
+  - `docs/03-data-contracts.md`
+  - `docs/07-roadmap-risks.md`
+- 摘要：按用户要求把多机器人协同从 C11 预留提升为 v1 交付：01 新增 6.6（按 robot_id 字典序的确定性调度、协同层在单体之后、链路消息排序、随机源派生、schedule_order 记录；链路模型与能力边界）并澄清 1.3 仅分布式集群为非目标；02 能力表新增 coordinator 与 link，预留表补 thermal；03 话题表新增 team.state/link.message、场景新增 teams[] 与 thermal 预留段；07 M2/M3 增加协同交付与验收、C11 更新、新增 C16 热网络预留与风险 R16。
+- 验证：五份文档内部链接 0 失效；方案文档含范围界定/验收指标/风险；未改代码，构建状态不变。
+- 关联计划：`deepseek/Logs/Plan/2026-10-24-multi-robot-collaboration.md`
