@@ -228,3 +228,9 @@
 - 根因：`win-ucrt64-debug` 预设把编译器、Ninja、Python 固定到 `C:/msys64/...`，而 `setup-msys2` 把工具链装在 runner 的临时目录。
 - 解决：CI 的 configure 步骤用命令行覆盖 `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER`/`CMAKE_MAKE_PROGRAM`/`Python3_EXECUTABLE`（Python 用 `cygpath -w` 转换）；本地预设保持不变以维持跨工具链可复现。
 - 验证：本地仍 20/20；CI 待下一轮确认。
+### P15 — Linux 链接共享库失败（缺少 -fPIC）
+
+- 现象：CI `linux / GCC` 在 build 阶段报 `relocation R_X86_64_PC32 against symbol ... can not be used when making a shared object; recompile with -fPIC`。
+- 根因：`srsp_core` 是共享库，链接的是静态库 `srsp_kernel`；后者未启用 `POSITION_INDEPENDENT_CODE`，ELF 下不能进入 .so。
+- 解决：对 `srsp_kernel` 设置 `POSITION_INDEPENDENT_CODE ON`（Windows 上是 no-op）。
+- 验证：CI run `40093093367` 三个 job 全绿（windows / linux / docs）。

@@ -85,7 +85,7 @@ tests/conformance/                  # 双传输一致性
 | T2.4 | Diagnostics | `severity + code + message + context`，控制台 + JSON 行日志 | 结构化日志可被测试断言 |
 | T2.5 | 内核 CMake 接入 | 顶层 `add_subdirectory(src/core)`、`apps`、`tests`，替换现有占位注释 | `SRSP_BUILD_EXAMPLES=OFF` 也能独立构建内核 |
 
-> 进度（2026-10-24）：**阶段 1、2、3、6 全部完成**——契约 6/6、内核骨架（T2.1–T2.4）、双传输（T3.1–T3.4）、CI（`windows-ucrt64`＋`linux-gcc`＋`docs` 三个 job，`docs_check` 进 ctest）；**T4 起步**（`version` / `demo --transport inproc|sidecar`）；**审计 D1/D2/D7 已修复**。四端：UCRT64 GCC/Clang 20/20，CLANG64 10/10，MSVC 9/9。剩余：T4 其余命令（非出口必需）、D3/D4（M1）；CI 首轮真实运行待推送后确认。
+> 进度（2026-10-24）：**M0 出口判据全部满足**——阶段 1（契约 6/6）、2（内核骨架）、3（双传输）、6（CI）完成，CI run `40093093367` 在 `c02fba4` 上三 job 全绿（windows / linux / docs）；README §7.1 命令与输出实测一致。四端：UCRT64 GCC/Clang 20/20，CLANG64 10/10，MSVC 9/9。剩余（非出口）：T4 其余命令、D3/D4（M1）。**下一步进入 M1**。
 
 ### 阶段 3：双传输 hello（5 天）
 

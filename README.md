@@ -3,9 +3,9 @@
 面向在轨服务、目标捕获、舱外装配与遥操作训练的空间机器人可视化仿真软件。
 采用 **平台 + 插件** 架构：机器人模型、动力学、空间环境、传感器、渲染引擎、控制器均为可独立分发、可动态替换的插件，通过**版本化的标准数据与调用接口**协作。
 
-> 当前状态：**架构设计基线 v0.1 + 可运行的插件 ABI 骨架**。
-> 已实现：C ABI 头文件、插件清单规范、最小示例插件与宿主（编译并运行通过）。
-> 规划完成：总体架构、插件契约、数据契约、技术栈、MSYS2 开发环境、打包方案、路线图。
+> 当前状态：**M0 基本完成**（契约 6/6、内核骨架、双传输、CLI、CI）。
+> 已实现：C ABI 与宿主侧 C API、内核（插件宿主/注册表/时钟/调度/诊断）、`srsp-cli`（`inproc` 与 `sidecar` 双传输）、gRPC 边车与 Python 边车、能力消息 schema、CI（Windows UCRT64 + Linux GCC + 文档检查）。
+> 待办：M1（可视化、录制回放、空间环境）。详见 [07 路线图](docs/07-roadmap-risks.md)。
 
 ---
 
@@ -82,32 +82,39 @@ SpaceRobotSimPlatform/
 ├─ AGENTS.md                         # 模型无关的 Agent 规则（DSH/Codex 等自动加载）
 ├─ ai-models.json                    # 模型命名空间注册表
 ├─ CMakeLists.txt / CMakePresets.json
+├─ .github/workflows/ci.yml          # CI：Windows UCRT64 / Linux GCC / 文档检查
 ├─ api/
 │  ├─ include/srsp/plugin_api.h      # 稳定 C ABI（v1.0）
-│  ├─ include/srsp/core_api.h        # 宿主侧 C API（draft 0.1，供 CLI/SDK 嵌入内核）
+│  ├─ include/srsp/core_api.h        # 宿主侧 C API（draft 0.1，CLI/SDK 嵌入内核）
 │  ├─ proto/srsp/v1/plugin.proto     # 控制面消息与边车服务
-│  └─ schema/                        # JSON Schema 与清单样例（examples/）
+│  └─ schema/                        # manifest 与能力消息 schema + 正反例
+├─ src/
+│  ├─ core/                          # 内核：srsp_kernel（内部 C++）+ srsp_core（C API 共享库）
+│  └─ bridge/                        # gRPC 边车桥接：Server / Host / Process
+├─ apps/
+│  ├─ cli/                           # srsp-cli（version / demo）
+│  └─ sidecar/                       # srsp-sidecar（把插件暴露为 gRPC 服务）
 ├─ deepseek/                         # DeepSeek 命名空间（Kimi 为同级 kimi/）
 │  ├─ Temp/                          # 缓存（不纳入版本管理）
-│  └─ Logs/
-│     ├─ Plan/                       # 方案与规划
-│     └─ Log/CHANGELOG.md            # 唯一变更日志
+│  ├─ ModuleTest/                    # 模型工作区的开发期测试（unit / integration）
+│  └─ Logs/                          # Plan/ 与 Log/（CHANGELOG、ISSUES）
 ├─ tools/
-│  ├─ ai/                            # 共享脚本、模板与模型解析
+│  ├─ ai/                            # 工作流、技能、脚本、模板
 │  ├─ env/                           # MSYS2 引导、包检查、VSCode 启动
+│  ├─ sidecar/                       # Python 边车与生成的 gRPC 桩
 │  └─ packaging/                     # 运行库收集
 ├─ examples/
-│  ├─ hello_plugin/                  # 可编译、可运行的 C++ 插件 + 宿主
+│  ├─ hello_plugin/                  # C++ 插件 + 宿主 + 清单
 │  └─ python_plugin/                 # Python 边车插件（SDK 目标形态）
 ├─ tests/
-│  ├─ abi/                           # ABI 布局 static_assert（跨编译器契约）
-│  └─ schema/                        # 清单样例校验（python + jsonschema）
-├─ vcpkg.json                        # MSVC 工具链依赖清单（win-vcpkg-* 预设）
+│  ├─ abi/                           # ABI 布局 static_assert
+│  ├─ unit/                          # 版本协商等契约测试
+│  ├─ schema/                        # manifest 与能力消息样例校验
+│  └─ docs/                          # JSON/YAML 解析与 Markdown 链接检查
+├─ vcpkg.json                        # MSVC 工具链依赖清单
 ├─ docs/
 └─ .vscode/
 ```
-
-后续里程碑将按文档规划加入 `core/`、`plugins/`、`apps/`、`sdk/`、`tests/`、`third_party/`。
 
 ---
 
@@ -170,7 +177,12 @@ loaded org.srsp.examples.hello 0.1.0 (ABI 1.0)
 checkpoint: 16 bytes at step 3
 after 2 more steps: {"ok":true,"steps":5}
 after restore:      {"ok":true,"steps":3}
+after one update:   {"commands":[],"steps":4}
+[INFO] hello plugin shut down
+log lines: 2
 ```
+
+> 2026-10-24 实测：以上输出逐行一致（含最后三行）。`ctest` 应显示 20/20 通过。
 
 ### 7.2 Linux（Ubuntu 22.04+）
 
@@ -204,24 +216,25 @@ cmake --build --preset linux-gcc-debug
 
 | 项 | 状态 |
 |---|---|
-| GCC 16.1.0（MSYS2 UCRT64） | ✅ 已验证：构建 + ctest 3/3 |
-| Clang 22.1.8（MSYS2 UCRT64，libstdc++） | ✅ 已验证：构建 + ctest 3/3；与 GCC 插件双向互载 |
-| Clang 22.1.8（MSYS2 CLANG64，libc++） | ✅ 仅验证层：构建 + ctest 3/3，ASan 无告警；产物不分发 |
-| MSVC 19.50（VS Community 2026） | ✅ 已验证：构建 + ctest 3/3；GCC↔MSVC 插件互载 |
+| GCC 16.1.0（MSYS2 UCRT64） | ✅ 构建 + `ctest` **20/20** |
+| Clang 22.1.8（MSYS2 UCRT64，libstdc++） | ✅ 构建 + `ctest` **20/20**；与 GCC 插件双向互载 |
+| Clang 22.1.8（MSYS2 CLANG64，libc++） | ✅ 仅验证层：构建 + `ctest` **10/10**（单元测试与边车桥接按设计跳过）；产物不分发 |
+| MSVC 19.50（VS Community 2026） | ✅ 构建 + `ctest` **9/9**（同上跳过项） |
 | CMake 4.4.0 / Ninja 1.13.2 / ccache 4.13.6 / Catch2 3.15.2 | ✅ 已安装（`pacman`） |
 | Qt 6.11.1 / gRPC 1.82.0 / protobuf 35.1 / Eigen3 / benchmark | ✅ 已安装并完成集成 smoke（find_package + 链接 + 运行） |
-| Python（UCRT64 3.14.6 + pip） | ✅ schema 测试由 UCRT64 Python 驱动（`win-python` 预设），系统 Windows Python 不再需要 |
+| Python（UCRT64 3.14.6，含 `jsonschema`/`grpcio`/`yaml`） | ✅ schema/能力/文档测试与 Python 边车均用它 |
 | vcpkg | ⚠️ 未安装（`VCPKG_ROOT` 未设置）；`win-vcpkg-*` 预设待启用 |
 | bgfx / CSPICE / Pinocchio / MCAP | ⚠️ MSYS2 无现成包，按 superbuild 自建（见 05 §5） |
-| Linux 构建 | 未在本机验证（无 WSL/容器） |
-| Agent 配置（AGENTS.md + tools/ai 多模型脚本） | ✅ 已启用，环境注入/计划创建/日志追加已验证 |
+| Linux 构建 | ⏳ 由 CI `linux-gcc` job 验证（本地无 WSL/容器）；边车桥接在 Linux 默认关闭（需带 CMake config 的 gRPC） |
+| CI | ✅ 三个 job 已落地；Windows 与文档 job 已通过，Linux 修复中 |
+| Agent 配置（AGENTS.md + workflows/skills） | ✅ 已启用（两条工作流 + 三个技能） |
 
 ---
 
 ## 9. 约定
 
 - 文档与设计讨论用中文；代码、标识符、提交信息用英文。
-- 契约（`api/`）是唯一真源；文档中的 JSON/代码片段由 CI 抽取校验，避免漂移。
+- 契约（`api/`）是唯一真源；CI 校验 JSON/YAML 可解析、manifest 与能力消息样例符合 schema、Markdown 链接可达（`ctest docs_check`）。
 - 所有插件必须声明能力版本与 ABI 版本；破坏性变更提升主版本。
 - 仿真线程内禁用墙钟与无序并行；确定性缺陷按 P0 处理。
 - 提交前：`clang-format`、`ctest`、`srsp-conformance`（有插件改动时）。
@@ -230,5 +243,10 @@ cmake --build --preset linux-gcc-debug
 
 ## 10. 下一步
 
-按 [07 路线图](docs/07-roadmap-risks.md) 的 M0 清单推进：冻结 ABI 与数据模式 → 内核骨架 →
-双传输 hello 插件 → bgfx/CSPICE 技术验证 → 三套示例模型。近期可执行的 10 项任务见该文档 §8。
+M0 已基本收尾（契约、内核骨架、双传输、CLI、CI）。接下来按 [07 路线图](docs/07-roadmap-risks.md) 进入 **M1**：
+
+1. `renderer.bgfx` 最小渲染 + 双原点；
+2. `srsp-studio`（场景树/属性/时间轴/视口）；
+3. MCAP 录制与回放（`state_hash` 一致）；
+4. 空间环境（星历/光照/eclipse）与 `dynamics.rigid` 对照 Pinocchio；
+5. 补审计遗留项 D3（selection pin/score）与 D4（`Diagnostic.remedy`）。

@@ -642,3 +642,13 @@
 - 摘要：首轮 CI 两处失败修复：Linux 端更正 nlohmann 包名并让桥接在缺少 protobuf/gRPC CMake config 时优雅跳过（Ubuntu 只有 pkg-config）；Windows 端由 CI 命令行覆盖预设里的 C:/msys64 硬编码路径（编译器/Ninja/Python）。05 补充 Linux 桥接限制说明。
 - 验证：本地四端不受影响（UCRT64 20/20）；ci.yml 变更待下一轮 CI 验证；失败日志已归档到 ISSUES P13/P14。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V13 — 核对并修正 README；CI 首轮全绿
+
+- 类型：文档
+- 文件：
+  - `README.md`
+  - `deepseek/Logs/Log/ISSUES.md`
+- 摘要：按 M0 出口要求核对 README：实测 §7.1 命令与输出逐行一致；修正过时内容（当前状态、仓库结构补 src/apps/tools/sidecar/.github/ModuleTest、环境验证表改为 20/20/10/9 与 CI 状态、删除'文档片段由 CI 抽取'的夸大表述、下一步改为 M1）。CI run 40093093367 三 job 全绿；ISSUES 补 P15（Linux -fPIC）。
+- 验证：docs_check 通过（JSON/YAML/链接）；README §7.1 命令本地实测输出与文档一致；CI 三个 job 全绿。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
