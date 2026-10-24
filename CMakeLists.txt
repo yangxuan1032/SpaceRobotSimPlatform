@@ -23,6 +23,7 @@ target_include_directories(srsp_api INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/api/i
 target_compile_features(srsp_api INTERFACE cxx_std_20)
 
 option(SRSP_BUILD_CORE "Build the kernel library" ON)
+option(SRSP_BUILD_APPS "Build the command line tools" ON)
 option(SRSP_BUILD_EXAMPLES "Build the example plugins and host" ON)
 option(SRSP_BUILD_TESTS "Build the test suite" ON)
 option(SRSP_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
@@ -31,6 +32,10 @@ enable_testing()
 
 if(SRSP_BUILD_CORE)
   add_subdirectory(src/core)
+endif()
+
+if(SRSP_BUILD_APPS)
+  add_subdirectory(apps)
 endif()
 
 if(SRSP_BUILD_EXAMPLES)
@@ -49,6 +54,5 @@ if(SRSP_BUILD_TESTS AND DEFINED ENV{SRSP_AI_MODEL} AND NOT "$ENV{SRSP_AI_MODEL}"
   endif()
 endif()
 
-# Placeholder: plugins and apps are added milestone by milestone.
+# Placeholder: plugins are added milestone by milestone.
 # add_subdirectory(plugins)
-# add_subdirectory(apps)
