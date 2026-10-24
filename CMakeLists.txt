@@ -24,6 +24,7 @@ target_compile_features(srsp_api INTERFACE cxx_std_20)
 
 option(SRSP_BUILD_CORE "Build the kernel library" ON)
 option(SRSP_BUILD_APPS "Build the command line tools" ON)
+option(SRSP_BUILD_BRIDGE "Build the gRPC sidecar bridge when gRPC is available" ON)
 option(SRSP_BUILD_EXAMPLES "Build the example plugins and host" ON)
 option(SRSP_BUILD_TESTS "Build the test suite" ON)
 option(SRSP_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
@@ -32,6 +33,21 @@ enable_testing()
 
 if(SRSP_BUILD_CORE)
   add_subdirectory(src/core)
+endif()
+
+# The gRPC bridge is currently supported on the UCRT64 toolchain only: the
+# gRPC package lives in the UCRT64 prefix and its headers conflict with the
+# CLANG64 libc++ toolchain; MSVC has no gRPC package in this workspace.
+# It is added before apps so that the CLI can link it when available.
+if(SRSP_BUILD_BRIDGE AND NOT MSVC AND CMAKE_CXX_COMPILER MATCHES "ucrt64")
+  find_package(gRPC CONFIG QUIET)
+  if(gRPC_FOUND)
+    add_subdirectory(src/bridge)
+  else()
+    message(STATUS "gRPC not found; the sidecar bridge is disabled")
+  endif()
+elseif(SRSP_BUILD_BRIDGE)
+  message(STATUS "The sidecar bridge is enabled only for the UCRT64 toolchain; skipped for this compiler")
 endif()
 
 if(SRSP_BUILD_APPS)

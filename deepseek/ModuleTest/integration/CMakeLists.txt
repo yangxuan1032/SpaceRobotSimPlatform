@@ -5,3 +5,8 @@ if(TARGET srsp_cli AND TARGET srsp_hello_plugin)
 else()
   message(STATUS "srsp_cli or srsp_hello_plugin missing; integration tests are skipped")
 endif()
+
+# The sidecar roundtrip needs gRPC, so it only appears when the bridge is built.
+if(TARGET srsp_bridge)
+  add_subdirectory(sidecar)
+endif()

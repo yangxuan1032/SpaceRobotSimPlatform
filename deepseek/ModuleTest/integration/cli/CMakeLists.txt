@@ -18,8 +18,27 @@ set_tests_properties(integration.cli_demo_unknown_method PROPERTIES
   TIMEOUT 30
   WILL_FAIL TRUE)
 
-add_test(NAME integration.cli_sidecar_reserved
-  COMMAND srsp_cli demo --transport sidecar)
-set_tests_properties(integration.cli_sidecar_reserved PROPERTIES
-  TIMEOUT 30
-  PASS_REGULAR_EXPRESSION "reserved for M0 stage 3")
+# The same call over the sidecar transport must produce the same payload.
+if(TARGET srsp_sidecar)
+  add_test(NAME integration.cli_demo_sidecar
+    COMMAND srsp_cli demo --transport sidecar
+            --sidecar-exe $<TARGET_FILE:srsp_sidecar>
+            --plugin $<TARGET_FILE:srsp_hello_plugin>)
+  set_tests_properties(integration.cli_demo_sidecar PROPERTIES
+    TIMEOUT 120
+    PASS_REGULAR_EXPRESSION "\"ok\":true")
+else()
+  message(STATUS "srsp_sidecar not built; integration.cli_demo_sidecar is not registered")
+endif()
+
+# Cross-language path: a Python sidecar driven by the same C++ host.
+if(TARGET srsp_sidecar AND DEFINED Python3_EXECUTABLE)
+  add_test(NAME integration.cli_demo_sidecar_python
+    COMMAND srsp_cli demo --transport sidecar
+            --sidecar-exe "${Python3_EXECUTABLE}"
+            --sidecar-script "${CMAKE_SOURCE_DIR}/tools/sidecar/srsp_sidecar.py"
+            --plugin $<TARGET_FILE:srsp_hello_plugin>)
+  set_tests_properties(integration.cli_demo_sidecar_python PROPERTIES
+    TIMEOUT 180
+    PASS_REGULAR_EXPRESSION "\"lang\":[ ]?\"python\"")
+endif()
