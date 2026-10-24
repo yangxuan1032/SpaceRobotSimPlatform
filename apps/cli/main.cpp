@@ -11,8 +11,14 @@
  */
 #include <srsp/core/plugin_host.hpp>
 
+#if defined(SRSP_HAVE_SIDECAR)
+#  include <srsp/bridge/sidecar_host.hpp>
+#  include <srsp/bridge/sidecar_process.hpp>
+#endif
+
 #include <cstdio>
 #include <cstring>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -121,6 +127,90 @@ int run_version() {
   return 0;
 }
 
+#if defined(SRSP_HAVE_SIDECAR)
+/** @brief Random handshake token for one sidecar instance. */
+std::string make_token() {
+  std::random_device device;
+  char buffer[40];
+  std::snprintf(buffer, sizeof(buffer), "%08x%08x%08x%08x", device(), device(),
+                device(), device());
+  return buffer;
+}
+
+/** @brief Launches a sidecar, invokes @p method over gRPC and prints the reply. */
+int run_sidecar_demo(const std::vector<std::string>& args) {
+  const std::string plugin_path = option_value(args, "--plugin");
+  const std::string sidecar_exe = option_value(args, "--sidecar-exe");
+  const std::string method = option_value(args, "--method").empty()
+                                 ? "core.ping"
+                                 : option_value(args, "--method");
+  if (plugin_path.empty()) {
+    std::fputs("error: --plugin <path> is required for the sidecar transport\n",
+               stderr);
+    return kExitFailure;
+  }
+  if (sidecar_exe.empty()) {
+    std::fputs("error: --sidecar-exe <path> is required for the sidecar "
+               "transport\n",
+               stderr);
+    return kExitFailure;
+  }
+
+  const std::string token = make_token();
+  const std::string sidecar_script = option_value(args, "--sidecar-script");
+  std::vector<std::string> child_args;
+  if (!sidecar_script.empty()) {
+    child_args.push_back(sidecar_script);
+  }
+  child_args.insert(child_args.end(),
+                    {"--port", "0", "--token", token, "--plugin", plugin_path});
+
+  srsp::bridge::SidecarProcess child;
+  if (!child.start(sidecar_exe, child_args)) {
+    std::fprintf(stderr, "error: could not start sidecar '%s'\n",
+                 sidecar_exe.c_str());
+    return kExitFailure;
+  }
+
+  std::string line;
+  if (!child.read_line(&line, 10000) || line.rfind("READY ", 0) != 0) {
+    std::fputs("error: sidecar did not report readiness\n", stderr);
+    child.terminate();
+    child.wait();
+    return kExitFailure;
+  }
+  const std::string address = "127.0.0.1:" + line.substr(6);
+
+  int result = 0;
+  {
+    srsp::bridge::SidecarHost client(address, token, 5000);
+    srsp_error err{};
+    if (client.connect(&err) != SRSP_OK) {
+      std::fprintf(stderr, "error: sidecar handshake failed: %s\n",
+                   err.message != nullptr ? err.message : "unknown");
+      result = kExitFailure;
+    } else {
+      std::string payload;
+      const srsp_status status =
+          client.invoke(method, std::string{}, &payload, &err);
+      if (status == SRSP_OK) {
+        std::printf("%s\n", payload.c_str());
+      } else {
+        std::fprintf(stderr, "error: sidecar call '%s' failed: %s\n",
+                     method.c_str(),
+                     err.message != nullptr ? err.message : "unknown");
+        result = kExitFailure;
+      }
+      client.shutdown();
+    }
+  }
+
+  child.terminate();
+  child.wait();
+  return result;
+}
+#endif  // SRSP_HAVE_SIDECAR
+
 int run_demo(const std::vector<std::string>& args) {
   const std::string transport = option_value(args, "--transport");
   const std::string plugin_path = option_value(args, "--plugin");
@@ -133,10 +223,13 @@ int run_demo(const std::vector<std::string>& args) {
     return kExitFailure;
   }
   if (transport == "sidecar") {
-    std::fputs("error: sidecar transport is reserved for M0 stage 3 and is "
-               "not implemented yet\n",
+#if defined(SRSP_HAVE_SIDECAR)
+    return run_sidecar_demo(args);
+#else
+    std::fputs("error: this build does not include the gRPC sidecar bridge\n",
                stderr);
     return kExitUnsupported;
+#endif
   }
   if (transport != "inproc") {
     std::fprintf(stderr, "error: unknown transport '%s'\n", transport.c_str());
