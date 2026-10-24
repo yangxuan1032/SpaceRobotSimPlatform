@@ -182,3 +182,30 @@
 - 解决：正则改为允许可选空格（`"lang":[ ]?"python"`）；并在测试说明里约定“断言 JSON 字段而非字节”。
 - 验证：`integration.cli_demo_sidecar_python` 通过；四端 15/15、15/15、7/7、7/7。
 - 关联：`CHANGELOG.md` 2026-10-24 V5。
+### P8 — 共享库只导出 C API，C++ 内部类链接失败
+
+- 现象：`srsp_core` 改为 SHARED 后，单元测试与桥接层出现大量 `undefined reference to srsp::core::TimeService::...`。
+- 根因：Windows 下只有带 `__declspec(dllexport)` 的符号可见；C++ 内部类没有导出属性，链接器看不到。
+- 解决：拆成两层——`srsp_kernel`（STATIC，内部 C++ 实现）+ `srsp_core`（SHARED，仅 `core_api.h` 的 C 符号，`SRSP_CORE_BUILD` 控制导出）。C++ 消费者链 `srsp_kernel`，外部宿主链 `srsp_core`。
+- 验证：四端构建通过，C API 测试与 C++ 单测同时可用。
+
+### P9 — manifest 的相对库路径在构建树里指向错误位置
+
+- 现象：`unit.manifest_load` 加载失败，清单里 `bin/srsp_hello.dll` 解析不到。
+- 根因：清单按**安装布局**写相对路径，而构建树中插件实际在 `plugins/org.srsp.examples.hello/bin/`。
+- 解决：测试把 `plugin.json` 复制到插件安装目录（`configure_file` 到 `plugins/<id>/`），使相对路径成立；同时确认 CLI 用绝对路径不受影响。
+- 验证：`unit.manifest_load` 通过，`plugin_id()` 返回 `org.srsp.examples.hello`。
+
+### P10 — CLANG64 误抓 UCRT64 的 nlohmann-json
+
+- 现象：CLANG64 编译 `plugin_host.cpp` 报 `<cstddef> tried including <stddef.h> but didn't find libc++'s`。
+- 根因：`find_package(nlohmann_json)` 命中 UCRT64 前缀，其 include 目录被注入 libc++ 工具链。
+- 解决：manifest 解析做成按工具链可选（仅 MSVC/UCRT64 启用），通过 `SRSP_HAVE_MANIFEST` 编译期守卫，未启用时返回 `SRSP_E_UNSUPPORTED` 并跳过该单测。
+- 验证：CLANG64 8/8 通过，UCRT64 17/17。
+
+### P11 — MSVC 的 C 模式拒绝 core_api.h 的包含布局
+
+- 现象：`test_host_api.c` 在 MSVC 下报 `vcruntime.h(399): error C2065: "uintptr_t": 未声明的标识符` 等一串错误，即使显式包含 `<stdint.h>`。
+- 根因：MSVC 以 C 模式编译该翻译单元时，`vcruntime.h` 与现有头文件包含顺序冲突（GCC/Clang 正常）。
+- 解决：host_api 的 C 表面测试在 MSVC 上跳过并打印原因；C 表面由 UCRT64 GCC/Clang 覆盖。
+- 验证：MSVC 7/7 通过；把「MSVC C 模式验证」列入 CI 待办（可能需要 `/TC` 与显式包含顺序）。

@@ -55,10 +55,13 @@ class PythonPlugin:
 
 
 class Runtime(plugin_pb2_grpc.PluginRuntimeServicer):
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, fault: str = "") -> None:
         self._token = token
         self._plugin = PythonPlugin()
         self._stop = threading.Event()
+        # Test hook: injected once, used by the CLI restart test.
+        self._fault = fault
+        self._fault_fired = False
 
     def Handshake(self, request, context):  # noqa: N802
         if request.token != self._token:
@@ -73,6 +76,11 @@ class Runtime(plugin_pb2_grpc.PluginRuntimeServicer):
         context.abort(grpc.StatusCode.UNIMPLEMENTED, "shared memory is reserved for M2")
 
     def Invoke(self, request, context):  # noqa: N802
+        if self._fault == "first-invoke" and not self._fault_fired:
+            self._fault_fired = True
+            return plugin_pb2.InvokeResponse(
+                error=plugin_pb2.Error(code=11, message="injected fault")
+            )
         payload = self._plugin.invoke(request.method)
         if payload is None:
             return plugin_pb2.InvokeResponse(
@@ -109,7 +117,7 @@ def main() -> int:
     args = parser.parse_args()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
-    runtime = Runtime(args.token)
+    runtime = Runtime(args.token, os.environ.get("SRSP_SIDECAR_FAULT", ""))
     plugin_pb2_grpc.add_PluginRuntimeServicer_to_server(runtime, server)
     port = server.add_insecure_port(f"127.0.0.1:{args.port}")
     if port == 0:

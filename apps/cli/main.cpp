@@ -9,7 +9,7 @@
  * The sidecar transport is reserved for M0 stage 3 and currently reports
  * SRSP_E_UNSUPPORTED without pretending to work.
  */
-#include <srsp/core/plugin_host.hpp>
+#include <srsp/core_api.h>
 
 #if defined(SRSP_HAVE_SIDECAR)
 #  include <srsp/bridge/sidecar_host.hpp>
@@ -32,67 +32,6 @@ namespace {
 constexpr int kExitUnsupported = 3;
 /// Exit code for a failed plugin operation.
 constexpr int kExitFailure = 2;
-
-void SRSP_CALL cli_log(void*, int32_t level, srsp_str message) {
-  std::fprintf(stderr, "[log:%d] %.*s\n", static_cast<int>(level),
-               static_cast<int>(message.size),
-               message.data != nullptr ? message.data : "");
-}
-
-double SRSP_CALL cli_time(void*) { return 0.0; }
-
-int64_t SRSP_CALL cli_time_ns(void*) { return 0; }
-
-srsp_status SRSP_CALL cli_alloc(void*, uint64_t size, uint64_t alignment,
-                                void** out) {
-  if (out == nullptr || size == 0) {
-    return SRSP_E_INVALID_ARGUMENT;
-  }
-  if (alignment < alignof(void*)) {
-    alignment = alignof(void*);
-  }
-#if defined(_WIN32)
-  *out = _aligned_malloc(static_cast<size_t>(size), static_cast<size_t>(alignment));
-#else
-  if (posix_memalign(out, static_cast<size_t>(alignment),
-                     static_cast<size_t>(size)) != 0) {
-    *out = nullptr;
-  }
-#endif
-  return *out != nullptr ? SRSP_OK : SRSP_E_OUT_OF_MEMORY;
-}
-
-void SRSP_CALL cli_free(void*, void* ptr) {
-#if defined(_WIN32)
-  _aligned_free(ptr);
-#else
-  std::free(ptr);
-#endif
-}
-
-srsp_status SRSP_CALL cli_publish(void*, srsp_str, srsp_bytes, uint64_t) {
-  return SRSP_E_UNSUPPORTED;
-}
-
-srsp_status SRSP_CALL cli_shm_map(void*, srsp_str, uint64_t, int32_t, void**) {
-  return SRSP_E_UNSUPPORTED;
-}
-
-void SRSP_CALL cli_shm_unmap(void*, void*, uint64_t) {}
-
-srsp_host_v1 make_services() {
-  srsp_host_v1 services{};
-  services.struct_size = sizeof(srsp_host_v1);
-  services.log = cli_log;
-  services.time_tai = cli_time;
-  services.time_tai_ns = cli_time_ns;
-  services.alloc = cli_alloc;
-  services.free = cli_free;
-  services.publish = cli_publish;
-  services.shm_map = cli_shm_map;
-  services.shm_unmap = cli_shm_unmap;
-  return services;
-}
 
 srsp_str to_str(const std::string& text) {
   srsp_str result{};
@@ -158,6 +97,7 @@ int run_sidecar_demo(const std::vector<std::string>& args) {
 
   const std::string token = make_token();
   const std::string sidecar_script = option_value(args, "--sidecar-script");
+  const bool restart_enabled = option_value(args, "--no-restart").empty();
   std::vector<std::string> child_args;
   if (!sidecar_script.empty()) {
     child_args.push_back(sidecar_script);
@@ -166,42 +106,60 @@ int run_sidecar_demo(const std::vector<std::string>& args) {
                     {"--port", "0", "--token", token, "--plugin", plugin_path});
 
   srsp::bridge::SidecarProcess child;
-  if (!child.start(sidecar_exe, child_args)) {
+
+  // Launches the sidecar and returns its bound address, or an empty string.
+  const auto launch = [&]() -> std::string {
+    if (!child.start(sidecar_exe, child_args)) {
+      return {};
+    }
+    std::string line;
+    if (!child.read_line(&line, 10000) || line.rfind("READY ", 0) != 0) {
+      child.terminate();
+      child.wait();
+      return {};
+    }
+    return "127.0.0.1:" + line.substr(6);
+  };
+
+  std::string address = launch();
+  if (address.empty()) {
     std::fprintf(stderr, "error: could not start sidecar '%s'\n",
                  sidecar_exe.c_str());
     return kExitFailure;
   }
 
-  std::string line;
-  if (!child.read_line(&line, 10000) || line.rfind("READY ", 0) != 0) {
-    std::fputs("error: sidecar did not report readiness\n", stderr);
-    child.terminate();
-    child.wait();
-    return kExitFailure;
-  }
-  const std::string address = "127.0.0.1:" + line.substr(6);
-
-  int result = 0;
-  {
+  int result = kExitFailure;
+  for (int attempt = 0; attempt < 2; ++attempt) {
     srsp::bridge::SidecarHost client(address, token, 5000);
     srsp_error err{};
     if (client.connect(&err) != SRSP_OK) {
       std::fprintf(stderr, "error: sidecar handshake failed: %s\n",
                    err.message != nullptr ? err.message : "unknown");
-      result = kExitFailure;
     } else {
       std::string payload;
       const srsp_status status =
           client.invoke(method, std::string{}, &payload, &err);
+      client.shutdown();
       if (status == SRSP_OK) {
         std::printf("%s\n", payload.c_str());
-      } else {
-        std::fprintf(stderr, "error: sidecar call '%s' failed: %s\n",
-                     method.c_str(),
-                     err.message != nullptr ? err.message : "unknown");
-        result = kExitFailure;
+        result = 0;
+        break;
       }
-      client.shutdown();
+      std::fprintf(stderr, "error: sidecar call '%s' failed: %s\n",
+                   method.c_str(),
+                   err.message != nullptr ? err.message : "unknown");
+    }
+
+    if (!restart_enabled || attempt == 1) {
+      break;
+    }
+    std::fputs("info: restarting the sidecar once\n", stderr);
+    child.terminate();
+    child.wait();
+    address = launch();
+    if (address.empty()) {
+      std::fputs("error: could not restart the sidecar\n", stderr);
+      break;
     }
   }
 
@@ -241,37 +199,46 @@ int run_demo(const std::vector<std::string>& args) {
     return kExitFailure;
   }
 
-  srsp::core::PluginHost host(make_services());
+  // The inproc path goes through the host-side C API on purpose: it is the
+  // only consumer that proves core_api.h stays usable from a pure C surface.
   srsp_error err{};
+  srsp_context_config config{};
+  config.struct_size = sizeof(srsp_context_config);
+  config.log = nullptr;
+  config.log_user = nullptr;
+  config.flags = SRSP_CTX_FLAG_HEADLESS;
 
-  if (host.load(plugin_path, &err) != SRSP_OK) {
+  srsp_context* ctx = nullptr;
+  if (srsp_context_create(&config, &ctx, &err) != SRSP_OK) {
+    std::fprintf(stderr, "error: context create failed: %s\n",
+                 err.message != nullptr ? err.message : "unknown");
+    return kExitFailure;
+  }
+
+  int result = kExitFailure;
+  if (srsp_load_plugin(ctx, to_str(plugin_path), &err) != SRSP_OK) {
     std::fprintf(stderr, "error: load failed: %s\n",
                  err.message != nullptr ? err.message : "unknown");
-    return kExitFailure;
-  }
-  if (host.init(srsp_str{}, &err) != SRSP_OK) {
-    std::fprintf(stderr, "error: init failed: %s\n",
-                 err.message != nullptr ? err.message : "unknown");
-    return kExitFailure;
-  }
-
-  srsp_buffer response{};
-  const srsp_status status = host.call(to_str(method), srsp_bytes{}, &response, &err);
-  const int result = status == SRSP_OK ? 0 : kExitFailure;
-
-  if (status == SRSP_OK) {
-    const char* text = response.data != nullptr
-                           ? reinterpret_cast<const char*>(response.data)
-                           : "";
-    std::printf("%.*s\n", static_cast<int>(response.size), text);
-    srsp_host_v1 services = make_services();
-    services.free(services.user, response.data);
   } else {
-    std::fprintf(stderr, "error: call '%s' failed: %s\n", method.c_str(),
-                 err.message != nullptr ? err.message : "unknown");
+    srsp_buffer response{};
+    const srsp_status status =
+        srsp_plugin_call(ctx, srsp_str{}, to_str(method), srsp_bytes{}, &response,
+                         &err);
+    if (status == SRSP_OK) {
+      const char* text = response.data != nullptr
+                             ? reinterpret_cast<const char*>(response.data)
+                             : "";
+      std::printf("%.*s\n", static_cast<int>(response.size), text);
+      srsp_buffer_release(ctx, &response);
+      result = 0;
+    } else {
+      std::fprintf(stderr, "error: call '%s' failed: %s\n", method.c_str(),
+                   err.message != nullptr ? err.message : "unknown");
+    }
+    srsp_unload_plugin(ctx, nullptr);
   }
 
-  host.unload();
+  srsp_context_destroy(ctx);
   return result;
 }
 

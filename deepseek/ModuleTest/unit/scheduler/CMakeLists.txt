@@ -1,5 +1,5 @@
 add_executable(test_scheduler test_scheduler.cpp)
-target_link_libraries(test_scheduler PRIVATE srsp_core Catch2::Catch2WithMain)
+target_link_libraries(test_scheduler PRIVATE srsp_kernel Catch2::Catch2WithMain)
 add_test(NAME unit.scheduler COMMAND test_scheduler)
 set_tests_properties(unit.scheduler PROPERTIES TIMEOUT 30)
 

@@ -28,7 +28,7 @@ add_library(srsp_bridge STATIC
   src/sidecar_process.cpp
   src/sidecar_server.cpp)
 target_include_directories(srsp_bridge PUBLIC include)
-target_link_libraries(srsp_bridge PUBLIC srsp_core srsp_proto)
+target_link_libraries(srsp_bridge PUBLIC srsp_kernel srsp_proto)
 
 if(MSVC)
   target_compile_options(srsp_bridge PRIVATE /W4)

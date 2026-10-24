@@ -545,3 +545,57 @@
 - 摘要：通过 pacman 安装 python-grpcio/grpcio-tools（1.82.0，规避 PEP 668），用 grpc_tools.protoc 生成 Python 桩；新增 tools/sidecar/srsp_sidecar.py：PluginRuntime 服务（token/ABI 握手、core.ping/describe/update、Ping、Checkpoint/Restore、Shutdown、AttachShm 返回 UNIMPLEMENTED），绑定临时端口后打印 READY；CLI 增加 --sidecar-script 以支持 python.exe + 脚本形式拉起；新增 integration.cli_demo_sidecar_python。
 - 验证：四端：UCRT64 GCC 15/15、UCRT64 Clang 15/15、CLANG64 7/7、MSVC 7/7；Python 边车实测返回 lang=python；ISSUES 补 P7。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V6 — 审计 M0 计划与架构设计的一致性
+
+- 类型：文档
+- 文件：
+  - `deepseek/Logs/Plan/2026-10-24-plan-vs-architecture-audit.md`
+- 摘要：逐项对照 M0 执行计划与 01/02/03/05/07：结论为方向一致、7 处偏离。高：CLI 未经 core_api（A11 未验证）、运行时未读 manifest；中：selection 仅优先级、诊断缺 remedy；低：测试目录与计划不一致、工具链矩阵未反映桥接仅 UCRT64、内核为静态库未导出 C API。另列 4 项文档与进度不同步，并给出 P0–P2 修复建议。
+- 验证：结论均附文件与行为证据（apps/cli/main.cpp 引用、srsp_core STATIC、Diagnostic 字段、02 §12 勾选状态、05 行 140 数字）；未改代码。
+- 关联计划：`deepseek/Logs/Plan/2026-10-24-plan-vs-architecture-audit.md`
+
+### V7 — 按审计结论修正文档：测试分层、能力矩阵、清单勾选
+
+- 类型：文档
+- 文件：
+  - `docs/02-plugin-contract.md`
+  - `docs/05-msys2-dev-environment.md`
+  - `docs/07-roadmap-risks.md`
+  - `deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+- 摘要：P0 文档修正：(1) 02 新增 §10.3 测试分层（tests/ 契约测试 vs <model>/ModuleTest 开发期测试）并勾选双传输条目（5/6）；(2) 05 新增 §2.5 能力矩阵，写明四端测试数与桥接仅 UCRT64 的原因；(3) 07 M0 条目与 M0 计划 T3.4 改为引用 ModuleTest/integration；(4) 修复 M0 计划中指向已移出版本库的架构规划文件的失效链接。
+- 验证：四份文档链接校验 0 失效（02:2、05:0、07:0、M0 计划:16）；02 §12 勾选 5/6；数字与四端实测一致（15/15/7/7）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-24-plan-vs-architecture-audit.md`
+
+### V8 — 实现宿主侧 core_api 与 manifest 装载（审计 D1/D2）
+
+- 类型：新增
+- 文件：
+  - `api/include/srsp/core_api.h`
+  - `src/core/src/core_api.cpp`
+  - `src/core/CMakeLists.txt`
+  - `src/core/include/srsp/core/plugin_host.hpp`
+  - `src/core/src/plugin_host.cpp`
+  - `apps/cli/main.cpp`
+  - `deepseek/ModuleTest/integration/host_api/test_host_api.c`
+  - `deepseek/ModuleTest/integration/host_api/CMakeLists.txt`
+  - `deepseek/ModuleTest/integration/CMakeLists.txt`
+  - `deepseek/ModuleTest/unit/plugin_host/test_manifest_load.cpp`
+  - `deepseek/ModuleTest/unit/plugin_host/CMakeLists.txt`
+  - `src/bridge/CMakeLists.txt`
+  - `deepseek/Logs/Log/ISSUES.md`
+- 摘要：D1：新增 core_api 实现（context 创建/销毁、load_plugin、start/pause/step、time_tai_ns、plugin_call、buffer_release；project/snapshot/subscribe 明确返回 UNSUPPORTED），srsp_core 改共享库并拆出内部静态库 srsp_kernel，CLI 的 inproc 路径改走 C API；新增纯 C 语言的 host_api 集成测试。D2：PluginHost 新增 load_with_manifest（读 plugin.json 校验 id/api 主版本/平台库路径后再加载），nlohmann-json 按工具链启用，新增 manifest 单元测试。ISSUES 补 P8–P11。
+- 验证：四端：UCRT64 GCC 17/17、UCRT64 Clang 17/17、CLANG64 8/8、MSVC 7/7（host_api 的 C 测试在 MSVC 跳过并说明原因）；C API 从 C 语言成功驱动内核；manifest 加载返回正确 plugin_id。
+- 关联计划：`deepseek/Logs/Plan/2026-10-24-plan-vs-architecture-audit.md`
+
+### V9 — 实现边车故障后单次重启（M0 T3.3）
+
+- 类型：新增
+- 文件：
+  - `apps/cli/main.cpp`
+  - `tools/sidecar/srsp_sidecar.py`
+  - `deepseek/ModuleTest/integration/cli/CMakeLists.txt`
+  - `docs/05-msys2-dev-environment.md`
+- 摘要：CLI 的 sidecar 路径改为两段式：调用失败（握手或 Invoke 非 OK）时终止子进程、重新拉起、重连并重试一次，可用 --no-restart 关闭；Python 边车支持 SRSP_SIDECAR_FAULT=first-invoke 故障注入（首次 Invoke 返回 INTERNAL）；新增 integration.cli_demo_sidecar_restart 覆盖该路径；05 能力矩阵数字更新为 18/18/8/7（单元测试 30 例、集成测试 7/7/4/3）。
+- 验证：四端：UCRT64 GCC 18/18、UCRT64 Clang 18/18、CLANG64 8/8、MSVC 7/7；重启用例实测在注入故障后成功（PASS 正则命中 restarting the sidecar once）。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
