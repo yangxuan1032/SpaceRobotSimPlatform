@@ -209,3 +209,9 @@
 - 根因：MSVC 以 C 模式编译该翻译单元时，`vcruntime.h` 与现有头文件包含顺序冲突（GCC/Clang 正常）。
 - 解决：host_api 的 C 表面测试在 MSVC 上跳过并打印原因；C 表面由 UCRT64 GCC/Clang 覆盖。
 - 验证：MSVC 7/7 通过；把「MSVC C 模式验证」列入 CI 待办（可能需要 `/TC` 与显式包含顺序）。
+### P12 — 「仅 UCRT64」门槛误伤 Linux
+
+- 现象：为 CI 准备 Linux job 时发现桥接层、manifest 解析、单元测试在 Linux 上会被跳过。
+- 根因：门槛写成 `CMAKE_CXX_COMPILER MATCHES "ucrt64"`，本意是「Windows 上避开 CLANG64/MSVC」，但把 Linux 也排除了。
+- 解决：条件改为「非 Windows，或 Windows 且编译器在 ucrt64」，即 `NOT WIN32 OR ... MATCHES "ucrt64"`；单元测试用 `MSVC OR (WIN32 AND NOT ...ucrt64)`。
+- 验证：Windows 四端行为不变（20/20/10/9）；Linux 端待首轮 CI 验证。

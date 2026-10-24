@@ -150,7 +150,7 @@ pacman -Q | wc -l
 | 集成测试（`<model>/ModuleTest/integration`） | ✅ 7 | ✅ 7 | ✅ 4 | ✅ 3 |
 | gRPC 边车桥接（`srsp_bridge`） | ✅ | ✅ | ⛔ 跳过 | ⛔ 跳过 |
 | Python 边车（grpcio） | ✅ | ✅ | ⛔ 跳过 | ⛔ 跳过 |
-| `ctest` 合计 | **19** | **19** | **9** | **8** |
+| `ctest` 合计 | **20** | **20** | **10** | **9** |
 
 跳过原因（不是缺陷，是当前环境的硬约束）：
 
@@ -432,50 +432,25 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 
 ## 10. CI
 
-```yaml
-name: ci
-on: [push, pull_request]
+工作流文件：`.github/workflows/ci.yml`（2026-10-24 落地，替代本文档早期的草案）。
 
-jobs:
-  windows:
-    runs-on: windows-latest
-    env:
-      SRSP_AI_MODEL: ci
-    defaults: { run: { shell: msys2 {0} } }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          update: true
-          install: >-
-            mingw-w64-ucrt-x86_64-toolchain
-            mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-eigen3
-            mingw-w64-ucrt-x86_64-qt6-base
-            mingw-w64-ucrt-x86_64-protobuf
-            mingw-w64-ucrt-x86_64-grpc
-      - run: cmake --preset win-ucrt64-release
-      - run: cmake --build --preset win-ucrt64-release -j 4
-      - run: ctest --preset win-ucrt64-release --output-on-failure
-      - uses: actions/upload-artifact@v4
-        with: { name: srsp-win64, path: ci/Temp/build/win-ucrt64-release/dist }
+| Job | Runner | 内容 |
+|---|---|---|
+| `windows-ucrt64` | `windows-latest` + `msys2/setup-msys2` (UCRT64) | 安装 GCC/CMake/Ninja/Catch2/nlohmann-json/protobuf/gRPC/python(jsonschema,yaml) → `win-ucrt64-debug` 配置、构建、`ctest` |
+| `linux-gcc` | `ubuntu-24.04` | apt 安装 cmake/ninja/g++/python3(+jsonschema,yaml)/libprotobuf/libgrpc++/nlohmann/catch2 → `linux-gcc-debug` 配置、构建、`ctest` |
+| `docs` | `ubuntu-24.04` | `python3 tests/docs/check_docs.py`：JSON/YAML 解析 + Markdown 相对链接 |
 
-  linux:
-    runs-on: ubuntu-22.04
-    env:
-      SRSP_AI_MODEL: ci
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y build-essential cmake ninja-build libeigen3-dev qt6-base-dev libgrpc++-dev protobuf-compiler-grpc
-      - run: cmake --preset linux-gcc-release
-      - run: cmake --build --preset linux-gcc-release -j 4
-      - run: ctest --preset linux-gcc-release --output-on-failure
-```
+约定：
 
-CI 门禁：构建 + 单测 + 契约测试必须通过；性能基准仅记录趋势，回归超过 15% 时告警。
+- 三个 job 都设置 `SRSP_AI_MODEL=ci`，构建目录落在 `ci/Temp/build/<preset>`（已被 `.gitignore` 忽略）；
+- 门禁：构建 + 单测 + 契约测试必须通过；性能基准仅记录趋势，回归超过 15% 时告警（基准尚未进 CI）；
+- **本地等价命令**（Windows）：`cmake --preset win-ucrt64-debug && cmake --build --preset win-ucrt64-debug && ctest --preset win-ucrt64-debug --output-on-failure`；
+- 文档检查也可单独跑：`python tests/docs/check_docs.py`（缺少 PyYAML 时只跳过 YAML 部分）。
 
+已验证 / 未验证（如实说明）：
+
+- ✅ 工作流 YAML 可解析（3 个 job、步骤数正确）；`check_docs.py` 本地通过；本地四端 ctest 全绿；
+- ⚠️ **GitHub Actions 的实际运行未验证**（本地无 runner）。首次推送后需要看首轮 CI 结果再收紧。
 ---
 
 ## 11. 常见问题（排错手册）

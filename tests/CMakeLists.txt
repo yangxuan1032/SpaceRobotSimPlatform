@@ -2,7 +2,8 @@
 #   abi/         C ABI layout static asserts (toolchain-portability contract)
 #   unit/        version negotiation / rejection paths (docs/02 section 6)
 #   schema/      JSON Schema example validation (python + jsonschema)
-#   conformance/ dual-transport consistency (added in M0, phase 3)
+#   docs/        JSON/YAML parsing and Markdown relative-link checks (CI mirror)
+#   conformance/ dual-transport consistency lives in <model>/ModuleTest/integration
 #   bench/       performance baselines      (added in M0, phase 2+)
 
 add_subdirectory(abi)
@@ -10,6 +11,12 @@ add_subdirectory(unit)
 
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
+  # Repository hygiene: JSON/YAML parse + Markdown links (needs no packages).
+  add_test(NAME docs_check
+           COMMAND ${Python3_EXECUTABLE}
+                   ${CMAKE_CURRENT_SOURCE_DIR}/docs/check_docs.py)
+  set_tests_properties(docs_check PROPERTIES TIMEOUT 120)
+
   execute_process(
     COMMAND ${Python3_EXECUTABLE} -c "import jsonschema"
     RESULT_VARIABLE SRSP_HAVE_JSONSCHEMA
@@ -28,5 +35,5 @@ if(Python3_Interpreter_FOUND)
     message(STATUS "Python3 found but 'jsonschema' is missing; schema example tests are disabled (pip install jsonschema to enable)")
   endif()
 else()
-  message(STATUS "Python3 not found; schema example tests are disabled")
+  message(STATUS "Python3 not found; docs and schema tests are disabled")
 endif()

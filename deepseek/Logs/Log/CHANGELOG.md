@@ -614,3 +614,19 @@
 - 摘要：T1 最后一项：为 core.ping 与 controller.update 定义请求/响应 JSON Schema（\.request/response，additionalProperties=false），各方向 3 正例 + 3 反例；新增 validate_capability_examples.py（强制每个方向 ≥3 正 3 反，正例必须通过、反例必须被拒），接入 ctest 为 schema_capability_examples；02 补消息冻结说明并勾选第 3 项（6/6），05 能力矩阵总数更新为 19/19/9/8。
 - 验证：UCRT64 GCC/Clang 各 19/19、CLANG64 9/9；schema_capability_examples 通过，正反例按预期通过/被拒；02 §12 勾选 6/6。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V11 — 落地 CI 工作流与文档检查（M0 T6）
+
+- 类型：新增
+- 文件：
+  - `.github/workflows/ci.yml`
+  - `tests/docs/check_docs.py`
+  - `tests/CMakeLists.txt`
+  - `docs/05-msys2-dev-environment.md`
+  - `CMakeLists.txt`
+  - `src/core/CMakeLists.txt`
+  - `deepseek/ModuleTest/CMakeLists.txt`
+  - `deepseek/Logs/Log/ISSUES.md`
+- 摘要：T6：新增 .github/workflows/ci.yml（windows-ucrt64 / linux-gcc / docs 三个 job）；新增 tests/docs/check_docs.py（JSON 解析、YAML 解析、Markdown 相对链接）并注册为 ctest docs_check；修正工具链门槛使 Linux 也能构建桥接与跑单测；05 §10 改为真实工作流说明并标注验证等级。
+- 验证：本地：docs_check 通过（JSON/YAML/链接均 ok），ci.yml 可被 PyYAML 解析（3 job）；四端 20/20/10/9。GitHub Actions 实际运行未验证（无 runner），已在文档中标注。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
