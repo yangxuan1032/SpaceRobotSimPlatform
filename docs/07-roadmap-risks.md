@@ -48,7 +48,7 @@ M0 契约与骨架      M1 最小闭环        M2 环境与传感器     M3 捕�
 | 交付物 | 验收 |
 |---|---|
 | `api/`：C ABI 头、proto、manifest schema、SRM schema v0 | 评审通过，`static_assert` 布局测试通过 |
-| `hello` 插件（C++ 进程内）与 `hello` 边车（Python） | `srsp-cli demo` 两种传输输出一致 |
+| `hello` 插件（C++ 进程内）与 `hello` 边车（Python） | `srsp-cli demo` 两种传输输出一致（用例在 `<model>/ModuleTest/integration`，分层见 02 §10.3） |
 | 内核骨架：注册表、调度循环、日志、诊断、插件宿主 | 能加载/卸载/配置插件，错误路径有测试 |
 | CMakePresets + `bootstrap-msys2.sh` + CI（Win/Linux） | 干净机器按文档 30 分钟内构建成功 |
 | `tests/bench` 骨架与首版基线数字 | 至少 1 个可复现基准（含容差表占位） |

@@ -3,7 +3,7 @@
 - 日期：2026-10-22
 - 状态：实施中（环境与契约部分已完成，内核/CLI/双传输/CI 待建；2026-10-23 回填）
 - 提出人：用户
-- 关联文档：[README](../../../README.md)、[01 总体架构](../../../docs/01-architecture.md)、[02 插件契约](../../../docs/02-plugin-contract.md)、[03 数据契约](../../../docs/03-data-contracts.md)、[04 技术栈](../../../docs/04-subsystems-and-stack.md)、[05 MSYS2 环境](../../../docs/05-msys2-dev-environment.md)、[06 打包](../../../docs/06-packaging.md)、[07 路线图](../../../docs/07-roadmap-risks.md)、[架构与技术栈规划](2026-10-20-srsp-architecture.md)
+- 关联文档：[README](../../../README.md)、[01 总体架构](../../../docs/01-architecture.md)、[02 插件契约](../../../docs/02-plugin-contract.md)、[03 数据契约](../../../docs/03-data-contracts.md)、[04 技术栈](../../../docs/04-subsystems-and-stack.md)、[05 MSYS2 环境](../../../docs/05-msys2-dev-environment.md)、[06 打包](../../../docs/06-packaging.md)、[07 路线图](../../../docs/07-roadmap-risks.md)、[一致性审计](2026-10-24-plan-vs-architecture-audit.md)（原「架构与技术栈规划」已按计划治理策略移出版本库，可在 git 历史中查看）
 
 ## 1. 背景与目标
 
@@ -85,7 +85,7 @@ tests/conformance/                  # 双传输一致性
 | T2.4 | Diagnostics | `severity + code + message + context`，控制台 + JSON 行日志 | 结构化日志可被测试断言 |
 | T2.5 | 内核 CMake 接入 | 顶层 `add_subdirectory(src/core)`、`apps`、`tests`，替换现有占位注释 | `SRSP_BUILD_EXAMPLES=OFF` 也能独立构建内核 |
 
-> 进度（2026-10-24）：**T2.1–T2.4 已完成**（27 个单元用例）；**T4 起步**（`srsp-cli version` / `demo --transport inproc`）；**T3.1 已完成**（CLI 自动拉起 `srsp-sidecar`，临时端口 + READY + token + 回收）；**T3.2 已完成**——Python 边车（`tools/sidecar/srsp_sidecar.py` + 生成桩，grpcio 1.82 由 pacman 安装），C++ 宿主成功驱动 Python 插件，CLI 支持 `--sidecar-script`。四端：UCRT64 GCC/Clang 15/15，CLANG64 7/7，MSVC 7/7。下一步：T3.3 边车崩溃/超时后的重启与恢复路径。
+> 进度（2026-10-24）：**阶段 2、阶段 3 全部完成**——内核骨架（T2.1–T2.4）、双传输（T3.1 拉起、T3.2 Python 边车、T3.3 故障重启、T3.4 一致性用例）；**T4 起步**（`version` / `demo --transport inproc|sidecar`）；**审计 D1/D2/D7 已修复**（`core_api` 实现并被 CLI 使用、内核拆分为 `srsp_kernel`+`srsp_core`、manifest 装载校验）。四端：UCRT64 GCC/Clang 18/18，CLANG64 8/8，MSVC 7/7。下一步：T6 CI（M0 出口硬条件）、T4 剩余命令、D3/D4（M1）。
 
 ### 阶段 3：双传输 hello（5 天）
 
@@ -94,7 +94,7 @@ tests/conformance/                  # 双传输一致性
 | T3.1 | `srsp-cli demo --transport inproc\|sidecar` | 同一请求序列双路执行 | 两条路径退出码 0 |
 | T3.2 | Python 边车实现 | 基于 `api/proto/srsp/v1/plugin.proto` 的 `PluginRuntime`：Handshake / Invoke / Ping / Shutdown，先实现 `core.describe` 与 `hello.echo` | 边车可独立启动并响应 Ping |
 | T3.3 | 边车宿主 | 进程拉起、token 握手、超时、一次重启路径 | 杀死边车后能重启并恢复调用 |
-| T3.4 | 一致性用例 | 相同输入两路输出逐字节一致 | `tests/conformance` 用例通过 |
+| T3.4 | 一致性用例 | 相同输入两路输出逐字节一致 | `<model>/ModuleTest/integration` 用例通过（原写 `tests/conformance`，已按 [02 §10.3](../../../docs/02-plugin-contract.md) 的分层语义归位） |
 
 M0 只走 gRPC + inline bytes；共享内存（`BlobRef`/`AttachShm`）按 [docs/02](../../../docs/02-plugin-contract.md) §7 推到 M2 再落地，避免 M0 被 Windows 共享内存细节拖住。
 
@@ -207,6 +207,7 @@ T6 CI（贯穿）          （T5 Qt 已移入 M1）
 | 2026-10-23 | 阶段 2 收尾：T2.4 Diagnostics + T2.3 宏步调度（含 9 个新用例） | UCRT64 GCC/Clang 各 9/9；CLANG64/MSVC 各 4/4；5 套件 27 用例 |
 | 2026-10-24 | 阶段 4 起步：`srsp-cli`（version / demo inproc）+ 集成测试层 | 四端 13/13、13/13、8/8、8/8；sidecar 显式返回 UNSUPPORTED |
 | 2026-10-24 | 阶段 3 传输层：`srsp_proto` + `srsp_bridge`（Server/Host）+ 一致性测试 | 四端 14/14、14/14、8/8、8/8；inproc 与 sidecar 载荷逐字节一致 |
+| 2026-10-24 | 阶段 3 收尾：T3.3 边车故障重启 + T4 走 core_api + manifest 装载 | 四端 18/18、18/18、8/8、7/7 |
 
 ## 10. 修订记录
 
