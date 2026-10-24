@@ -30,6 +30,8 @@
 | 传感器 | `srsp.sensor/device@1` | IMU、星敏、相机、LiDAR、GNSS、F/T | 进程内 |
 | 渲染器 | `srsp.render/renderer@1` | bgfx、Qt Quick 3D、three.js、Unity | 进程内或边车 |
 | 控制器 | `srsp.control/controller@1` | PD、计算力矩、MPC、遥操作 | 进程内或边车（Python/MATLAB） |
+| 协同控制器 | `srsp.control/coordinator@1` | 编队保持、任务分配、一致性 | 进程内或边车 |
+| 机器人间链路 | `srsp.io/link@1` | 有向链路、延迟/带宽/丢包、事件队列 | 进程内 |
 | 记录/回放 | `srsp.io/recorder@1` | MCAP、Parquet | 进程内 |
 | 界面面板 | `srsp.ui/panel@1` | Qt 面板、Web 面板 | 进程内 / Web |
 | 脚本引擎 | `srsp.script/engine@1` | Python 边车、Lua（可选） | 边车 |
@@ -553,7 +555,7 @@ if __name__ == "__main__":
 
 ## 13. 预留能力与扩展点（reserved，不实现）
 
-以下能力 ID 为**未来增强**占位（对应 [07 §11](07-roadmap-risks.md) 的 C1–C15）。它们不出现在 v1 的 manifest 样例中，也没有实现；一旦被调用必须返回 `SRSP_E_UNSUPPORTED`，并在诊断里提示所需版本。
+以下能力 ID 为**未来增强**占位（对应 [07 §11](07-roadmap-risks.md) 的 C1–C16）。它们不出现在 v1 的 manifest 样例中，也没有实现；一旦被调用必须返回 `SRSP_E_UNSUPPORTED`，并在诊断里提示所需版本。
 
 | 预留能力 ID | 对应优势 | 形态 |
 |---|---|---|
@@ -564,6 +566,7 @@ if __name__ == "__main__":
 | `srsp.io/dataset@1` | 合成数据/标注导出 | 边车 |
 | `srsp.control/policy@1` | 策略推理（ONNX 等） | 进程内或边车 |
 | `srsp.analysis/{coverage,access,conjunction,maneuver}@1` | 任务级分析 | 进程内 |
+| `srsp.dynamics/thermal@1` | 本体热力学（LPTN 热网络，C16） | 进程内 |
 | `srsp.io/fsw_bridge@1`、`srsp.io/hil@1` | 飞控/HIL | 边车 |
 | `srsp.io/rosbridge@1` | ROS 2 桥接 | 边车 |
 
