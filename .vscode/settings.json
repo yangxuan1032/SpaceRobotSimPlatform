@@ -5,6 +5,7 @@
   "cmake.generator": "Ninja",
   "cmake.parallelJobs": 0,
   "C_Cpp.intelliSenseEngine": "disabled",
+  "C_Cpp.formatting": "disabled",
   "clangd.arguments": [
     "--compile-commands-dir=${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp",
     "--background-index",
@@ -18,6 +19,23 @@
   "files.encoding": "utf8",
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
+  "[cpp]": {
+    "editor.defaultFormatter": "xaver.clang-format"
+  },
+  "[c]": {
+    "editor.defaultFormatter": "xaver.clang-format"
+  },
+  "[markdown]": {
+    "editor.formatOnSave": false
+  },
+  "cSpell.ignorePaths": [
+    "**/Temp/**",
+    "docs/**",
+    "deepseek/**",
+    "kimi/**",
+    "**/*.md"
+  ],
+  "cSpell.language": "en",
   "terminal.integrated.defaultProfile.windows": "MSYS2 UCRT64",
   "terminal.integrated.profiles.windows": {
     "MSYS2 UCRT64": {
@@ -32,6 +50,7 @@
   "windows": {
     "cmake.cmakePath": "C:/msys64/ucrt64/bin/cmake.exe",
     "clangd.path": "C:/msys64/ucrt64/bin/clangd.exe",
+    "clang-format.executable": "C:/msys64/ucrt64/bin/clang-format.exe",
     "cmake.environment": {
       "PATH": "C:\\msys64\\ucrt64\\bin;${env:PATH}",
       "TEMP": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/tmp",
@@ -42,7 +61,8 @@
     }
   },
   "linux": {
-    "cmake.cmakePath": "/usr/bin/cmake"
+    "cmake.cmakePath": "/usr/bin/cmake",
+    "clang-format.executable": "/usr/bin/clang-format"
   },
   "search.exclude": {
     "**/build": true,

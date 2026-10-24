@@ -230,26 +230,38 @@ code .
 
 ### 4.2 扩展
 
-| 扩展 | 用途 |
-|---|---|
-| `ms-vscode.cmake-tools` | 配置/构建/调试/预设集成 |
-| `llvm-vs-code-extensions.vscode-clangd` | 代码导航、补全、clang-tidy |
-| `ms-vscode.cpptools` | 仅用于调试（IntelliSense 关闭） |
-| `cheshirekow.cmake-format` | CMake 格式化 |
-| `vadimcn.vscode-lldb`（可选） | 更快的调试体验 |
-| `ms-python.python` | Python 边车与脚本 |
-| `zxh404.vscode-proto3` | proto 语法 |
-| `redhat.vscode-yaml` | YAML 校验 |
-| `tamasfe.even-better-toml` | TOML 校验 |
-| `bierner.markdown-mermaid` | 文档中的 Mermaid 预览 |
-| `github.vscode-github-actions` | CI 编辑 |
+| 扩展 | 用途 | 备注 |
+|---|---|---|
+| `ms-vscode.cmake-tools` | 配置/构建/测试/预设集成 | 必需 |
+| `llvm-vs-code-extensions.vscode-clangd` | 代码导航、补全、clang-tidy | 必需；IntelliSense 的唯一来源 |
+| `ms-vscode.cpptools` | 仅用于调试（cppdbg） | 必需；`C_Cpp.intelliSenseEngine: disabled` |
+| `xaver.clang-format` | 保存时格式化 C/C++ | 必需；`clang-format.executable` 指向 UCRT64 |
+| `cheshirekow.cmake-format` | CMake 格式化 | 必需 |
+| `ms-python.python` + `ms-python.vscode-pylance` | Python 边车与脚本 | 必需 |
+| `drblury.protobuf-vsc` | `.proto` 语法/跳转 | 必需；**统一用它**，不再推荐 `zxh404.vscode-proto3` |
+| `redhat.vscode-yaml` | YAML 校验 | 必需 |
+| `github.vscode-github-actions` | CI 工作流 schema | 必需 |
+| `tamasfe.even-better-toml` | TOML 校验 | 推荐 |
+| `bierner.markdown-mermaid` | 文档 Mermaid 预览 | 推荐 |
+| `davidanson.vscode-markdownlint` | Markdown lint | 推荐；行宽规则在 `.markdownlint.json` 关闭 |
+| `editorconfig.editorconfig` | 尊重 `.editorconfig` | 推荐 |
+| `matepek.vscode-catch2-test-adapter` | Test Explorer 跑 Catch2 用例 | 推荐（非强制，CI 才是门禁） |
+| `cschlosser.doxdocgen` | 生成 Doxygen 注释骨架 | 推荐（与 `module-build` 技能一致） |
+| `streetsidesoftware.code-spell-checker` | 拼写 | 可选；已配置忽略中文文档与标识符 |
+| `vadimcn.vscode-lldb` | 更快的调试体验 | 可选 |
+| `rust-lang.rust-analyzer` | Rust CLI（规划中） | 可选；待 `sdk/rust/` 落地 |
+
+**不建议**：`ms-vscode.cpptools-extension-pack`（与 clangd 路线重复，只带来主题与 make 辅助）、`zxh404.vscode-proto3`（与 drblury 冲突）。
 
 ### 4.3 仓库内已提供
 
-- `.vscode/settings.json`：预设、clangd、终端、编码；
-- `.vscode/extensions.json`：推荐扩展；
-- `.vscode/tasks.json`：配置/构建/测试/调试任务；
-- `.vscode/launch.json`：gdb 调试示例宿主。
+- `.vscode/settings.json`：预设、clangd、clang-format 绑定、终端、编码、拼写忽略；
+- `.vscode/extensions.json`：推荐与不推荐扩展；
+- `.vscode/tasks.json`：configure / build / test / docs_check / hello demo / cli inproc / cli sidecar / clang-format；
+- `.vscode/launch.json`：hello host、`srsp-cli`（inproc、sidecar）、`test_plugin_host`（单测）、Linux hello host；
+- `.clangd`：命令行 clangd 的默认参数（不含数据库路径，路径由扩展参数注入）；
+- `.markdownlint.json`：关闭行宽等不适合中文文档的规则；
+- 个人覆盖写 `.vscode/*.local.json`（已被 `.gitignore` 忽略）。
 
 ### 4.4 clangd 与 compile_commands.json
 
@@ -269,6 +281,18 @@ CMake 配置时导出 `compile_commands.json`，并由 CMake Tools 复制到当�
 ```
 
 > 让 clangd 与 GCC 编译器版本匹配即可；clangd 只做语义分析，不参与构建。
+
+**多工具链约定（重要）**：`compile_commands.json` 只有一份，后配置的预设会覆盖它。为避免索引与真实构建不一致：
+
+1. clangd **只跟 `win-ucrt64-debug`**；
+2. 切到 `win-ucrt64-clang-debug` / `win-clang64-debug` / `win-msvc-debug` 后，clangd 索引可能报错——这属于预期，用命令行 `ctest` 验证该工具链即可；
+3. 改回 UCRT64 后执行一次 configure，再 `clangd: Restart language server`。
+
+命令行使用 clangd 时显式指定数据库：
+
+```bash
+clangd --compile-commands-dir=<model>/Temp
+```
 
 ---
 

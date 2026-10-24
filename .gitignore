@@ -45,3 +45,6 @@ runs/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Personal editor overrides (never committed)
+.vscode/*.local.json

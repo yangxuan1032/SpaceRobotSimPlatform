@@ -6,9 +6,7 @@
       "type": "shell",
       "command": "cmake",
       "args": ["--preset", "${input:preset}"],
-      "windows": {
-        "command": "C:/msys64/ucrt64/bin/cmake.exe"
-      },
+      "windows": { "command": "C:/msys64/ucrt64/bin/cmake.exe" },
       "problemMatcher": [],
       "group": "build"
     },
@@ -17,9 +15,7 @@
       "type": "shell",
       "command": "cmake",
       "args": ["--build", "--preset", "${input:preset}"],
-      "windows": {
-        "command": "C:/msys64/ucrt64/bin/cmake.exe"
-      },
+      "windows": { "command": "C:/msys64/ucrt64/bin/cmake.exe" },
       "problemMatcher": ["$gcc"],
       "group": { "kind": "build", "isDefault": true }
     },
@@ -28,23 +24,97 @@
       "type": "shell",
       "command": "ctest",
       "args": ["--preset", "${input:preset}", "--output-on-failure"],
+      "windows": { "command": "C:/msys64/ucrt64/bin/ctest.exe" },
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "Docs: check (json/yaml/links)",
+      "type": "shell",
+      "command": "python3",
+      "args": ["${workspaceFolder}/tests/docs/check_docs.py"],
       "windows": {
-        "command": "C:/msys64/ucrt64/bin/ctest.exe"
+        "command": "C:/msys64/ucrt64/bin/python.exe",
+        "args": ["${workspaceFolder}/tests/docs/check_docs.py"]
       },
       "problemMatcher": [],
       "group": "test"
     },
     {
-      "label": "Demo: hello plugin (Windows)",
+      "label": "Demo: hello plugin",
       "type": "shell",
-      "command": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp_hello_host.exe",
+      "command": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp_hello_host",
       "args": [
-        "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/plugins/org.srsp.examples.hello/bin/srsp_hello.dll"
+        "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/plugins/org.srsp.examples.hello/bin/srsp_hello.so"
       ],
       "windows": {
-        "command": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp_hello_host.exe"
+        "command": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp_hello_host.exe",
+        "args": [
+          "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/plugins/org.srsp.examples.hello/bin/srsp_hello.dll"
+        ]
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Demo: srsp-cli (inproc)",
+      "type": "shell",
+      "command": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp-cli",
+      "args": [
+        "demo",
+        "--transport", "inproc",
+        "--plugin",
+        "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/plugins/org.srsp.examples.hello/bin/srsp_hello.so"
+      ],
+      "windows": {
+        "command": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp-cli.exe",
+        "args": [
+          "demo",
+          "--transport", "inproc",
+          "--plugin",
+          "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/plugins/org.srsp.examples.hello/bin/srsp_hello.dll"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Demo: srsp-cli (sidecar)",
+      "type": "shell",
+      "command": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp-cli",
+      "args": [
+        "demo",
+        "--transport", "sidecar",
+        "--sidecar-exe",
+        "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp-sidecar",
+        "--plugin",
+        "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/plugins/org.srsp.examples.hello/bin/srsp_hello.so"
+      ],
+      "windows": {
+        "command": "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp-cli.exe",
+        "args": [
+          "demo",
+          "--transport", "sidecar",
+          "--sidecar-exe",
+          "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/bin/srsp-sidecar.exe",
+          "--plugin",
+          "${workspaceFolder}/${env:SRSP_AI_MODEL}/Temp/build/${input:preset}/plugins/org.srsp.examples.hello/bin/srsp_hello.dll"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Format: clang-format (C/C++)",
+      "type": "shell",
+      "command": "clang-format",
+      "args": [
+        "-i",
+        "src/**/*.cpp", "src/**/*.hpp",
+        "apps/**/*.cpp",
+        "tests/**/*.cpp",
+        "examples/**/*.cpp"
+      ],
+      "windows": { "command": "C:/msys64/ucrt64/bin/clang-format.exe" },
+      "problemMatcher": [],
+      "group": "none"
     }
   ],
   "inputs": [
@@ -55,6 +125,9 @@
       "options": [
         "win-ucrt64-debug",
         "win-ucrt64-release",
+        "win-ucrt64-clang-debug",
+        "win-clang64-debug",
+        "win-msvc-debug",
         "linux-gcc-debug",
         "linux-gcc-release",
         "linux-clang-asan"

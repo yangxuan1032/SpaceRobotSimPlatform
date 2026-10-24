@@ -1,0 +1,19 @@
+# Project-wide clangd defaults. The compile database path contains the model
+# namespace (<model>/Temp), which cannot be expressed here; the VS Code
+# extension passes it via `clangd.arguments`. For command-line clangd use:
+#   clangd --compile-commands-dir=<model>/Temp
+CompileFlags:
+  Add:
+    - -std=c++20
+Diagnostics:
+  ClangTidy:
+    Add:
+      - bugprone-*
+      - performance-*
+      - modernize-use-override
+    Remove:
+      - modernize-use-trailing-return-type
+InlayHints:
+  Enabled: true
+  ParameterNames: true
+  Designators: true

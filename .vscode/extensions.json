@@ -3,15 +3,22 @@
     "ms-vscode.cmake-tools",
     "llvm-vs-code-extensions.vscode-clangd",
     "ms-vscode.cpptools",
+    "xaver.clang-format",
     "cheshirekow.cmake-format",
     "ms-python.python",
-    "zxh404.vscode-proto3",
+    "ms-python.vscode-pylance",
+    "drblury.protobuf-vsc",
     "redhat.vscode-yaml",
+    "github.vscode-github-actions",
     "tamasfe.even-better-toml",
     "bierner.markdown-mermaid",
-    "github.vscode-github-actions"
+    "davidanson.vscode-markdownlint",
+    "editorconfig.editorconfig",
+    "matepek.vscode-catch2-test-adapter",
+    "cschlosser.doxdocgen"
   ],
   "unwantedRecommendations": [
-    "ms-vscode.cpptools-extension-pack"
+    "ms-vscode.cpptools-extension-pack",
+    "zxh404.vscode-proto3"
   ]
 }
