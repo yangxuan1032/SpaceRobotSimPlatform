@@ -222,6 +222,30 @@ orbital_servicer.srm/
 - 传感器 `rate_hz` 必须是宏步频率的整数分频或整数倍。
 - 所有网格路径存在、单位包围盒合理（警告阈值可配）。
 
+### 3.7 热模型（预留，v1 只校验不计算）
+
+对应 [07 §11](07-roadmap-risks.md) 的 C16 与能力 `srsp.dynamics/thermal@1`（1.2）。v1 解析并校验该段，不参与动力学。
+
+```jsonc
+"thermal": {
+  "nodes": [
+    { "id": "bus", "capacity_J_per_K": 12000, "temperature_K": 293.0,
+      "heaters": [{ "power_W": 20, "max_power_W": 60 }] },
+    { "id": "camera", "capacity_J_per_K": 400, "temperature_K": 293.0 }
+  ],
+  "conductances": [
+    { "from": "bus", "to": "camera", "W_per_K": 1.5 }
+  ],
+  "radiators": [
+    { "node": "bus", "area_m2": 0.4, "absorptivity": 0.2, "emissivity": 0.85 }
+  ]
+}
+```
+
+- 单位：`K`、`J/K`、`W`、`W/K`、`m²`；
+- 辐射面与 `eclipse` 因子、太阳角系数耦合（见 [04 §4.2](04-subsystems-and-stack.md)）；
+- 预留期只做 schema 校验与可视化展示，不出温度曲线。
+
 ---
 
 ## 4. 状态与 Arrow 表
@@ -285,6 +309,8 @@ message BlobRef {
 | `sensor.<type>.<id>` | 传感器 → 消费者 | 按配置 | `srsp.sensor.*/1` | 量测帧 |
 | `render.scene` | 内核 → 渲染器 | 变更时 | `srsp.scene/1` | 场景增量 |
 | `diag.log` | 全体 → 内核 | 事件 | `srsp.diag/1` | 结构化日志 |
+| `team.state` | 内核 → 协同层 | 宏步 | `srsp.team/1` | 成员摘要、链路状态、任务分配 |
+| `link.message` | 成员 ↔ 成员 | 事件 | `srsp.link/1` | 链路消息与投递结果（延迟/丢包） |
 | `ui.command` | UI → 内核 | 事件 | `srsp.cmd.ui/1` | 用户操作（暂停、注入故障） |
 
 ### 5.2 投递语义
@@ -470,6 +496,33 @@ message SensorFrame {
 
 - 路径相对项目根；`${timestamp}` 等变量由内核展开。
 - 事件按 `t` 排序，同一时刻按文件顺序；运行时插入的事件必须带 `seq` 保持确定性。
+
+**多机器人团队 `teams[]`**（同一场景内 N 个机器人协同）：
+
+```json
+{
+  "entities": [
+    { "id": "robot_a", "model": "models/sat_a.srm", "initial_state": { } },
+    { "id": "robot_b", "model": "models/sat_b.srm", "initial_state": { } }
+  ],
+  "teams": [
+    {
+      "id": "team_1",
+      "members": ["robot_a", "robot_b"],
+      "links": [
+        { "from": "robot_a", "to": "robot_b", "delay_ns": 100000000,
+          "bandwidth_bps": 9600, "loss_rate": 0.0, "queue_capacity": 64 }
+      ],
+      "coordinator": { "capability": "srsp.control/coordinator@1", "params": { } }
+    }
+  ]
+}
+```
+
+- `robot_id` 即实体 `id`，全局唯一；链路为**有向边**，未声明即不可达；
+- `delay_ns` 为整数纳秒；`loss_rate` ∈ [0,1]；
+- 调度顺序：宏步内按 `robot_id` 字典序更新单体，协同层在单体之后运行一次，顺序写入 `state.meta.schedule_order`；
+- `teams[]` 省略时等价于每个实体各自独立（旧场景文件保持兼容）。
 
 ---
 
