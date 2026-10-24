@@ -6,7 +6,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/integration/CMakeLists.txt")
   add_subdirectory(integration)
 endif()
 
-if(MSVC OR NOT CMAKE_CXX_COMPILER MATCHES "ucrt64")
+if(MSVC OR (WIN32 AND NOT CMAKE_CXX_COMPILER MATCHES "ucrt64"))
   message(STATUS "Unit tests are enabled only for the UCRT64 toolchain; skipped for the current compiler")
   return()
 endif()
