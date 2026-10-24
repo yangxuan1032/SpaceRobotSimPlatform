@@ -137,7 +137,28 @@ pkg-config --modversion eigen3
 pacman -Q | wc -l
 ```
 
-本机基线（2026-10-22 实测）：GCC 16.1.0、Clang 22.1.8（UCRT64，含 clangd/clang-tidy/compiler-rt）、Python 3.14.6 + pip 26.1.2、CMake 4.4.0、Ninja 1.13.2、ccache 4.13.6、Catch2 3.15.2、protobuf 35.1、gRPC 1.82.0、Qt 6.11.1、Eigen3、benchmark 均已安装；CLANG64 保留 clang 22 + libc++ + lld + lldb（仅验证层，1.87 GB）；Visual Studio Community 2026（MSVC 19.50）可用，`win-msvc-*` 预设已验证。四套工具链（GCC / Clang-UCRT64 / Clang-CLANG64 / MSVC）各自 `ctest` 3/3 通过。已清理的重复项：clang-21 家族（约 7.1 GiB）、MSYS 层重复 cmake 4.3.4 及其孤儿依赖；清理后 `ucrt64` 3.55 GB、`clang64` 1.87 GB。
+本机基线（2026-10-22 实测）：GCC 16.1.0、Clang 22.1.8（UCRT64，含 clangd/clang-tidy/compiler-rt）、Python 3.14.6 + pip 26.1.2、CMake 4.4.0、Ninja 1.13.2、ccache 4.13.6、Catch2 3.15.2、protobuf 35.1、gRPC 1.82.0（含 `python-grpcio` 1.82.0）、Qt 6.11.1、Eigen3、benchmark 均已安装；CLANG64 保留 clang 22 + libc++ + lld + lldb（仅验证层，1.87 GB）；Visual Studio Community 2026（MSVC 19.50）可用，`win-msvc-*` 预设已验证。已清理的重复项：clang-21 家族（约 7.1 GiB）、MSYS 层重复 cmake 4.3.4 及其孤儿依赖；清理后 `ucrt64` 3.55 GB、`clang64` 1.87 GB。
+
+### 2.5 能力矩阵（2026-10-24 实测）
+
+四套工具链**不是能力等价**的，差异来自第三方包的可获得性与运行时 ABI：
+
+| 能力 | UCRT64 GCC | UCRT64 Clang | CLANG64（libc++） | MSVC |
+|---|---|---|---|---|
+| 构建（core / apps / tests） | ✅ | ✅ | ✅ | ✅ |
+| 单元测试（`<model>/ModuleTest/unit`，Catch2） | ✅ 30 用例 | ✅ 30 用例 | ⛔ 跳过 | ⛔ 跳过 |
+| 集成测试（`<model>/ModuleTest/integration`） | ✅ 7 | ✅ 7 | ✅ 4 | ✅ 3 |
+| gRPC 边车桥接（`srsp_bridge`） | ✅ | ✅ | ⛔ 跳过 | ⛔ 跳过 |
+| Python 边车（grpcio） | ✅ | ✅ | ⛔ 跳过 | ⛔ 跳过 |
+| `ctest` 合计 | **18** | **18** | **8** | **7** |
+
+跳过原因（不是缺陷，是当前环境的硬约束）：
+
+- **Catch2 与单元测试**：Catch2 只在 UCRT64 前缀提供；CLANG64/MSVC 链接 UCRT64 的 libstdc++ 目标会失败，故模块单测仅在 UCRT64 启用；
+- **gRPC 桥接**：`find_package(gRPC)` 在 CLANG64 下会找到 UCRT64 的包并带进 `-isystem .../ucrt64/include`，与 libc++ 标准库头冲突；MSVC 侧无 gRPC 包。桥接因此限定 UCRT64；
+- 集成测试不依赖 Catch2，因此在四端都跑。
+
+若后续要补齐 CLANG64/MSVC 的单元测试能力，需为这两个运行时各自提供 Catch2 构建（源码编译或 vcpkg），属于 M1 的 CI 工作项。
 
 同一实测中**仍未安装**的项：Boost、Arrow、OpenCV、FFmpeg、Assimp、SDL2/Vulkan 等可选依赖；MSYS 层 `base-devel`/`git`；`VCPKG_ROOT` 未配置（`win-vcpkg-*` 预设待启用）。
 

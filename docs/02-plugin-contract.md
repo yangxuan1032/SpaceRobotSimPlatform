@@ -443,6 +443,16 @@ srsp-plugin-template/
 - `checkpoint → restore → 继续步进` 与不中断结果一致（容差内）；
 - 边车：断线重连、心跳超时、优雅关闭。
 
+### 10.3 测试分层（目录语义）
+
+| 层次 | 位置 | 内容 | 进 CI |
+|---|---|---|---|
+| 工程级契约测试 | `tests/`（`abi/`、`unit/`、`schema/`） | ABI 布局断言、版本协商、manifest 样例、双传输一致性 | 是 |
+| 模块开发期测试 | `<model>/ModuleTest/unit/<module>/` | 单模块正例/反例、错误码路径（Catch2） | 是（仅 UCRT64，见 05 §2.5） |
+| 模块集成测试 | `<model>/ModuleTest/integration/<scenario>/` | 跨模块主流程与失败路径（CLI 双传输、边车 roundtrip） | 是（四端） |
+
+约定：`tests/` 是**随工程演进**的契约门禁，`ModuleTest/` 是**随模型工作区演进**的开发证据；两者不互相替代。历史计划中写的 `tests/conformance` 即上表的集成测试层。
+
 发布到插件仓库前必须附 `conformance.json` 报告。
 
 ### 10.3 调试
@@ -547,7 +557,7 @@ if __name__ == "__main__":
 - [x] `plugin_api.h` 字段与对齐在 Windows/Linux、GCC/Clang/MSVC 下一致（`static_assert` 覆盖；`tests/abi/layout_static_assert.cpp`，2026-10-22 已在 GCC 16.1、Clang 22.1.8（libstdc++ 与 libc++ 两种运行时）与 MSVC 19.50 验证，Linux 端随 CI 补验）
 - [x] `plugin-manifest.schema.json` 通过 10 个真实插件样例校验（`api/schema/examples/`，6 正 4 反，`tests/schema/validate_manifest_examples.py`，2026-10-22 全过）
 - [ ] 每个能力的请求/响应消息冻结，附 3 个正例、3 个反例
-- [ ] 进程内/边车两条路径跑通同一 `hello` 插件
+- [x] 进程内/边车两条路径跑通同一 `hello` 插件（2026-10-24：`srsp-cli demo --transport inproc|sidecar` 双路可跑，一致性用例在 `<model>/ModuleTest/integration/{sidecar,cli}`，载荷逐字节一致；分层语义见 §10.3）
 - [x] 版本协商与不兼容拒绝路径有自动化测试（`tests/unit/abi_negotiation.cpp`：不支持的主版本返回 NULL、缺 host 服务返回 `SRSP_E_INVALID_ARGUMENT`、截断 host 表仍可用、未知方法返回 `SRSP_E_UNSUPPORTED`）
 - [x] 错误码表与诊断文案评审通过（`api/error_codes.md`：12 个错误码的触发条件、责任方与处理建议）
 
