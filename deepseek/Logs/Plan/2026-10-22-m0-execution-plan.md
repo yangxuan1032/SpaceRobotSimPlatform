@@ -85,7 +85,7 @@ tests/conformance/                  # 双传输一致性
 | T2.4 | Diagnostics | `severity + code + message + context`，控制台 + JSON 行日志 | 结构化日志可被测试断言 |
 | T2.5 | 内核 CMake 接入 | 顶层 `add_subdirectory(src/core)`、`apps`、`tests`，替换现有占位注释 | `SRSP_BUILD_EXAMPLES=OFF` 也能独立构建内核 |
 
-> 进度（2026-10-24）：**阶段 2、阶段 3 全部完成**——内核骨架（T2.1–T2.4）、双传输（T3.1 拉起、T3.2 Python 边车、T3.3 故障重启、T3.4 一致性用例）；**T4 起步**（`version` / `demo --transport inproc|sidecar`）；**审计 D1/D2/D7 已修复**（`core_api` 实现并被 CLI 使用、内核拆分为 `srsp_kernel`+`srsp_core`、manifest 装载校验）。四端：UCRT64 GCC/Clang 18/18，CLANG64 8/8，MSVC 7/7。下一步：T6 CI（M0 出口硬条件）、T4 剩余命令、D3/D4（M1）。
+> 进度（2026-10-24）：**阶段 1、2、3 全部完成**——契约 6/6（含能力消息冻结）、内核骨架（T2.1–T2.4）、双传输（T3.1–T3.4）；**T4 起步**（`version` / `demo --transport inproc|sidecar`）；**审计 D1/D2/D7 已修复**。四端：UCRT64 GCC/Clang 19/19，CLANG64 9/9，MSVC 8/8。下一步：T6 CI（M0 出口硬条件）、D3/D4（M1）。
 
 ### 阶段 3：双传输 hello（5 天）
 

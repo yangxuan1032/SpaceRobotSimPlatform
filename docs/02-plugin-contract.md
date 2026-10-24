@@ -314,6 +314,8 @@ core.<method>            平台保留：describe / configure / ping / checkpoint
 
 `srsp.model/importer@1`、`srsp.control/controller@1`、`srsp.io/recorder@1`、`srsp.ui/panel@1`、`srsp.script/engine@1` 的方法表在 M0 冻结时拆分为 `api/proto/srsp/v1/capabilities.proto`；当前以 04 文档的能力矩阵为准。
 
+**已冻结的消息（2026-10-24）**：`core.ping` 与 `controller.update` 的请求/响应形状以 JSON Schema 固化在 `api/schema/capabilities/<method>.schema.json`（含 `$defs.request`、`$defs.response`），示例在 `api/schema/examples/capabilities/<method>/{request,response}/`，每个方向 **3 正例 + 3 反例**，由 `tests/schema/validate_capability_examples.py` 校验（ctest `schema_capability_examples`）。新增能力时按同一布局补齐，不足 3+3 会直接失败。
+
 ---
 
 ## 6. 版本与兼容策略
@@ -556,7 +558,7 @@ if __name__ == "__main__":
 
 - [x] `plugin_api.h` 字段与对齐在 Windows/Linux、GCC/Clang/MSVC 下一致（`static_assert` 覆盖；`tests/abi/layout_static_assert.cpp`，2026-10-22 已在 GCC 16.1、Clang 22.1.8（libstdc++ 与 libc++ 两种运行时）与 MSVC 19.50 验证，Linux 端随 CI 补验）
 - [x] `plugin-manifest.schema.json` 通过 10 个真实插件样例校验（`api/schema/examples/`，6 正 4 反，`tests/schema/validate_manifest_examples.py`，2026-10-22 全过）
-- [ ] 每个能力的请求/响应消息冻结，附 3 个正例、3 个反例
+- [x] 每个能力的请求/响应消息冻结，附 3 个正例、3 个反例（2026-10-24：`core.ping` 与 `controller.update` 的 schema 在 `api/schema/capabilities/`，示例 3+3/方向，ctest `schema_capability_examples` 强制数量与形状）
 - [x] 进程内/边车两条路径跑通同一 `hello` 插件（2026-10-24：`srsp-cli demo --transport inproc|sidecar` 双路可跑，一致性用例在 `<model>/ModuleTest/integration/{sidecar,cli}`，载荷逐字节一致；分层语义见 §10.3）
 - [x] 版本协商与不兼容拒绝路径有自动化测试（`tests/unit/abi_negotiation.cpp`：不支持的主版本返回 NULL、缺 host 服务返回 `SRSP_E_INVALID_ARGUMENT`、截断 host 表仍可用、未知方法返回 `SRSP_E_UNSUPPORTED`）
 - [x] 错误码表与诊断文案评审通过（`api/error_codes.md`：12 个错误码的触发条件、责任方与处理建议）

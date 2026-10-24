@@ -599,3 +599,18 @@
 - 摘要：CLI 的 sidecar 路径改为两段式：调用失败（握手或 Invoke 非 OK）时终止子进程、重新拉起、重连并重试一次，可用 --no-restart 关闭；Python 边车支持 SRSP_SIDECAR_FAULT=first-invoke 故障注入（首次 Invoke 返回 INTERNAL）；新增 integration.cli_demo_sidecar_restart 覆盖该路径；05 能力矩阵数字更新为 18/18/8/7（单元测试 30 例、集成测试 7/7/4/3）。
 - 验证：四端：UCRT64 GCC 18/18、UCRT64 Clang 18/18、CLANG64 8/8、MSVC 7/7；重启用例实测在注入故障后成功（PASS 正则命中 restarting the sidecar once）。
 - 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
+
+### V10 — 冻结 core.ping 与 controller.update 消息并补 3 正例 3 反例（T1 收尾）
+
+- 类型：新增
+- 文件：
+  - `api/schema/capabilities/controller.update.schema.json`
+  - `api/schema/capabilities/core.ping.schema.json`
+  - `api/schema/examples/capabilities/`
+  - `tests/schema/validate_capability_examples.py`
+  - `tests/CMakeLists.txt`
+  - `docs/02-plugin-contract.md`
+  - `docs/05-msys2-dev-environment.md`
+- 摘要：T1 最后一项：为 core.ping 与 controller.update 定义请求/响应 JSON Schema（\.request/response，additionalProperties=false），各方向 3 正例 + 3 反例；新增 validate_capability_examples.py（强制每个方向 ≥3 正 3 反，正例必须通过、反例必须被拒），接入 ctest 为 schema_capability_examples；02 补消息冻结说明并勾选第 3 项（6/6），05 能力矩阵总数更新为 19/19/9/8。
+- 验证：UCRT64 GCC/Clang 各 19/19、CLANG64 9/9；schema_capability_examples 通过，正反例按预期通过/被拒；02 §12 勾选 6/6。
+- 关联计划：`deepseek/Logs/Plan/2026-10-22-m0-execution-plan.md`
