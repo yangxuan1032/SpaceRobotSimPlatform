@@ -29,6 +29,9 @@ add_library(srsp_kernel STATIC
 
 target_include_directories(srsp_kernel PUBLIC include)
 target_link_libraries(srsp_kernel PUBLIC SRSP::api ${CMAKE_DL_LIBS})
+# srsp_core links this archive into a shared library, so the objects must be
+# position independent on ELF targets (no-op on Windows).
+set_target_properties(srsp_kernel PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(SRSP_MANIFEST_ENABLED)
   target_link_libraries(srsp_kernel PUBLIC nlohmann_json::nlohmann_json)
   target_compile_definitions(srsp_kernel PUBLIC SRSP_HAVE_MANIFEST=1)
