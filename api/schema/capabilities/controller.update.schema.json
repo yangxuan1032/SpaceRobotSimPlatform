@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "srsp.capability/controller.update@1",
+  "title": "srsp.control/controller@1 - controller.update",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commands", "dt"],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["joint", "effort"],
+            "properties": {
+              "joint": { "type": "string", "minLength": 1, "maxLength": 64 },
+              "effort": { "type": "number" }
+            }
+          }
+        },
+        "dt": { "type": "number", "exclusiveMinimum": 0 },
+        "seq": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps", "applied"],
+      "properties": {
+        "steps": { "type": "integer", "minimum": 0 },
+        "applied": { "type": "boolean" },
+        "commands": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    }
+  }
+}

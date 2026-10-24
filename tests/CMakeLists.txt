@@ -19,6 +19,11 @@ if(Python3_Interpreter_FOUND)
              COMMAND ${Python3_EXECUTABLE}
                      ${CMAKE_CURRENT_SOURCE_DIR}/schema/validate_manifest_examples.py)
     set_tests_properties(schema_manifest_examples PROPERTIES TIMEOUT 60)
+
+    add_test(NAME schema_capability_examples
+             COMMAND ${Python3_EXECUTABLE}
+                     ${CMAKE_CURRENT_SOURCE_DIR}/schema/validate_capability_examples.py)
+    set_tests_properties(schema_capability_examples PROPERTIES TIMEOUT 60)
   else()
     message(STATUS "Python3 found but 'jsonschema' is missing; schema example tests are disabled (pip install jsonschema to enable)")
   endif()

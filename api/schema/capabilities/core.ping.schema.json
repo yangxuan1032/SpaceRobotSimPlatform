@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "srsp.capability/core.ping@1",
+  "title": "core.ping (kernel reserved method)",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "seq": { "type": "integer", "minimum": 0 },
+        "t_tai": { "type": "number" }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "steps"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "steps": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
