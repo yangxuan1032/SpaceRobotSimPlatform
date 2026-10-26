@@ -527,3 +527,48 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | 2 000 步哈希重放 | 0 处不一致 | XXH3-128 |
 
 优化方向已立项（M1.4d）：铰接体算法（ABA）或 CRBA + 稀疏/带状求解；ABA 首次尝试未通过等价性测试，已回退（P26）。
+
+---
+
+## 12. 环境安装分级（必须 / 按需 / 延后）
+
+依据执行计划 v4（本地）整理，避免提前引入不必要的 ABI 与磁盘成本。
+
+### 12.1 必须（当前已满足）
+
+| 项 | 现状 |
+|---|---|
+| MSYS2 UCRT64 工具链（GCC 16.1、CMake 4.4、Ninja、ctest、ccache） | ✅ 实测 34/34 |
+| Git + `credential.helper=manager` | ✅ 可推送 |
+| Qt 6.11（base/tools） | ✅ 已装 |
+| 构建期 Python（protoc 插件） | ✅ 系统 Python 3.14 + MSYS2 grpcio |
+
+### 12.2 按需（M1 收口时才需要）
+
+| 项 | 触发条件 | 成本 |
+|---|---|---|
+| Python 互操作环境（uv/venv + `numpy`/`mujoco`/`mcap`） | W7 MuJoCo 边车、MCAP 官方 SDK 交叉校验 | 2–4 GB |
+| micromamba + `pinocchio` | Pinocchio 数值对照 | 1–2 GB |
+
+### 12.3 延后（有明确触发点）
+
+| 项 | 触发条件 |
+|---|---|
+| MSVC Build Tools / vcpkg | 需要 CUDA 或改用 bgfx / 原生重依赖（约 25–40 GB） |
+| Vulkan SDK | 选择 Vulkan 渲染后端或 GPU compute（D3D11 路线不需要） |
+| CUDA Toolkit | 2.0 的可选 NVIDIA 加速 |
+| WSL2 + Ubuntu 24.04 | 1.2 跨平台阶段 |
+| Doxygen / graphviz、clang-tidy / cppcheck | 文档生成、静态分析专项 |
+
+### 12.4 安装路径约定
+
+| 项 | 路径 |
+|---|---|
+| MSYS2 | `C:\msys64`（仅用 `ucrt64` 前缀） |
+| Python venv | `deepseek\Temp\venv`（被 `.gitignore` 的 `/*/Temp/*` 覆盖） |
+| micromamba 根 | `deepseek\Temp\mamba`（`MAMBA_ROOT_PREFIX`） |
+| ccache | `deepseek\Temp\ccache`（`CCACHE_DIR`） |
+| vcpkg（延后） | `C:\vcpkg`（`VCPKG_ROOT`） |
+| Vulkan SDK（延后） | `C:\VulkanSDK\<version>`（`VULKAN_SDK`） |
+
+规则：互操作脚本必须使用**绝对路径解释器**（如 `deepseek\Temp\venv\Scripts\python.exe`），禁止裸 `python`，避免 PATH 串台（P24/P30）。

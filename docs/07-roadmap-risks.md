@@ -291,3 +291,71 @@ M1 出口判据的逐项实测记录，与 `deepseek/Logs/Plan/2026-10-26-m1-exe
 | 测试矩阵 | UCRT64 Debug **34/34**；CLANG64 预设已移除 | MSVC 仍需 vcvars 环境验证（P27）；CLANG64 因 libc++ 环境问题移除（P28） |
 
 **已知差距**：渲染后端为 Qt 软件实现（bgfx 进 1.1）；性能预算未达标（需 ABA 或等价的 O(n) 算法）；W7 的 Python 侧验证受环境限制。
+
+---
+
+## 13. 后续路线图（2026-10-26 更新，含 GPU 与跨平台）
+
+本节是**长期共享结论**；模型专属的详细规划按规则不入库（`<model>/Logs/` 已被忽略）。
+
+### 13.1 开发环境组合
+
+| 环境 | 必需性 | 用途 |
+|---|---|---|
+| A. MSYS2 UCRT64（GCC 16） | 必需 | 内核/插件/测试/studio/基准（当前 34/34） |
+| B. Python（uv/venv + micromamba） | 必需 | W7 `pin`/`mujoco` 对照、MCAP 官方 SDK 校验、numpy 原型 |
+| C. MSVC + vcpkg | 可选 | CUDA、bgfx 备选、Windows 原生重依赖 |
+| D. WSL2 + Ubuntu 24.04 | 跨平台阶段必需 | Linux 构建、ASan/TSan、CI 对齐 |
+
+边界：A 的内核不得链接 B/C/D 产物；跨边界只走 C ABI 或 gRPC 边车。何时必须安装、何时延后见 [05 开发环境](05-msys2-dev-environment.md) §12。
+
+### 13.2 GPU 阶段
+
+| 阶段 | 版本 | 内容 | 出口判据 |
+|---|---|---|---|
+| P-GPU-0 | 当前 | 仅预留接口，CPU 路径正确 | 34/34 不回退 |
+| P-GPU-1 | 1.1 | `renderer.rhi`（QRhi → D3D11/Vulkan） | 1080p ≥ 30 fps |
+| P-GPU-2 | M4 | 批量世界 + compute 抽象 | 1e3 world 批量 step |
+| P-GPU-3 | M4 后期 | GPU 批量动力学（Vulkan 优先，D3D12 备选） | 1e4 刚体 ≥ 1e6 body-steps/s |
+| P-GPU-4 | 2.0 | 可选 CUDA 后端 | 同判据；不进核心依赖 |
+
+原则：单世界性能靠算法（ABA/CRBA），GPU 收益在集群批量世界。
+
+### 13.3 跨平台阶段
+
+| 阶段 | 版本 | 内容 | 出口判据 |
+|---|---|---|---|
+| P-XP-0 | 当前 | 预留平台抽象 | 设计约定 |
+| P-XP-1 | 1.2 | Linux 构建与测试（WSL2/CI） | `linux-gcc` 全绿 + ASan/TSan |
+| P-XP-2 | 1.2 | 双平台打包 | 两平台包可运行 |
+| P-XP-3 | 2.x | macOS（视需求，Metal 经 QRhi） | 视需求 |
+
+现在遵守的 5 条：路径不硬编码、动态库加载抽象、宽度/字节序不进 ABI、TAI ns 时间基、`-ffp-contract=off`。
+
+### 13.4 预留接口
+
+| 编号 | 内容 | 状态 | 版本 |
+|---|---|---|---|
+| R1 | `RendererCapabilities` | 已落地 | 1.0 |
+| R6 | `Sphere::mesh_uri/material_id` | 已落地 | 1.0 |
+| R2 | 设备绑定约定 | 设计已定 | 1.1 |
+| R3 | manifest `compute` 段 | 设计已定 | 1.1 |
+| R4 | ABI 次版本 + `srsp.dynamics/batch@1` 命名 | 设计已定 | 1.1 |
+| R5 | `state_hash` 后端指纹 | 设计已定 | 1.1 |
+| R7 | `srsp_model_desc` 扁平化 | 设计已定 | M4 |
+| R8 | `srsp::platform` | 设计已定 | 1.2 |
+| R9 | 线程/队列约定 | 设计已定 | M4 |
+| R10 | 资源根布局 | 设计已定 | 1.2 |
+| R11 | 时间源字段 | 设计已定 | 1.2 |
+| R12 | 确定性模式声明 | 设计已定 | 1.1 |
+
+原则：只加不删、默认安全、不写未测代码。
+
+### 13.5 里程碑
+
+| 版本 | 内容 | 出口判据 |
+|---|---|---|
+| 1.1 | QRhi 渲染、ABA/CRBA、W7 Python 验证、R2/R3/R4/R5/R12 | 1080p ≥ 30 fps；100 体 ≤ 300 µs 或豁免 |
+| 1.2 | Linux、ASan/TSan、R8/R10/R11、打包 | Linux 全绿；两平台包可运行 |
+| M4 | 批量世界、compute、R7/R9 | 1e3 world 批量 step |
+| 2.0 | GPU 批量动力学、可选 CUDA | 1e4 刚体 ≥ 1e6 body-steps/s |
