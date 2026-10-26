@@ -34,7 +34,6 @@ jobs:
             mingw-w64-ucrt-x86_64-tinyxml2
             mingw-w64-ucrt-x86_64-eigen3
             mingw-w64-ucrt-x86_64-xxhash
-            mingw-w64-ucrt-x86_64-clang-tools-extra
             mingw-w64-ucrt-x86_64-protobuf
             mingw-w64-ucrt-x86_64-grpc
             mingw-w64-ucrt-x86_64-python
@@ -50,7 +49,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=g++ \
             -DCMAKE_MAKE_PROGRAM=ninja \
             -DPython3_EXECUTABLE="$(cygpath -w "$(which python)")"
-            -DSRSP_MODULE_TEST_DIR="$(cygpath -w "$GITHUB_WORKSPACE/deepseek/ModuleTest")"
+            -DSRSP_MODULE_TEST_DIR=deepseek/ModuleTest
 
       - name: build
         run: cmake --build --preset win-ucrt64-debug
