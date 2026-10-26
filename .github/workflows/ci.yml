@@ -31,6 +31,10 @@ jobs:
             mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-catch
             mingw-w64-ucrt-x86_64-nlohmann-json
+            mingw-w64-ucrt-x86_64-tinyxml2
+            mingw-w64-ucrt-x86_64-eigen3
+            mingw-w64-ucrt-x86_64-xxhash
+            mingw-w64-ucrt-x86_64-clang-tools-extra
             mingw-w64-ucrt-x86_64-protobuf
             mingw-w64-ucrt-x86_64-grpc
             mingw-w64-ucrt-x86_64-python
