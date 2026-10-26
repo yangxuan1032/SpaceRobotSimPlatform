@@ -22,6 +22,8 @@ add_library(SRSP::api ALIAS srsp_api)
 target_include_directories(srsp_api INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/api/include")
 target_compile_features(srsp_api INTERFACE cxx_std_20)
 
+include(cmake/env.cmake)
+
 option(SRSP_BUILD_CORE "Build the kernel library" ON)
 option(SRSP_BUILD_MODEL "Build the SRM model layer" ON)
 option(SRSP_BUILD_DYNAMICS "Build the rigid-body dynamics library" ON)
@@ -43,7 +45,7 @@ endif()
 # SRM needs nlohmann-json, the same dependency the manifest parser uses; the
 # cache variable set by src/core tells whether it is available for this
 # toolchain (UCRT64 or MSVC/Linux, not CLANG64).
-if(SRSP_BUILD_MODEL AND SRSP_MANIFEST_ENABLED)
+if(SRSP_BUILD_MODEL AND SRSP_MANIFEST_ENABLED AND SRSP_ENV_DEPS_OK)
   add_subdirectory(src/model)
 elseif(SRSP_BUILD_MODEL)
   message(STATUS "nlohmann-json is unavailable for this toolchain; the SRM model layer is disabled")
@@ -53,7 +55,7 @@ if(SRSP_BUILD_RENDER)
   add_subdirectory(src/render)
 endif()
 
-if(SRSP_BUILD_RECORD AND NOT MSVC)
+if(SRSP_BUILD_RECORD AND SRSP_ENV_DEPS_OK)
   add_subdirectory(src/record)
 endif()
 
@@ -72,7 +74,7 @@ elseif(SRSP_BUILD_BRIDGE)
   message(STATUS "The sidecar bridge is enabled only for the UCRT64 toolchain; skipped for this compiler")
 endif()
 
-if(SRSP_BUILD_DYNAMICS AND TARGET srsp_model AND NOT MSVC)
+if(SRSP_BUILD_DYNAMICS AND TARGET srsp_model AND SRSP_ENV_DEPS_OK)
   add_subdirectory(src/dynamics)
 elseif(SRSP_BUILD_DYNAMICS)
   message(STATUS "SRM is unavailable; the dynamics library is disabled")

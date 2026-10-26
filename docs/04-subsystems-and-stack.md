@@ -409,3 +409,11 @@ MATLAB/Simulink 通过边车（MATLAB Engine 或编译为 C 共享库）；Julia
 对应的非目标已写入 [01 §1.3](01-architecture.md)（不做 GPU 并行 RL 训练平台），风险见 [07 R15](07-roadmap-risks.md)。
 
 调研中竞品的其余优势能力（GPU 批量并行、可微分物理、高保真接触、合成数据管线、任务级分析、FSW/HIL、地球 3D Tiles 等）已整理为**预留扩展点**，不进入 v1 实施：[07 §11](07-roadmap-risks.md) 给出能力映射与触发条件，[02 §13](02-plugin-contract.md) 给出预留能力 ID 与调用约定。
+
+---
+
+## 附录 A. 渲染与计算选型更新（2026-10-26）
+
+- **渲染**：bgfx 不再作为 M1/1.1 的必选项。1.1 采用 **Qt RHI（QRhi）** 实现 `renderer.rhi`，在 Windows 上走 D3D11/Vulkan；Qt 软件后端保留为无 GPU 环境的回退。理由：零新增依赖、可与 compute 共用设备、保留跨平台可能。
+- **GPU 计算**：首选 **Vulkan compute**（跨厂商、与渲染共用设备）；Windows-only 场景允许 **D3D12 compute** 作为备选；**CUDA 仅作为 2.0 的可选后端**，不进入核心依赖。
+- **性能定位**：单世界（100 体）性能问题由算法解决（ABA/CRBA），GPU 的收益在集群批量世界（M4）。

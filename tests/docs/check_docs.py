@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SKIP_DIRS = {".git", "Temp", "build", "node_modules", "__pycache__", ".vs"}
-JSON_TARGETS = ["api", "tests", "tools", "docs", "deepseek", "kimi", "ai-models.json",
+JSON_TARGETS = ["api", "tests", "tools", "docs", "deepseek", "ai-models.json",
                 "CMakePresets.json", "vcpkg.json"]
 LINK_RE = re.compile(r"\]\(([^)\s]+)\)")
 

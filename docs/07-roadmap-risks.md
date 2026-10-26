@@ -288,6 +288,6 @@ M1 出口判据的逐项实测记录，与 `deepseek/Logs/Plan/2026-10-26-m1-exe
 | W7 MJCF 子集导入 | ✅ | `unit.mjcf` 4 用例 |
 | W7 Pinocchio 对照 / MuJoCo 边车 | ⚠️ 未验证 | 环境缺 `numpy`/`pinocchio`/`mujoco`（P24） |
 | 100 刚体单步 ≤ 300 μs | ❌ 未达标 | Release 实测 **9.06 ms**（约 30×），根因与计划见 P25/P26 |
-| 测试矩阵 | UCRT64 Debug **34/34** | MSVC/CLANG64 本轮未能验证（P27/P28） |
+| 测试矩阵 | UCRT64 Debug **34/34**；CLANG64 预设已移除 | MSVC 仍需 vcvars 环境验证（P27）；CLANG64 因 libc++ 环境问题移除（P28） |
 
 **已知差距**：渲染后端为 Qt 软件实现（bgfx 进 1.1）；性能预算未达标（需 ABA 或等价的 O(n) 算法）；W7 的 Python 侧验证受环境限制。

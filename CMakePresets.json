@@ -1,287 +1,297 @@
 {
-  "version": 6,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 27,
-    "patch": 0
-  },
-  "configurePresets": [
-    {
-      "name": "base",
-      "hidden": true,
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/$env{SRSP_AI_MODEL}/Temp/build/${presetName}",
-      "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "SRSP_BUILD_EXAMPLES": "ON"
-      }
-    },
-    {
-      "name": "base-gcc",
-      "hidden": true,
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-ffp-contract=off"
-      }
-    },
-    {
-      "name": "base-msvc",
-      "hidden": true,
-      "inherits": "base"
-    },
-    {
-      "name": "base-vcpkg",
-      "hidden": true,
-      "inherits": "base-msvc",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_TARGET_TRIPLET": "x64-windows"
-      }
-    },
-    {
-      "name": "base-clang",
-      "hidden": true,
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-ffp-contract=off"
-      }
-    },
-    {
-      "name": "win-python",
-      "hidden": true,
-      "cacheVariables": {
-        "Python3_EXECUTABLE": "C:/msys64/ucrt64/bin/python.exe"
-      }
-    },
-    {
-      "name": "win-ucrt64-debug",
-      "displayName": "Windows UCRT64 Debug (GCC)",
-      "description": "Requires MSYS2 UCRT64; launch from the MSYS2 shell or tools/env/launch-vscode.ps1",
-      "inherits": ["base-gcc", "win-python"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/gcc.exe",
-        "CMAKE_CXX_COMPILER": "C:/msys64/ucrt64/bin/g++.exe",
-        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/ninja.exe"
-      }
-    },
-    {
-      "name": "win-ucrt64-release",
-      "displayName": "Windows UCRT64 Release (GCC)",
-      "inherits": "win-ucrt64-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "win-msvc-debug",
-      "displayName": "Windows MSVC Debug",
-      "description": "Requires Visual Studio 2022+ (vcvars environment); no third-party deps. FP contraction stays at the compiler default until a per-platform FP policy is decided",
-      "inherits": ["base-msvc", "win-python"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "win-msvc-release",
-      "displayName": "Windows MSVC Release",
-      "inherits": "win-msvc-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "win-vcpkg-debug",
-      "displayName": "Windows MSVC Debug (vcpkg)",
-      "description": "Requires Visual Studio 2022+ and VCPKG_ROOT; resolves vcpkg.json dependencies",
-      "inherits": ["base-vcpkg", "win-python"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "win-vcpkg-release",
-      "displayName": "Windows MSVC Release (vcpkg)",
-      "inherits": "win-vcpkg-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "win-ucrt64-clang-debug",
-      "displayName": "Windows UCRT64 Debug (Clang, libstdc++)",
-      "description": "Clang from the UCRT64 environment: links the same libstdc++ as the GCC preset, so C++ objects stay ABI-compatible. Second compiler for layout asserts, clang-tidy and ASan",
-      "inherits": ["base-clang", "win-python"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bin/clang.exe",
-        "CMAKE_CXX_COMPILER": "C:/msys64/ucrt64/bin/clang++.exe",
-        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/ninja.exe"
-      }
-    },
-    {
-      "name": "win-ucrt64-clang-release",
-      "displayName": "Windows UCRT64 Release (Clang, libstdc++)",
-      "inherits": "win-ucrt64-clang-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "win-clang64-debug",
-      "displayName": "Windows CLANG64 Debug (libc++, verification only)",
-      "description": "CLANG64 environment (libc++ / libunwind runtime). Verification and sanitizer tier only: never ship these binaries. cmake/ninja are reused from UCRT64",
-      "inherits": ["base-clang", "win-python"],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_COMPILER": "C:/msys64/clang64/bin/clang.exe",
-        "CMAKE_CXX_COMPILER": "C:/msys64/clang64/bin/clang++.exe",
-        "CMAKE_MAKE_PROGRAM": "C:/msys64/ucrt64/bin/ninja.exe"
-      }
-    },
-    {
-      "name": "linux-gcc-debug",
-      "displayName": "Linux GCC Debug",
-      "inherits": "base-gcc",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "linux-gcc-release",
-      "displayName": "Linux GCC Release",
-      "inherits": "base-gcc",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "linux-clang-asan",
-      "displayName": "Linux Clang ASan + UBSan",
-      "inherits": "base-gcc",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CXX_FLAGS": "-ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer",
-        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
-        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address,undefined"
-      }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "win-ucrt64-debug",
-      "configurePreset": "win-ucrt64-debug"
-    },
-    {
-      "name": "win-ucrt64-release",
-      "configurePreset": "win-ucrt64-release"
-    },
-    {
-      "name": "win-msvc-debug",
-      "configurePreset": "win-msvc-debug"
-    },
-    {
-      "name": "win-msvc-release",
-      "configurePreset": "win-msvc-release"
-    },
-    {
-      "name": "win-vcpkg-debug",
-      "configurePreset": "win-vcpkg-debug"
-    },
-    {
-      "name": "win-vcpkg-release",
-      "configurePreset": "win-vcpkg-release"
-    },
-    {
-      "name": "win-ucrt64-clang-debug",
-      "configurePreset": "win-ucrt64-clang-debug"
-    },
-    {
-      "name": "win-ucrt64-clang-release",
-      "configurePreset": "win-ucrt64-clang-release"
-    },
-    {
-      "name": "win-clang64-debug",
-      "configurePreset": "win-clang64-debug"
-    },
-    {
-      "name": "linux-gcc-debug",
-      "configurePreset": "linux-gcc-debug"
-    },
-    {
-      "name": "linux-gcc-release",
-      "configurePreset": "linux-gcc-release"
-    },
-    {
-      "name": "linux-clang-asan",
-      "configurePreset": "linux-clang-asan"
-    }
-  ],
-  "testPresets": [
-    {
-      "name": "win-ucrt64-debug",
-      "configurePreset": "win-ucrt64-debug",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "win-ucrt64-release",
-      "configurePreset": "win-ucrt64-release",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "win-msvc-debug",
-      "configurePreset": "win-msvc-debug",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "win-msvc-release",
-      "configurePreset": "win-msvc-release",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "win-vcpkg-debug",
-      "configurePreset": "win-vcpkg-debug",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "win-vcpkg-release",
-      "configurePreset": "win-vcpkg-release",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "win-ucrt64-clang-debug",
-      "configurePreset": "win-ucrt64-clang-debug",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "win-ucrt64-clang-release",
-      "configurePreset": "win-ucrt64-clang-release",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "win-clang64-debug",
-      "configurePreset": "win-clang64-debug",
-      "environment": {
-        "PATH": "C:/msys64/clang64/bin;$penv{PATH}"
-      },
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "linux-gcc-debug",
-      "configurePreset": "linux-gcc-debug",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "linux-gcc-release",
-      "configurePreset": "linux-gcc-release",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "linux-clang-asan",
-      "configurePreset": "linux-clang-asan",
-      "output": { "outputOnFailure": true }
-    }
-  ]
+    "version":  6,
+    "cmakeMinimumRequired":  {
+                                 "major":  3,
+                                 "minor":  27,
+                                 "patch":  0
+                             },
+    "configurePresets":  [
+                             {
+                                 "name":  "base",
+                                 "hidden":  true,
+                                 "generator":  "Ninja",
+                                 "binaryDir":  "${sourceDir}/$env{SRSP_AI_MODEL}/Temp/build/${presetName}",
+                                 "cacheVariables":  {
+                                                        "CMAKE_EXPORT_COMPILE_COMMANDS":  "ON",
+                                                        "SRSP_BUILD_EXAMPLES":  "ON"
+                                                    }
+                             },
+                             {
+                                 "name":  "base-gcc",
+                                 "hidden":  true,
+                                 "inherits":  "base",
+                                 "cacheVariables":  {
+                                                        "CMAKE_CXX_FLAGS":  "-ffp-contract=off"
+                                                    }
+                             },
+                             {
+                                 "name":  "base-msvc",
+                                 "hidden":  true,
+                                 "inherits":  "base"
+                             },
+                             {
+                                 "name":  "base-vcpkg",
+                                 "hidden":  true,
+                                 "inherits":  "base-msvc",
+                                 "cacheVariables":  {
+                                                        "CMAKE_TOOLCHAIN_FILE":  "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                                                        "VCPKG_TARGET_TRIPLET":  "x64-windows"
+                                                    }
+                             },
+                             {
+                                 "name":  "base-clang",
+                                 "hidden":  true,
+                                 "inherits":  "base",
+                                 "cacheVariables":  {
+                                                        "CMAKE_CXX_FLAGS":  "-ffp-contract=off"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-python",
+                                 "hidden":  true,
+                                 "cacheVariables":  {
+                                                        "Python3_EXECUTABLE":  "C:/msys64/ucrt64/bin/python.exe"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-ucrt64-debug",
+                                 "displayName":  "Windows UCRT64 Debug (GCC)",
+                                 "description":  "Requires MSYS2 UCRT64; launch from the MSYS2 shell or tools/env/launch-vscode.ps1",
+                                 "inherits":  [
+                                                  "base-gcc",
+                                                  "win-python"
+                                              ],
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Debug",
+                                                        "CMAKE_C_COMPILER":  "C:/msys64/ucrt64/bin/gcc.exe",
+                                                        "CMAKE_CXX_COMPILER":  "C:/msys64/ucrt64/bin/g++.exe",
+                                                        "CMAKE_MAKE_PROGRAM":  "C:/msys64/ucrt64/bin/ninja.exe"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-ucrt64-release",
+                                 "displayName":  "Windows UCRT64 Release (GCC)",
+                                 "inherits":  "win-ucrt64-debug",
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Release"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-msvc-debug",
+                                 "displayName":  "Windows MSVC Debug",
+                                 "description":  "Requires Visual Studio 2022+ (vcvars environment); no third-party deps. FP contraction stays at the compiler default until a per-platform FP policy is decided",
+                                 "inherits":  [
+                                                  "base-msvc",
+                                                  "win-python"
+                                              ],
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Debug"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-msvc-release",
+                                 "displayName":  "Windows MSVC Release",
+                                 "inherits":  "win-msvc-debug",
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Release"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-vcpkg-debug",
+                                 "displayName":  "Windows MSVC Debug (vcpkg)",
+                                 "description":  "Requires Visual Studio 2022+ and VCPKG_ROOT; resolves vcpkg.json dependencies",
+                                 "inherits":  [
+                                                  "base-vcpkg",
+                                                  "win-python"
+                                              ],
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Debug"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-vcpkg-release",
+                                 "displayName":  "Windows MSVC Release (vcpkg)",
+                                 "inherits":  "win-vcpkg-debug",
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Release"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-ucrt64-clang-debug",
+                                 "displayName":  "Windows UCRT64 Debug (Clang, libstdc++)",
+                                 "description":  "Clang from the UCRT64 environment: links the same libstdc++ as the GCC preset, so C++ objects stay ABI-compatible. Second compiler for layout asserts, clang-tidy and ASan",
+                                 "inherits":  [
+                                                  "base-clang",
+                                                  "win-python"
+                                              ],
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Debug",
+                                                        "CMAKE_C_COMPILER":  "C:/msys64/ucrt64/bin/clang.exe",
+                                                        "CMAKE_CXX_COMPILER":  "C:/msys64/ucrt64/bin/clang++.exe",
+                                                        "CMAKE_MAKE_PROGRAM":  "C:/msys64/ucrt64/bin/ninja.exe"
+                                                    }
+                             },
+                             {
+                                 "name":  "win-ucrt64-clang-release",
+                                 "displayName":  "Windows UCRT64 Release (Clang, libstdc++)",
+                                 "inherits":  "win-ucrt64-clang-debug",
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Release"
+                                                    }
+                             },
+                             {
+                                 "name":  "linux-gcc-debug",
+                                 "displayName":  "Linux GCC Debug",
+                                 "inherits":  "base-gcc",
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Debug"
+                                                    }
+                             },
+                             {
+                                 "name":  "linux-gcc-release",
+                                 "displayName":  "Linux GCC Release",
+                                 "inherits":  "base-gcc",
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Release"
+                                                    }
+                             },
+                             {
+                                 "name":  "linux-clang-asan",
+                                 "displayName":  "Linux Clang ASan + UBSan",
+                                 "inherits":  "base-gcc",
+                                 "cacheVariables":  {
+                                                        "CMAKE_BUILD_TYPE":  "Debug",
+                                                        "CMAKE_C_COMPILER":  "clang",
+                                                        "CMAKE_CXX_COMPILER":  "clang++",
+                                                        "CMAKE_CXX_FLAGS":  "-ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer",
+                                                        "CMAKE_EXE_LINKER_FLAGS":  "-fsanitize=address,undefined",
+                                                        "CMAKE_SHARED_LINKER_FLAGS":  "-fsanitize=address,undefined"
+                                                    }
+                             }
+                         ],
+    "buildPresets":  [
+                         {
+                             "name":  "win-ucrt64-debug",
+                             "configurePreset":  "win-ucrt64-debug"
+                         },
+                         {
+                             "name":  "win-ucrt64-release",
+                             "configurePreset":  "win-ucrt64-release"
+                         },
+                         {
+                             "name":  "win-msvc-debug",
+                             "configurePreset":  "win-msvc-debug"
+                         },
+                         {
+                             "name":  "win-msvc-release",
+                             "configurePreset":  "win-msvc-release"
+                         },
+                         {
+                             "name":  "win-vcpkg-debug",
+                             "configurePreset":  "win-vcpkg-debug"
+                         },
+                         {
+                             "name":  "win-vcpkg-release",
+                             "configurePreset":  "win-vcpkg-release"
+                         },
+                         {
+                             "name":  "win-ucrt64-clang-debug",
+                             "configurePreset":  "win-ucrt64-clang-debug"
+                         },
+                         {
+                             "name":  "win-ucrt64-clang-release",
+                             "configurePreset":  "win-ucrt64-clang-release"
+                         },
+                         {
+                             "name":  "linux-gcc-debug",
+                             "configurePreset":  "linux-gcc-debug"
+                         },
+                         {
+                             "name":  "linux-gcc-release",
+                             "configurePreset":  "linux-gcc-release"
+                         },
+                         {
+                             "name":  "linux-clang-asan",
+                             "configurePreset":  "linux-clang-asan"
+                         }
+                     ],
+    "testPresets":  [
+                        {
+                            "name":  "win-ucrt64-debug",
+                            "configurePreset":  "win-ucrt64-debug",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "win-ucrt64-release",
+                            "configurePreset":  "win-ucrt64-release",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "win-msvc-debug",
+                            "configurePreset":  "win-msvc-debug",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "win-msvc-release",
+                            "configurePreset":  "win-msvc-release",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "win-vcpkg-debug",
+                            "configurePreset":  "win-vcpkg-debug",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "win-vcpkg-release",
+                            "configurePreset":  "win-vcpkg-release",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "win-ucrt64-clang-debug",
+                            "configurePreset":  "win-ucrt64-clang-debug",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "win-ucrt64-clang-release",
+                            "configurePreset":  "win-ucrt64-clang-release",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "linux-gcc-debug",
+                            "configurePreset":  "linux-gcc-debug",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "linux-gcc-release",
+                            "configurePreset":  "linux-gcc-release",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        },
+                        {
+                            "name":  "linux-clang-asan",
+                            "configurePreset":  "linux-clang-asan",
+                            "output":  {
+                                           "outputOnFailure":  true
+                                       }
+                        }
+                    ]
 }

@@ -588,3 +588,20 @@ if __name__ == "__main__":
 2. 插件若要声明预留能力，manifest 中须带 `"reserved": true`（schema 允许的扩展字段）并在 `core.describe` 中如实报告 `unsupported`；
 3. 未来实现时优先走「新增能力 ID」，避免改变既有能力的语义；
 4. 宿主侧对应接口在 `core_api.h` 以注释登记（批量步进、异步任务），未实现前返回 `SRSP_E_UNSUPPORTED`。
+
+---
+
+## 14. 预留接口（1.x 只占位，不承诺行为）
+
+后续 GPU 与跨平台需要，以下接口在契约中**先占位**；1.x 实现可选择忽略，但不得拒绝或静默失败：
+
+| 编号 | 预留 | 形态 | 落地版本 |
+|---|---|---|---|
+| R2 | 渲染器设备绑定 | `initialize(native_window)` 的约定语义扩展 | 1.1 |
+| R3 | manifest `compute { backends[], requires[], precision }` | schema optional 段；1.x 校验后忽略 | 1.1 |
+| R4 | 能力命名 `srsp.dynamics/batch@1` | 只保留命名空间，不实现符号 | 1.1 |
+| R5 | `state_hash` 的后端指纹 | 录制头字段；默认不参与哈希 | 1.1 |
+| R7 | `srsp_model_desc` 扁平化描述 | 批量世界输入 | M4 |
+| R12 | 确定性模式 D0/D1/D2 | manifest 与测试显式声明 | 1.1 |
+
+**未实现能力的统一行为**：调用未实现的预留能力必须返回 `SRSP_E_UNSUPPORTED`，禁止静默成功（与 docs/07 竞品扩展点规则一致）。
