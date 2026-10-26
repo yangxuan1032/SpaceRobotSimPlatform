@@ -99,8 +99,12 @@ if(SRSP_BUILD_TESTS)
 endif()
 
 # Model-scoped development tests: <model>/ModuleTest (see tools/ai/skills/module-test).
+# SRSP_MODULE_TEST_DIR lets CI reuse the shared module tests from another
+# namespace (the ci namespace only owns build caches, not test sources).
 if(SRSP_BUILD_TESTS AND DEFINED ENV{SRSP_AI_MODEL} AND NOT "$ENV{SRSP_AI_MODEL}" STREQUAL "")
-  set(SRSP_MODULE_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/$ENV{SRSP_AI_MODEL}/ModuleTest")
+  if(NOT DEFINED SRSP_MODULE_TEST_DIR)
+    set(SRSP_MODULE_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/$ENV{SRSP_AI_MODEL}/ModuleTest")
+  endif()
   if(EXISTS "${SRSP_MODULE_TEST_DIR}/CMakeLists.txt")
     add_subdirectory("${SRSP_MODULE_TEST_DIR}" "${CMAKE_BINARY_DIR}/module_test")
   endif()
