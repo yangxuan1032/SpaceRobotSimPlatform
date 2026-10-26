@@ -48,7 +48,7 @@ jobs:
             -DCMAKE_C_COMPILER=gcc \
             -DCMAKE_CXX_COMPILER=g++ \
             -DCMAKE_MAKE_PROGRAM=ninja \
-            -DPython3_EXECUTABLE="$(cygpath -w "$(which python)")"
+            -DPython3_EXECUTABLE="$(cygpath -w "$(which python)")" \
             -DSRSP_MODULE_TEST_DIR=deepseek/ModuleTest
 
       - name: build
