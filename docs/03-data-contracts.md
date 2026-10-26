@@ -590,3 +590,42 @@ message SensorFrame {
 3. `quat_wb` 与角速度约定的最终选择（当前：世界线速度 + 体系角速度）。
 4. 图像色彩空间与 HDR 管线（线性 sRGB → 显示 sRGB 的转换位置）。
 5. MCAP schema 编码对 Arrow 的支持方式（内嵌 IPC schema 还是自定义描述）。
+
+---
+
+## 13. MCAP 子集实现边界（2026-10-26 实测）
+
+当前录制实现（`src/record`）只写 MCAP 的一个**子集**，消费方需知悉其边界。
+
+### 13.1 写入的记录
+
+| 记录 | 是否写入 | 说明 |
+|---|---|---|
+| Magic | ✅ | 文件首尾各 8 字节 |
+| Header | ✅ | profile + library（`srsp-mcap/0.1`） |
+| Schema | ✅ | 名称 + 编码 + 数据 |
+| Channel | ✅ | topic + message encoding + 空 metadata |
+| Message | ✅ | channel_id + sequence + log_time + publish_time + data |
+| DataEnd | ✅ | `data_section_crc = 0`（不计算） |
+| Footer | ✅ | `summary_start = 0`、`summary_offset_start = 0`、`summary_crc = 0` |
+| **Summary 区（Schema/Channel/Statistics/SummaryOffset）** | ❌ | 不写，`get_summary()` 返回 None |
+| Chunk / 压缩 | ❌ | 未分块，未使用 zstd |
+| Attachment / Metadata | ❌ | 未实现 |
+
+### 13.2 兼容性（用官方 SDK 验证）
+
+用官方 Python `mcap` **1.6.0** 读取 C++ 写出的文件（5 条消息、`srsp.state/1`、`sim.state`、`log_time` 1000…5000）：
+
+- ✅ 顺序读取（`iter_messages()`）完全兼容：消息数、topic、schema 名、时间戳、载荷字节全部一致；
+- ⚠️ `get_summary()` 为 `None`：依赖 summary 的随机访问、`mcap info` 汇总、按时间索引的 seek 不可用。
+
+### 13.3 影响与后续
+
+| 影响 | 现状 | 计划 |
+|---|---|---|
+| 回放一致性校验 | 不受影响（顺序读取 + `state_hash`） | — |
+| 大文件随机访问 | 不支持 | 1.1：补 Summary 区与 SummaryOffset |
+| 录制体积 | 未压缩 | 1.1 评估 zstd chunk（见路线图 §13） |
+| 工具生态（`mcap` CLI、Foxglove 等） | 顺序读取可用，摘要视图缺失 | 同上 |
+
+**结论**：M1 的录制/回放能力成立（`state_hash` 逐步一致已实测），但“可被生态工具完整消费”尚差 Summary 区与压缩两项，列为 1.1 任务。
