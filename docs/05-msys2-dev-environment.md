@@ -510,3 +510,20 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 - [ ] VSCode 中 `F5` 可启动示例宿主并命中插件断点
 - [ ] `srsp-cli --version` 可运行（M1 之后）
 - [ ] 能打开并播放一个示例场景（M1 之后）
+
+---
+## 11. M1 实测性能（2026-10-26，Release）
+
+`bench/` 下的基准可复现（`ctest --preset win-ucrt64-release -R bench -V`）。
+
+| 指标 | 数值 | 说明 |
+|---|---|---|
+| 100 体链 · 质量矩阵装配 | 2.141 ms | `M = Σ Jᵀ I J`，J 为 6×306 |
+| 100 体链 · 偏置力（RNEA） | 0.009 ms | 世界系 Newton-Euler 递推 |
+| 100 体链 · 单步（RK4） | **9.058 ms** | 4 次 M 装配 + 4 次 306×306 LDLT |
+| 预算 | 300 μs | docs/07 M1 判据 → **未达标（约 30×）** |
+| MCAP 写 60 000 条（256 B） | 0.057 s（≈ 29.5 MB/s） | 10 分钟 @100 Hz 容量充足 |
+| MCAP 读回 | 0.072 s（≈ 202.8 MB/s） | — |
+| 2 000 步哈希重放 | 0 处不一致 | XXH3-128 |
+
+优化方向已立项（M1.4d）：铰接体算法（ABA）或 CRBA + 稀疏/带状求解；ABA 首次尝试未通过等价性测试，已回退（P26）。

@@ -159,7 +159,7 @@ ABI/数据模式 ──▶ 内核调度 ──▶ 动力学 ──▶ 传感器�
 | R15 | 竞品生态迭代快（Isaac/Newton、mjorbit 等） | 高 | 高 | 用户改用「Isaac 做感知 + STK 做轨道」组合 | 不打 GPU-RL 吞吐；押注确定性回放、空间尺度可视化、能力寻址插件；M1 的「能看/能录/能回放」不可裁剪；提供 MJCF/MCAP 互操作 |
 | R16 | 多机器人协同的状态规模与调度复杂度 | 中 | 中 | 4 机器人时步进耗时超 2× 单机；回放不一致 | 起步限 8 成员；调度顺序显式记录并回归测试；性能基准纳入 CI；协同算法只做插件 |
 
-> 调研依据见 `deepseek/Logs/Plan/2026-10-23-simulator-landscape.md`（2026-10 同类工具对比与精度参考）。
+> 调研依据为 2026-10 同类工具对比与精度参考（原始调研文档已归档到 git 历史）。
 
 ---
 
@@ -230,7 +230,7 @@ ABI/数据模式 ──▶ 内核调度 ──▶ 动力学 ──▶ 传感器�
 
 ## 11. 对标增强与预留接口（不进入 v1 开发）
 
-> 依据 2026-10 同类工具调研（`deepseek/Logs/Plan/2026-10-23-simulator-landscape.md`）。本节列出竞品优势能力，**只保留接口与扩展点，不实现**；调用未实现的能力必须返回 `SRSP_E_UNSUPPORTED`，禁止静默成功。
+> 依据 2026-10 同类工具调研（原始文档已归档到 git 历史）。本节列出竞品优势能力，**只保留接口与扩展点，不实现**；调用未实现的能力必须返回 `SRSP_E_UNSUPPORTED`，禁止静默成功。
 
 ### 11.1 扩展机制
 
@@ -269,3 +269,25 @@ ABI/数据模式 ──▶ 内核调度 ──▶ 动力学 ──▶ 传感器�
 - 预留能力在 manifest 与文档中统一标注 `reserved`；未实现前被调用返回 `SRSP_E_UNSUPPORTED` 并在诊断中提示所需版本；
 - 预留只使用「能力 ID + ABI 追加位 + 既有字段承载」，不得为此改动已冻结的结构；
 - 触发条件未满足的能力不排期，避免范围蔓延（见 R6、R15）。
+
+---
+
+## 12. M1 实测状态（2026-10-26）
+
+M1 出口判据的逐项实测记录，与 `deepseek/Logs/Plan/2026-10-26-m1-execution-plan.md` 同步维护。
+
+| 能力 | 状态 | 证据 |
+|---|---|---|
+| SRM 1.0 + URDF 导入 + 3 个示例模型 | ✅ | `unit.srm` 7 用例、`unit.urdf` 4 用例 |
+| `dynamics.rigid`（浮基/关节/轮/推力器） | ✅ | `unit.dynamics` 15 用例（含能量守恒、轨道） |
+| 力模型（两体/第三体/SRP/大气） | ✅ | `unit.force_models` 6 用例 |
+| 双原点渲染（机器人/地球/星空） | ✅（Qt 后端） | `unit.projection` 5 用例 + 离屏像素断言 |
+| `renderer.bgfx` | ⛔ 取消，改为 1.1 的 `renderer.rhi`（QRhi） | 无 MSYS2 包；替代分析见 `2026-10-26-bgfx-cuda-alternatives.md` |
+| `srsp-studio` 四面板 + Qt 空壳 | ✅ | `integration.studio_ui`（bodies/joints/timeline/step 校验） |
+| MCAP 录制回放 + `state_hash` | ✅（子集） | `unit.mcap` 3 用例、`integration.replay`（200 步一致）、`bench_record`（2 000 步 0 不一致） |
+| W7 MJCF 子集导入 | ✅ | `unit.mjcf` 4 用例 |
+| W7 Pinocchio 对照 / MuJoCo 边车 | ⚠️ 未验证 | 环境缺 `numpy`/`pinocchio`/`mujoco`（P24） |
+| 100 刚体单步 ≤ 300 μs | ❌ 未达标 | Release 实测 **9.06 ms**（约 30×），根因与计划见 P25/P26 |
+| 测试矩阵 | UCRT64 Debug **34/34** | MSVC/CLANG64 本轮未能验证（P27/P28） |
+
+**已知差距**：渲染后端为 Qt 软件实现（bgfx 进 1.1）；性能预算未达标（需 ABA 或等价的 O(n) 算法）；W7 的 Python 侧验证受环境限制。

@@ -38,9 +38,27 @@ struct CameraView {
  * Lifecycle: initialize (once) -> resize/set_camera/render_frame (many) ->
  * shutdown (once, also called by the destructor).
  */
+/** @brief Declared capabilities of a renderer backend (reserved for 1.1). */
+struct RendererCapabilities {
+  const char* backend = "unknown";  ///< "null", "qt", "rhi", "vulkan", ...
+  bool gpu = false;                 ///< True when rendering uses a GPU device.
+  bool compute = false;             ///< True when the device can also run compute.
+  int max_viewports = 1;            ///< Independent viewports per frame.
+};
 class Renderer {
  public:
   virtual ~Renderer() = default;
+
+  /**
+   * @brief Declares backend capabilities.
+   *
+   * Reservations (see post-M1 upgrade plan R1): a GPU backend reports
+   * gpu=true and may set compute=true when it shares its device with the
+   * compute layer. The default keeps every existing backend valid.
+   */
+  [[nodiscard]] virtual RendererCapabilities capabilities() const noexcept {
+    return RendererCapabilities{name(), false, false, 1};
+  }
 
   /** @brief Stable renderer name, e.g. "null" or "bgfx". */
   [[nodiscard]] virtual const char* name() const noexcept = 0;
