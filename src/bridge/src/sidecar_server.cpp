@@ -4,27 +4,25 @@
  *        transport.
  */
 #include <srsp/bridge/sidecar_server.hpp>
-
 #include <srsp/core/plugin_host.hpp>
-
-#include <grpcpp/grpcpp.h>
 
 #include <cstring>
 #include <string>
 
+#include <grpcpp/grpcpp.h>
+
 #include "srsp/v1/plugin.grpc.pb.h"
 
 #if defined(_WIN32)
-#  include <malloc.h>
+#include <malloc.h>
 #else
-#  include <cstdlib>
+#include <cstdlib>
 #endif
 
 namespace srsp::bridge {
 namespace {
 
-srsp_status SRSP_CALL srv_alloc(void*, uint64_t size, uint64_t alignment,
-                                void** out) {
+srsp_status SRSP_CALL srv_alloc(void*, uint64_t size, uint64_t alignment, void** out) {
   if (out == nullptr || size == 0) {
     return SRSP_E_INVALID_ARGUMENT;
   }
@@ -34,8 +32,7 @@ srsp_status SRSP_CALL srv_alloc(void*, uint64_t size, uint64_t alignment,
 #if defined(_WIN32)
   *out = _aligned_malloc(static_cast<size_t>(size), static_cast<size_t>(alignment));
 #else
-  if (posix_memalign(out, static_cast<size_t>(alignment),
-                     static_cast<size_t>(size)) != 0) {
+  if (posix_memalign(out, static_cast<size_t>(alignment), static_cast<size_t>(size)) != 0) {
     *out = nullptr;
   }
 #endif
@@ -52,9 +49,13 @@ void SRSP_CALL srv_free(void*, void* ptr) {
 
 void SRSP_CALL srv_log(void*, int32_t, srsp_str) {}
 
-double SRSP_CALL srv_time(void*) { return 0.0; }
+double SRSP_CALL srv_time(void*) {
+  return 0.0;
+}
 
-int64_t SRSP_CALL srv_time_ns(void*) { return 0; }
+int64_t SRSP_CALL srv_time_ns(void*) {
+  return 0;
+}
 
 srsp_status SRSP_CALL srv_publish(void*, srsp_str, srsp_bytes, uint64_t) {
   return SRSP_E_UNSUPPORTED;
@@ -91,9 +92,7 @@ srsp_str to_str(const std::string& text) {
 class Runtime final : public srsp::v1::PluginRuntime::Service {
  public:
   Runtime(std::string token, std::string plugin_path)
-      : token_(std::move(token)),
-        plugin_path_(std::move(plugin_path)),
-        host_(make_services()) {}
+      : token_(std::move(token)), plugin_path_(std::move(plugin_path)), host_(make_services()) {}
 
   ~Runtime() override { host_.unload(); }
 
@@ -108,8 +107,7 @@ class Runtime final : public srsp::v1::PluginRuntime::Service {
       return grpc::Status(grpc::StatusCode::PERMISSION_DENIED, "bad token");
     }
     if (request->host_abi_major() != SRSP_ABI_MAJOR) {
-      return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION,
-                          "unsupported host ABI");
+      return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "unsupported host ABI");
     }
     reply->set_plugin_id("org.srsp.sidecar.hello");
     reply->set_api("1.0");
@@ -122,8 +120,7 @@ class Runtime final : public srsp::v1::PluginRuntime::Service {
     const std::string payload = request->payload();
     srsp_buffer response{};
     srsp_error err{};
-    const srsp_status status = host_.call(to_str(request->method()),
-                                          srsp_bytes{}, &response, &err);
+    const srsp_status status = host_.call(to_str(request->method()), srsp_bytes{}, &response, &err);
     if (status != SRSP_OK) {
       auto* error = reply->mutable_error();
       error->set_code(static_cast<int32_t>(status));
@@ -155,7 +152,7 @@ class Runtime final : public srsp::v1::PluginRuntime::Service {
     }
     if (out.data != nullptr && out.size > 0) {
       reply->set_inline_data(reinterpret_cast<const char*>(out.data),
-                            static_cast<size_t>(out.size));
+                             static_cast<size_t>(out.size));
     }
     srsp_host_v1 services = make_services();
     services.free(services.user, out.data);
@@ -165,8 +162,7 @@ class Runtime final : public srsp::v1::PluginRuntime::Service {
   grpc::Status Restore(grpc::ServerContext*, const srsp::v1::RestoreRequest* request,
                        srsp::v1::Empty*) override {
     const std::string& data = request->inline_data();
-    const srsp_bytes payload{
-        reinterpret_cast<const uint8_t*>(data.data()), data.size()};
+    const srsp_bytes payload{reinterpret_cast<const uint8_t*>(data.data()), data.size()};
     if (host_.restore(payload, nullptr) != SRSP_OK) {
       return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "restore failed");
     }
@@ -181,8 +177,7 @@ class Runtime final : public srsp::v1::PluginRuntime::Service {
 
   grpc::Status AttachShm(grpc::ServerContext*, const srsp::v1::AttachShmRequest*,
                          srsp::v1::Empty*) override {
-    return grpc::Status(grpc::StatusCode::UNIMPLEMENTED,
-                        "shared memory is reserved for M2");
+    return grpc::Status(grpc::StatusCode::UNIMPLEMENTED, "shared memory is reserved for M2");
   }
 
  private:
@@ -199,7 +194,9 @@ struct SidecarServer::Impl {
 };
 
 SidecarServer::SidecarServer() : impl_(std::make_unique<Impl>()) {}
-SidecarServer::~SidecarServer() { stop(); }
+SidecarServer::~SidecarServer() {
+  stop();
+}
 
 bool SidecarServer::start(const std::string& address, const std::string& token,
                           const std::string& plugin_path) {
@@ -212,8 +209,7 @@ bool SidecarServer::start(const std::string& address, const std::string& token,
 
   grpc::ServerBuilder builder;
   int selected_port = 0;
-  builder.AddListeningPort(address, grpc::InsecureServerCredentials(),
-                           &selected_port);
+  builder.AddListeningPort(address, grpc::InsecureServerCredentials(), &selected_port);
   builder.RegisterService(impl_->runtime.get());
   impl_->server = builder.BuildAndStart();
   if (impl_->server == nullptr || selected_port == 0) {

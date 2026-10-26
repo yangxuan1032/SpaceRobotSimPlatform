@@ -66,8 +66,7 @@ class PluginHost {
    *         SRSP_E_INVALID_ARGUMENT (required fields missing),
    *         SRSP_E_VERSION_MISMATCH (manifest or plugin rejects the ABI).
    */
-  srsp_status load_with_manifest(std::string_view manifest_path,
-                                 srsp_error* err) noexcept;
+  srsp_status load_with_manifest(std::string_view manifest_path, srsp_error* err) noexcept;
 
   /** @brief Calls `shutdown` (if initialised) and unloads the library. */
   void unload() noexcept;
@@ -82,9 +81,7 @@ class PluginHost {
   [[nodiscard]] const srsp_plugin_v1* plugin() const noexcept { return plugin_; }
 
   /** @brief Plugin id from the manifest; empty when loaded by raw path. */
-  [[nodiscard]] const std::string& plugin_id() const noexcept {
-    return plugin_id_;
-  }
+  [[nodiscard]] const std::string& plugin_id() const noexcept { return plugin_id_; }
 
   /**
    * @brief Initialises the plugin with a JSON configuration.

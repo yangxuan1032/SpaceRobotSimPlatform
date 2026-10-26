@@ -1,0 +1,25 @@
+{
+  "schema": "srsp.model/1",
+  "name": "sat_target",
+  "version": "1.0",
+  "bodies": [
+    {
+      "id": "core",
+      "inertia": { "mass": 420.0, "com": [0.0, 0.0, 0.0], "tensor": [260.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 300.0] },
+      "geometry": [ { "mesh": "meshes/target_core.glb" } ]
+    },
+    {
+      "id": "antenna",
+      "parent_joint": "j_antenna",
+      "inertia": { "mass": 4.0, "com": [0.0, 0.0, 0.6], "tensor": [0.8, 0.0, 0.0, 0.0, 0.8, 0.0, 0.0, 0.0, 0.05] },
+      "geometry": [ { "mesh": "meshes/antenna.glb" } ]
+    }
+  ],
+  "joints": [
+    { "id": "j_antenna", "parent": "core", "child": "antenna", "type": "fixed", "origin": [0.0, 0.0, 0.5] }
+  ],
+  "actuators": [],
+  "sensors": [
+    { "id": "marker", "type": "camera", "body": "core", "rate_hz": 1.0 }
+  ]
+}

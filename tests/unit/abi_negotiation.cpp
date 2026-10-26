@@ -12,15 +12,16 @@
 
 #include <srsp/plugin_api.h>
 
-#include <cstdio>
 #include <cstring>
 
+#include <cstdio>
+
 #if defined(_WIN32)
-#  include <malloc.h>
-#  include <windows.h>
+#include <malloc.h>
+#include <windows.h>
 #else
-#  include <dlfcn.h>
-#  include <cstdlib>
+#include <cstdlib>
+#include <dlfcn.h>
 #endif
 
 namespace {
@@ -46,12 +47,15 @@ void SRSP_CALL host_log(void* user, int32_t, srsp_str) {
   }
 }
 
-double SRSP_CALL host_time(void*) { return 0.0; }
+double SRSP_CALL host_time(void*) {
+  return 0.0;
+}
 
-int64_t SRSP_CALL host_time_ns(void*) { return 0; }
+int64_t SRSP_CALL host_time_ns(void*) {
+  return 0;
+}
 
-srsp_status SRSP_CALL host_alloc(void*, uint64_t size, uint64_t alignment,
-                                 void** out) {
+srsp_status SRSP_CALL host_alloc(void*, uint64_t size, uint64_t alignment, void** out) {
   if (out == nullptr) {
     return SRSP_E_INVALID_ARGUMENT;
   }
@@ -62,8 +66,7 @@ srsp_status SRSP_CALL host_alloc(void*, uint64_t size, uint64_t alignment,
   *out = _aligned_malloc(static_cast<size_t>(size), static_cast<size_t>(alignment));
   return *out != nullptr ? SRSP_OK : SRSP_E_OUT_OF_MEMORY;
 #else
-  return posix_memalign(out, static_cast<size_t>(alignment),
-                        static_cast<size_t>(size)) == 0
+  return posix_memalign(out, static_cast<size_t>(alignment), static_cast<size_t>(size)) == 0
              ? SRSP_OK
              : SRSP_E_OUT_OF_MEMORY;
 #endif
@@ -104,7 +107,9 @@ srsp_host_v1 make_host(HostState* state) {
 
 #if defined(_WIN32)
 using Library = HMODULE;
-Library open_library(const char* path) { return LoadLibraryA(path); }
+Library open_library(const char* path) {
+  return LoadLibraryA(path);
+}
 void* find_symbol(Library lib, const char* name) {
   return reinterpret_cast<void*>(GetProcAddress(lib, name));
 }
@@ -115,8 +120,12 @@ void close_library(Library lib) {
 }
 #else
 using Library = void*;
-Library open_library(const char* path) { return dlopen(path, RTLD_NOW | RTLD_LOCAL); }
-void* find_symbol(Library lib, const char* name) { return dlsym(lib, name); }
+Library open_library(const char* path) {
+  return dlopen(path, RTLD_NOW | RTLD_LOCAL);
+}
+void* find_symbol(Library lib, const char* name) {
+  return dlsym(lib, name);
+}
 void close_library(Library lib) {
   if (lib != nullptr) {
     dlclose(lib);
@@ -175,8 +184,7 @@ int main(int argc, char** argv) {
 
       // 4. host table truncated before time_tai_ns still works (append-only rule)
       srsp_host_v1 truncated = host;
-      truncated.struct_size =
-          static_cast<uint32_t>(offsetof(srsp_host_v1, time_tai_ns));
+      truncated.struct_size = static_cast<uint32_t>(offsetof(srsp_host_v1, time_tai_ns));
       const srsp_status truncated_status =
           plugin->init(plugin->self, &truncated, SRSP_STR_LITERAL("{}"), nullptr);
       CHECK(truncated_status == SRSP_OK);
@@ -185,17 +193,15 @@ int main(int argc, char** argv) {
       srsp_buffer response{};
       srsp_error call_err{};
       call_err.struct_size = sizeof(srsp_error);
-      const srsp_status unknown_status =
-          plugin->call(plugin->self, SRSP_STR_LITERAL("does.not.exist"),
-                       SRSP_BYTES_NONE, &response, &call_err);
+      const srsp_status unknown_status = plugin->call(
+          plugin->self, SRSP_STR_LITERAL("does.not.exist"), SRSP_BYTES_NONE, &response, &call_err);
       CHECK(unknown_status == SRSP_E_UNSUPPORTED);
       CHECK(call_err.code == SRSP_E_UNSUPPORTED);
 
       // 6. a supported method still works after the rejected calls
       srsp_buffer ok_response{};
-      const srsp_status ping_status =
-          plugin->call(plugin->self, SRSP_STR_LITERAL("core.ping"),
-                       SRSP_BYTES_NONE, &ok_response, nullptr);
+      const srsp_status ping_status = plugin->call(plugin->self, SRSP_STR_LITERAL("core.ping"),
+                                                   SRSP_BYTES_NONE, &ok_response, nullptr);
       CHECK(ping_status == SRSP_OK);
       if (ping_status == SRSP_OK && ok_response.data != nullptr) {
         host.free(host.user, ok_response.data);

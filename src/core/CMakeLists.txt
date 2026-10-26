@@ -11,7 +11,7 @@
 # therefore enabled per toolchain and reported as SRSP_MANIFEST_ENABLED.
 #
 set(SRSP_MANIFEST_ENABLED OFF)
-if(MSVC OR NOT WIN32 OR CMAKE_CXX_COMPILER MATCHES "ucrt64")
+if(NOT MSVC AND (NOT WIN32 OR CMAKE_CXX_COMPILER MATCHES "ucrt64"))
   find_package(nlohmann_json CONFIG QUIET)
   if(nlohmann_json_FOUND)
     set(SRSP_MANIFEST_ENABLED ON)

@@ -17,6 +17,13 @@ if(Python3_Interpreter_FOUND)
                    ${CMAKE_CURRENT_SOURCE_DIR}/docs/check_docs.py)
   set_tests_properties(docs_check PROPERTIES TIMEOUT 120)
 
+  # Style gate: every C/C++ source must match .clang-format. The script skips
+  # itself when no clang-format is available on the machine.
+  add_test(NAME format_check
+           COMMAND ${Python3_EXECUTABLE}
+                   ${CMAKE_CURRENT_SOURCE_DIR}/style/check_format.py)
+  set_tests_properties(format_check PROPERTIES TIMEOUT 120)
+
   execute_process(
     COMMAND ${Python3_EXECUTABLE} -c "import jsonschema"
     RESULT_VARIABLE SRSP_HAVE_JSONSCHEMA

@@ -23,16 +23,38 @@ target_include_directories(srsp_api INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/api/i
 target_compile_features(srsp_api INTERFACE cxx_std_20)
 
 option(SRSP_BUILD_CORE "Build the kernel library" ON)
+option(SRSP_BUILD_MODEL "Build the SRM model layer" ON)
+option(SRSP_BUILD_DYNAMICS "Build the rigid-body dynamics library" ON)
+option(SRSP_BUILD_RENDER "Build the renderer contract and backends" ON)
+option(SRSP_BUILD_RECORD "Build MCAP recording and state hashing" ON)
 option(SRSP_BUILD_APPS "Build the command line tools" ON)
 option(SRSP_BUILD_BRIDGE "Build the gRPC sidecar bridge when gRPC is available" ON)
 option(SRSP_BUILD_EXAMPLES "Build the example plugins and host" ON)
 option(SRSP_BUILD_TESTS "Build the test suite" ON)
+option(SRSP_BUILD_BENCH "Build the benchmarks" ON)
 option(SRSP_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
 enable_testing()
 
 if(SRSP_BUILD_CORE)
   add_subdirectory(src/core)
+endif()
+
+# SRM needs nlohmann-json, the same dependency the manifest parser uses; the
+# cache variable set by src/core tells whether it is available for this
+# toolchain (UCRT64 or MSVC/Linux, not CLANG64).
+if(SRSP_BUILD_MODEL AND SRSP_MANIFEST_ENABLED)
+  add_subdirectory(src/model)
+elseif(SRSP_BUILD_MODEL)
+  message(STATUS "nlohmann-json is unavailable for this toolchain; the SRM model layer is disabled")
+endif()
+
+if(SRSP_BUILD_RENDER)
+  add_subdirectory(src/render)
+endif()
+
+if(SRSP_BUILD_RECORD AND NOT MSVC)
+  add_subdirectory(src/record)
 endif()
 
 # The gRPC bridge is currently supported on the UCRT64 toolchain only: the
@@ -50,12 +72,24 @@ elseif(SRSP_BUILD_BRIDGE)
   message(STATUS "The sidecar bridge is enabled only for the UCRT64 toolchain; skipped for this compiler")
 endif()
 
+if(SRSP_BUILD_DYNAMICS AND TARGET srsp_model AND NOT MSVC)
+  add_subdirectory(src/dynamics)
+elseif(SRSP_BUILD_DYNAMICS)
+  message(STATUS "SRM is unavailable; the dynamics library is disabled")
+endif()
+
 if(SRSP_BUILD_APPS)
   add_subdirectory(apps)
 endif()
 
 if(SRSP_BUILD_EXAMPLES)
   add_subdirectory(examples/hello_plugin)
+endif()
+
+if(SRSP_BUILD_BENCH AND TARGET srsp_dynamics AND TARGET srsp_record)
+  add_subdirectory(bench)
+elseif(SRSP_BUILD_BENCH)
+  message(STATUS "dynamics or record is unavailable; benchmarks are disabled")
 endif()
 
 if(SRSP_BUILD_TESTS)

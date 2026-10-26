@@ -44,8 +44,8 @@ class SidecarHost {
   srsp_status connect(srsp_error* err);
 
   /** @brief Invokes a method; response payload is copied into @p out. */
-  srsp_status invoke(const std::string& method, const std::string& payload,
-                     std::string* out, srsp_error* err);
+  srsp_status invoke(const std::string& method, const std::string& payload, std::string* out,
+                     srsp_error* err);
 
   /** @brief Liveness probe; false when the sidecar does not answer. */
   bool ping(uint64_t step_index);

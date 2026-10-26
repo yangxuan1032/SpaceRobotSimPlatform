@@ -19,3 +19,13 @@ if(TARGET srsp_core AND NOT MSVC)
 elseif(TARGET srsp_core)
   message(STATUS "integration.host_api_c is skipped on MSVC (C-mode header conflict)")
 endif()
+
+# Studio shell: headless self-test of the renderer contract.
+if(TARGET srsp_studio)
+  add_subdirectory(studio)
+endif()
+
+# Record/replay state-hash consistency (M1.9).
+if(TARGET srsp_record AND TARGET srsp_dynamics)
+  add_subdirectory(replay)
+endif()

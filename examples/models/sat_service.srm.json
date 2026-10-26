@@ -1,0 +1,40 @@
+{
+  "schema": "srsp.model/1",
+  "name": "sat_service",
+  "version": "1.0",
+  "bodies": [
+    {
+      "id": "bus",
+      "inertia": { "mass": 850.0, "com": [0.0, 0.0, 0.0], "tensor": [900.0, 0.0, 0.0, 0.0, 950.0, 0.0, 0.0, 0.0, 700.0] },
+      "geometry": [ { "mesh": "meshes/bus.glb" } ]
+    },
+    {
+      "id": "panel_left",
+      "parent_joint": "j_panel_left",
+      "inertia": { "mass": 35.0, "com": [0.0, -1.1, 0.0], "tensor": [0.5, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 12.0] },
+      "geometry": [ { "mesh": "meshes/panel.glb", "scale": [1.0, 1.0, 1.0] } ]
+    },
+    {
+      "id": "panel_right",
+      "parent_joint": "j_panel_right",
+      "inertia": { "mass": 35.0, "com": [0.0, 1.1, 0.0], "tensor": [0.5, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 12.0] },
+      "geometry": [ { "mesh": "meshes/panel.glb" } ]
+    }
+  ],
+  "joints": [
+    { "id": "j_panel_left", "parent": "bus", "child": "panel_left", "type": "revolute", "axis": [0.0, 1.0, 0.0], "lower": -2.62, "upper": 2.62, "origin": [0.0, -0.6, 0.0] },
+    { "id": "j_panel_right", "parent": "bus", "child": "panel_right", "type": "revolute", "axis": [0.0, 1.0, 0.0], "lower": -2.62, "upper": 2.62, "origin": [0.0, 0.6, 0.0] }
+  ],
+  "actuators": [
+    { "id": "rw_x", "type": "wheel", "body": "bus", "axis": [1.0, 0.0, 0.0], "max_effort": 0.2 },
+    { "id": "rw_y", "type": "wheel", "body": "bus", "axis": [0.0, 1.0, 0.0], "max_effort": 0.2 },
+    { "id": "rw_z", "type": "wheel", "body": "bus", "axis": [0.0, 0.0, 1.0], "max_effort": 0.2 },
+    { "id": "thr_1", "type": "thruster", "body": "bus", "axis": [1.0, 0.0, 0.0], "max_effort": 5.0 },
+    { "id": "thr_2", "type": "thruster", "body": "bus", "axis": [-1.0, 0.0, 0.0], "max_effort": 5.0 }
+  ],
+  "sensors": [
+    { "id": "imu_main", "type": "imu", "body": "bus", "rate_hz": 100.0, "mount_position": [0.2, 0.0, 0.1] },
+    { "id": "st_main", "type": "star_tracker", "body": "bus", "rate_hz": 10.0, "mount_position": [0.4, 0.0, 0.2] },
+    { "id": "cam_wide", "type": "camera", "body": "bus", "rate_hz": 5.0, "mount_position": [0.5, 0.0, 0.0] }
+  ]
+}

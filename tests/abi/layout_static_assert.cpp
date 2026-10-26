@@ -6,11 +6,12 @@
 // toolchain cannot be hosted by another (see docs/02-plugin-contract.md
 // section 4.1 and the rules block in plugin_api.h).
 
-#include <srsp/plugin_api.h>
 #include <srsp/core_api.h>
+#include <srsp/plugin_api.h>
+
+#include <cstdint>
 
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 
 #define SRSP_CHECK_SIZE(type, bytes) \
@@ -102,11 +103,15 @@ static_assert(SRSP_ABI_MINOR == 0u, "ABI minor changed; bump deliberately");
 int main() {
   std::printf("srsp_str        sizeof=%zu alignof=%zu\n", sizeof(srsp_str), alignof(srsp_str));
   std::printf("srsp_bytes      sizeof=%zu alignof=%zu\n", sizeof(srsp_bytes), alignof(srsp_bytes));
-  std::printf("srsp_buffer     sizeof=%zu alignof=%zu\n", sizeof(srsp_buffer), alignof(srsp_buffer));
+  std::printf("srsp_buffer     sizeof=%zu alignof=%zu\n", sizeof(srsp_buffer),
+              alignof(srsp_buffer));
   std::printf("srsp_error      sizeof=%zu alignof=%zu\n", sizeof(srsp_error), alignof(srsp_error));
-  std::printf("srsp_host_v1    sizeof=%zu alignof=%zu\n", sizeof(srsp_host_v1), alignof(srsp_host_v1));
-  std::printf("srsp_plugin_v1  sizeof=%zu alignof=%zu\n", sizeof(srsp_plugin_v1), alignof(srsp_plugin_v1));
-  std::printf("srsp_context_config sizeof=%zu alignof=%zu\n", sizeof(srsp_context_config), alignof(srsp_context_config));
+  std::printf("srsp_host_v1    sizeof=%zu alignof=%zu\n", sizeof(srsp_host_v1),
+              alignof(srsp_host_v1));
+  std::printf("srsp_plugin_v1  sizeof=%zu alignof=%zu\n", sizeof(srsp_plugin_v1),
+              alignof(srsp_plugin_v1));
+  std::printf("srsp_context_config sizeof=%zu alignof=%zu\n", sizeof(srsp_context_config),
+              alignof(srsp_context_config));
   std::printf("abi layout: all static asserts passed\n");
   return 0;
 }

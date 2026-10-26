@@ -31,8 +31,7 @@ class SidecarServer {
    * @param plugin_path Path of the plugin library to expose.
    * @return True on success; on failure the server stays stopped.
    */
-  bool start(const std::string& address, const std::string& token,
-             const std::string& plugin_path);
+  bool start(const std::string& address, const std::string& token, const std::string& plugin_path);
 
   /** @brief Stops the server and unloads the plugin. */
   void stop();

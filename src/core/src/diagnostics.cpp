@@ -61,8 +61,7 @@ void Diagnostics::set_history_capacity(std::size_t capacity) noexcept {
   capacity_ = capacity;
   if (records_.size() > capacity_) {
     const auto excess = records_.size() - capacity_;
-    records_.erase(records_.begin(),
-                   records_.begin() + static_cast<std::ptrdiff_t>(excess));
+    records_.erase(records_.begin(), records_.begin() + static_cast<std::ptrdiff_t>(excess));
   }
 }
 

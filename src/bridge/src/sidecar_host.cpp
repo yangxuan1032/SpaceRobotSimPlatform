@@ -4,10 +4,10 @@
  */
 #include <srsp/bridge/sidecar_host.hpp>
 
-#include <grpcpp/grpcpp.h>
-
 #include <chrono>
 #include <utility>
+
+#include <grpcpp/grpcpp.h>
 
 #include "srsp/v1/plugin.grpc.pb.h"
 
@@ -49,9 +49,7 @@ srsp_status map_grpc_status(const grpc::Status& status, const char* what,
 }  // namespace
 
 SidecarHost::SidecarHost(std::string address, std::string token, int timeout_ms)
-    : address_(std::move(address)),
-      token_(std::move(token)),
-      timeout_ms_(timeout_ms) {}
+    : address_(std::move(address)), token_(std::move(token)), timeout_ms_(timeout_ms) {}
 
 SidecarHost::~SidecarHost() = default;
 
@@ -60,8 +58,7 @@ srsp_status SidecarHost::connect(srsp_error* err) {
   auto stub = srsp::v1::PluginRuntime::NewStub(channel_);
 
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() +
-                       std::chrono::milliseconds(timeout_ms_));
+  context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout_ms_));
 
   srsp::v1::HandshakeRequest request;
   request.set_token(token_);
@@ -77,9 +74,8 @@ srsp_status SidecarHost::connect(srsp_error* err) {
   return SRSP_OK;
 }
 
-srsp_status SidecarHost::invoke(const std::string& method,
-                                const std::string& payload, std::string* out,
-                                srsp_error* err) {
+srsp_status SidecarHost::invoke(const std::string& method, const std::string& payload,
+                                std::string* out, srsp_error* err) {
   if (!channel_) {
     set_error(err, SRSP_E_NOT_READY, "sidecar is not connected");
     return SRSP_E_NOT_READY;
@@ -87,8 +83,7 @@ srsp_status SidecarHost::invoke(const std::string& method,
   auto stub = srsp::v1::PluginRuntime::NewStub(channel_);
 
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() +
-                       std::chrono::milliseconds(timeout_ms_));
+  context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout_ms_));
 
   srsp::v1::InvokeRequest request;
   request.set_method(method);
@@ -121,8 +116,7 @@ bool SidecarHost::ping(uint64_t step_index) {
   auto stub = srsp::v1::PluginRuntime::NewStub(channel_);
 
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() +
-                       std::chrono::milliseconds(timeout_ms_));
+  context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout_ms_));
 
   srsp::v1::PingRequest request;
   request.set_step_index(step_index);
@@ -137,8 +131,7 @@ void SidecarHost::shutdown() {
   }
   auto stub = srsp::v1::PluginRuntime::NewStub(channel_);
   grpc::ClientContext context;
-  context.set_deadline(std::chrono::system_clock::now() +
-                       std::chrono::milliseconds(timeout_ms_));
+  context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(timeout_ms_));
   srsp::v1::ShutdownRequest request;
   request.set_timeout_ms(static_cast<uint32_t>(timeout_ms_));
   srsp::v1::Empty reply;

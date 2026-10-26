@@ -50,8 +50,8 @@ class SidecarProcess {
 
   int pid_ = 0;
 #if defined(_WIN32)
-  void* process_ = nullptr;  ///< HANDLE
-  void* pipe_read_ = nullptr;  ///< HANDLE
+  void* process_ = nullptr;     ///< HANDLE
+  void* pipe_read_ = nullptr;   ///< HANDLE
   void* pipe_write_ = nullptr;  ///< HANDLE (child side, closed after spawn)
 #else
   int pipe_read_ = -1;

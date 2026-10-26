@@ -12,18 +12,19 @@
 #include <srsp/core_api.h>
 
 #if defined(SRSP_HAVE_SIDECAR)
-#  include <srsp/bridge/sidecar_host.hpp>
-#  include <srsp/bridge/sidecar_process.hpp>
+#include <srsp/bridge/sidecar_host.hpp>
+#include <srsp/bridge/sidecar_process.hpp>
 #endif
 
-#include <cstdio>
 #include <cstring>
-#include <random>
 #include <string>
 #include <vector>
 
+#include <cstdio>
+#include <random>
+
 #if defined(_WIN32)
-#  include <malloc.h>
+#include <malloc.h>
 #endif
 
 namespace {
@@ -49,8 +50,7 @@ void print_usage() {
 }
 
 /// @return The value following @p name, or an empty string.
-std::string option_value(const std::vector<std::string>& args,
-                         const std::string& name) {
+std::string option_value(const std::vector<std::string>& args, const std::string& name) {
   for (size_t i = 0; i + 1 < args.size(); ++i) {
     if (args[i] == name) {
       return args[i + 1];
@@ -60,9 +60,8 @@ std::string option_value(const std::vector<std::string>& args,
 }
 
 int run_version() {
-  std::printf("srsp-cli 0.1.0 (ABI %d.%d, plugin api %d)\n",
-              static_cast<int>(SRSP_ABI_MAJOR), static_cast<int>(SRSP_ABI_MINOR),
-              static_cast<int>(sizeof(srsp_plugin_v1)));
+  std::printf("srsp-cli 0.1.0 (ABI %d.%d, plugin api %d)\n", static_cast<int>(SRSP_ABI_MAJOR),
+              static_cast<int>(SRSP_ABI_MINOR), static_cast<int>(sizeof(srsp_plugin_v1)));
   return 0;
 }
 
@@ -71,8 +70,7 @@ int run_version() {
 std::string make_token() {
   std::random_device device;
   char buffer[40];
-  std::snprintf(buffer, sizeof(buffer), "%08x%08x%08x%08x", device(), device(),
-                device(), device());
+  std::snprintf(buffer, sizeof(buffer), "%08x%08x%08x%08x", device(), device(), device(), device());
   return buffer;
 }
 
@@ -80,18 +78,17 @@ std::string make_token() {
 int run_sidecar_demo(const std::vector<std::string>& args) {
   const std::string plugin_path = option_value(args, "--plugin");
   const std::string sidecar_exe = option_value(args, "--sidecar-exe");
-  const std::string method = option_value(args, "--method").empty()
-                                 ? "core.ping"
-                                 : option_value(args, "--method");
+  const std::string method =
+      option_value(args, "--method").empty() ? "core.ping" : option_value(args, "--method");
   if (plugin_path.empty()) {
-    std::fputs("error: --plugin <path> is required for the sidecar transport\n",
-               stderr);
+    std::fputs("error: --plugin <path> is required for the sidecar transport\n", stderr);
     return kExitFailure;
   }
   if (sidecar_exe.empty()) {
-    std::fputs("error: --sidecar-exe <path> is required for the sidecar "
-               "transport\n",
-               stderr);
+    std::fputs(
+        "error: --sidecar-exe <path> is required for the sidecar "
+        "transport\n",
+        stderr);
     return kExitFailure;
   }
 
@@ -102,8 +99,7 @@ int run_sidecar_demo(const std::vector<std::string>& args) {
   if (!sidecar_script.empty()) {
     child_args.push_back(sidecar_script);
   }
-  child_args.insert(child_args.end(),
-                    {"--port", "0", "--token", token, "--plugin", plugin_path});
+  child_args.insert(child_args.end(), {"--port", "0", "--token", token, "--plugin", plugin_path});
 
   srsp::bridge::SidecarProcess child;
 
@@ -123,8 +119,7 @@ int run_sidecar_demo(const std::vector<std::string>& args) {
 
   std::string address = launch();
   if (address.empty()) {
-    std::fprintf(stderr, "error: could not start sidecar '%s'\n",
-                 sidecar_exe.c_str());
+    std::fprintf(stderr, "error: could not start sidecar '%s'\n", sidecar_exe.c_str());
     return kExitFailure;
   }
 
@@ -137,16 +132,14 @@ int run_sidecar_demo(const std::vector<std::string>& args) {
                    err.message != nullptr ? err.message : "unknown");
     } else {
       std::string payload;
-      const srsp_status status =
-          client.invoke(method, std::string{}, &payload, &err);
+      const srsp_status status = client.invoke(method, std::string{}, &payload, &err);
       client.shutdown();
       if (status == SRSP_OK) {
         std::printf("%s\n", payload.c_str());
         result = 0;
         break;
       }
-      std::fprintf(stderr, "error: sidecar call '%s' failed: %s\n",
-                   method.c_str(),
+      std::fprintf(stderr, "error: sidecar call '%s' failed: %s\n", method.c_str(),
                    err.message != nullptr ? err.message : "unknown");
     }
 
@@ -173,8 +166,7 @@ int run_demo(const std::vector<std::string>& args) {
   const std::string transport = option_value(args, "--transport");
   const std::string plugin_path = option_value(args, "--plugin");
   const std::string method =
-      option_value(args, "--method").empty() ? "core.ping"
-                                             : option_value(args, "--method");
+      option_value(args, "--method").empty() ? "core.ping" : option_value(args, "--method");
 
   if (transport.empty()) {
     std::fputs("error: --transport is required (inproc|sidecar)\n", stderr);
@@ -184,8 +176,7 @@ int run_demo(const std::vector<std::string>& args) {
 #if defined(SRSP_HAVE_SIDECAR)
     return run_sidecar_demo(args);
 #else
-    std::fputs("error: this build does not include the gRPC sidecar bridge\n",
-               stderr);
+    std::fputs("error: this build does not include the gRPC sidecar bridge\n", stderr);
     return kExitUnsupported;
 #endif
   }
@@ -194,8 +185,7 @@ int run_demo(const std::vector<std::string>& args) {
     return kExitFailure;
   }
   if (plugin_path.empty()) {
-    std::fputs("error: --plugin <path> is required for the inproc transport\n",
-               stderr);
+    std::fputs("error: --plugin <path> is required for the inproc transport\n", stderr);
     return kExitFailure;
   }
 
@@ -222,12 +212,10 @@ int run_demo(const std::vector<std::string>& args) {
   } else {
     srsp_buffer response{};
     const srsp_status status =
-        srsp_plugin_call(ctx, srsp_str{}, to_str(method), srsp_bytes{}, &response,
-                         &err);
+        srsp_plugin_call(ctx, srsp_str{}, to_str(method), srsp_bytes{}, &response, &err);
     if (status == SRSP_OK) {
-      const char* text = response.data != nullptr
-                             ? reinterpret_cast<const char*>(response.data)
-                             : "";
+      const char* text =
+          response.data != nullptr ? reinterpret_cast<const char*>(response.data) : "";
       std::printf("%.*s\n", static_cast<int>(response.size), text);
       srsp_buffer_release(ctx, &response);
       result = 0;

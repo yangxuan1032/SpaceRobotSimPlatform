@@ -1,4 +1,5 @@
 add_subdirectory(cli)
+add_subdirectory(studio)
 
 if(TARGET srsp_bridge)
   add_subdirectory(sidecar)

@@ -1,0 +1,38 @@
+{
+  "schema": "srsp.model/1",
+  "name": "arm6",
+  "version": "1.0",
+  "bodies": [
+    {
+      "id": "base",
+      "inertia": { "mass": 120.0, "com": [0.0, 0.0, 0.0], "tensor": [8.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 6.0] }
+    },
+    { "id": "link1", "parent_joint": "j1", "inertia": { "mass": 12.0, "com": [0.0, 0.0, 0.25], "tensor": [0.35, 0.0, 0.0, 0.0, 0.35, 0.0, 0.0, 0.0, 0.05] } },
+    { "id": "link2", "parent_joint": "j2", "inertia": { "mass": 10.0, "com": [0.0, 0.0, 0.3], "tensor": [0.42, 0.0, 0.0, 0.0, 0.42, 0.0, 0.0, 0.0, 0.04] } },
+    { "id": "link3", "parent_joint": "j3", "inertia": { "mass": 8.0, "com": [0.0, 0.0, 0.25], "tensor": [0.25, 0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.03] } },
+    { "id": "link4", "parent_joint": "j4", "inertia": { "mass": 6.0, "com": [0.0, 0.0, 0.2], "tensor": [0.12, 0.0, 0.0, 0.0, 0.12, 0.0, 0.0, 0.0, 0.02] } },
+    { "id": "link5", "parent_joint": "j5", "inertia": { "mass": 4.0, "com": [0.0, 0.0, 0.15], "tensor": [0.06, 0.0, 0.0, 0.0, 0.06, 0.0, 0.0, 0.0, 0.01] } },
+    { "id": "link6", "parent_joint": "j6", "inertia": { "mass": 2.0, "com": [0.0, 0.0, 0.1], "tensor": [0.02, 0.0, 0.0, 0.0, 0.02, 0.0, 0.0, 0.0, 0.005] },
+      "geometry": [ { "mesh": "meshes/effector.glb" } ] }
+  ],
+  "joints": [
+    { "id": "j1", "parent": "base", "child": "link1", "type": "revolute", "axis": [0.0, 0.0, 1.0], "lower": -3.14, "upper": 3.14 },
+    { "id": "j2", "parent": "link1", "child": "link2", "type": "revolute", "axis": [0.0, 1.0, 0.0], "lower": -2.0, "upper": 2.0, "origin": [0.0, 0.0, 0.35] },
+    { "id": "j3", "parent": "link2", "child": "link3", "type": "revolute", "axis": [0.0, 1.0, 0.0], "lower": -2.5, "upper": 2.5, "origin": [0.0, 0.0, 0.4] },
+    { "id": "j4", "parent": "link3", "child": "link4", "type": "revolute", "axis": [0.0, 0.0, 1.0], "lower": -3.14, "upper": 3.14, "origin": [0.0, 0.0, 0.35] },
+    { "id": "j5", "parent": "link4", "child": "link5", "type": "revolute", "axis": [0.0, 1.0, 0.0], "lower": -2.0, "upper": 2.0, "origin": [0.0, 0.0, 0.3] },
+    { "id": "j6", "parent": "link5", "child": "link6", "type": "revolute", "axis": [0.0, 0.0, 1.0], "lower": -3.14, "upper": 3.14, "origin": [0.0, 0.0, 0.2] }
+  ],
+  "actuators": [
+    { "id": "a1", "type": "torque", "joint": "j1", "max_effort": 30.0 },
+    { "id": "a2", "type": "torque", "joint": "j2", "max_effort": 30.0 },
+    { "id": "a3", "type": "torque", "joint": "j3", "max_effort": 20.0 },
+    { "id": "a4", "type": "torque", "joint": "j4", "max_effort": 10.0 },
+    { "id": "a5", "type": "torque", "joint": "j5", "max_effort": 10.0 },
+    { "id": "a6", "type": "torque", "joint": "j6", "max_effort": 5.0 }
+  ],
+  "sensors": [
+    { "id": "joint_imu", "type": "imu", "body": "link6", "rate_hz": 200.0 },
+    { "id": "wrist_cam", "type": "camera", "body": "link6", "rate_hz": 30.0, "mount_position": [0.0, 0.0, 0.12] }
+  ]
+}

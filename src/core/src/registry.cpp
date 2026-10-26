@@ -23,10 +23,9 @@ bool Registry::unregister_plugin(std::string_view id) {
     return false;
   }
   plugins_.erase(it);
-  capabilities_.erase(
-      std::remove_if(capabilities_.begin(), capabilities_.end(),
-                     [id](const CapabilityRecord& c) { return c.plugin_id == id; }),
-      capabilities_.end());
+  capabilities_.erase(std::remove_if(capabilities_.begin(), capabilities_.end(),
+                                     [id](const CapabilityRecord& c) { return c.plugin_id == id; }),
+                      capabilities_.end());
   return true;
 }
 
@@ -41,8 +40,7 @@ bool Registry::mark_loaded(std::string_view id, bool loaded) {
 }
 
 bool Registry::add_capability(CapabilityRecord record) {
-  if (record.name.empty() || record.plugin_id.empty() ||
-      find_plugin(record.plugin_id) == nullptr) {
+  if (record.name.empty() || record.plugin_id.empty() || find_plugin(record.plugin_id) == nullptr) {
     return false;
   }
   capabilities_.push_back(std::move(record));
@@ -55,8 +53,7 @@ const PluginRecord* Registry::find_plugin(std::string_view id) const {
   return it == plugins_.end() ? nullptr : &*it;
 }
 
-const CapabilityRecord* Registry::resolve(std::string_view name,
-                                          uint32_t major) const {
+const CapabilityRecord* Registry::resolve(std::string_view name, uint32_t major) const {
   const CapabilityRecord* best = nullptr;
   for (const auto& capability : capabilities_) {
     if (capability.name != name || capability.major != major) {

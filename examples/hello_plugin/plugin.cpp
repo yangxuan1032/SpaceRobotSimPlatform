@@ -52,8 +52,7 @@ srsp_status reply(HelloPlugin* self, const std::string& json, srsp_buffer* out) 
 srsp_status SRSP_CALL plugin_init(void* self_ptr, const srsp_host_v1* host,
                                   srsp_str /*config_json*/, srsp_error* err) {
   auto* self = static_cast<HelloPlugin*>(self_ptr);
-  if (self == nullptr || host == nullptr || host->alloc == nullptr ||
-      host->free == nullptr) {
+  if (self == nullptr || host == nullptr || host->alloc == nullptr || host->free == nullptr) {
     set_error(err, SRSP_E_INVALID_ARGUMENT, "host services are incomplete");
     return SRSP_E_INVALID_ARGUMENT;
   }
@@ -64,9 +63,8 @@ srsp_status SRSP_CALL plugin_init(void* self_ptr, const srsp_host_v1* host,
   return SRSP_OK;
 }
 
-srsp_status SRSP_CALL plugin_call(void* self_ptr, srsp_str method,
-                                  srsp_bytes /*request*/, srsp_buffer* response,
-                                  srsp_error* err) {
+srsp_status SRSP_CALL plugin_call(void* self_ptr, srsp_str method, srsp_bytes /*request*/,
+                                  srsp_buffer* response, srsp_error* err) {
   auto* self = static_cast<HelloPlugin*>(self_ptr);
   if (self == nullptr) {
     set_error(err, SRSP_E_INVALID_STATE, "plugin instance is null");
@@ -76,29 +74,26 @@ srsp_status SRSP_CALL plugin_call(void* self_ptr, srsp_str method,
   const std::string name(method.data, static_cast<size_t>(method.size));
 
   if (name == "core.describe") {
-    return reply(self,
-                 R"({"id":"org.srsp.examples.hello","version":"0.1.0",)"
-                 R"("capabilities":[{"name":"srsp.control/controller","version":"1.0","alias":"controller"}],)"
-                 R"("methods":["core.describe","core.ping","controller.update"]})",
-                 response);
+    return reply(
+        self,
+        R"({"id":"org.srsp.examples.hello","version":"0.1.0",)"
+        R"("capabilities":[{"name":"srsp.control/controller","version":"1.0","alias":"controller"}],)"
+        R"("methods":["core.describe","core.ping","controller.update"]})",
+        response);
   }
   if (name == "core.ping") {
-    return reply(self, R"({"ok":true,"steps":)" + std::to_string(self->steps) + "}",
-                 response);
+    return reply(self, R"({"ok":true,"steps":)" + std::to_string(self->steps) + "}", response);
   }
   if (name == "controller.update") {
     ++self->steps;
-    return reply(self,
-                 R"({"commands":[],"steps":)" + std::to_string(self->steps) + "}",
-                 response);
+    return reply(self, R"({"commands":[],"steps":)" + std::to_string(self->steps) + "}", response);
   }
 
   set_error(err, SRSP_E_UNSUPPORTED, "unknown method");
   return SRSP_E_UNSUPPORTED;
 }
 
-srsp_status SRSP_CALL plugin_checkpoint(void* self_ptr, srsp_buffer* out,
-                                        srsp_error* err) {
+srsp_status SRSP_CALL plugin_checkpoint(void* self_ptr, srsp_buffer* out, srsp_error* err) {
   auto* self = static_cast<HelloPlugin*>(self_ptr);
   if (self == nullptr || self->host == nullptr || out == nullptr) {
     set_error(err, SRSP_E_INVALID_ARGUMENT, "invalid checkpoint arguments");
@@ -133,8 +128,7 @@ srsp_status SRSP_CALL plugin_restore(void* self_ptr, srsp_bytes in, srsp_error* 
 void SRSP_CALL plugin_shutdown(void* self_ptr) {
   auto* self = static_cast<HelloPlugin*>(self_ptr);
   if (self != nullptr && self->host != nullptr && self->host->log != nullptr) {
-    self->host->log(self->host->user, SRSP_LOG_INFO,
-                    SRSP_STR_LITERAL("hello plugin shut down"));
+    self->host->log(self->host->user, SRSP_LOG_INFO, SRSP_STR_LITERAL("hello plugin shut down"));
   }
 }
 
@@ -145,13 +139,19 @@ HelloPlugin& instance() {
 
 }  // namespace
 
-extern "C" SRSP_EXPORT const srsp_plugin_v1* SRSP_CALL srsp_plugin_query(
-    uint32_t host_abi_major, const srsp_host_v1* /*host*/) {
+extern "C" SRSP_EXPORT const srsp_plugin_v1* SRSP_CALL
+srsp_plugin_query(uint32_t host_abi_major, const srsp_host_v1* /*host*/) {
   if (host_abi_major != SRSP_ABI_MAJOR) {
     return nullptr;
   }
-  static const srsp_plugin_v1 api = {
-      sizeof(srsp_plugin_v1), "org.srsp.examples.hello", "0.1.0", &instance(),
-      plugin_init, plugin_call, plugin_checkpoint, plugin_restore, plugin_shutdown};
+  static const srsp_plugin_v1 api = {sizeof(srsp_plugin_v1),
+                                     "org.srsp.examples.hello",
+                                     "0.1.0",
+                                     &instance(),
+                                     plugin_init,
+                                     plugin_call,
+                                     plugin_checkpoint,
+                                     plugin_restore,
+                                     plugin_shutdown};
   return &api;
 }

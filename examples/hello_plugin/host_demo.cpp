@@ -4,16 +4,17 @@
 
 #include <srsp/plugin_api.h>
 
-#include <cstdio>
 #include <cstring>
 #include <string>
 
+#include <cstdio>
+
 #if defined(_WIN32)
-#  include <malloc.h>
-#  include <windows.h>
+#include <malloc.h>
+#include <windows.h>
 #else
-#  include <dlfcn.h>
-#  include <cstdlib>
+#include <cstdlib>
+#include <dlfcn.h>
 #endif
 
 namespace {
@@ -41,8 +42,7 @@ int64_t SRSP_CALL host_time_tai_ns(void* user) {
   return static_cast<int64_t>(static_cast<DemoHost*>(user)->sim_time * 1e9);
 }
 
-srsp_status SRSP_CALL host_alloc(void* /*user*/, uint64_t size, uint64_t alignment,
-                                 void** out) {
+srsp_status SRSP_CALL host_alloc(void* /*user*/, uint64_t size, uint64_t alignment, void** out) {
   if (out == nullptr) {
     return SRSP_E_INVALID_ARGUMENT;
   }
@@ -53,8 +53,7 @@ srsp_status SRSP_CALL host_alloc(void* /*user*/, uint64_t size, uint64_t alignme
   *out = _aligned_malloc(static_cast<size_t>(size), static_cast<size_t>(alignment));
   return *out != nullptr ? SRSP_OK : SRSP_E_OUT_OF_MEMORY;
 #else
-  return posix_memalign(out, static_cast<size_t>(alignment),
-                        static_cast<size_t>(size)) == 0
+  return posix_memalign(out, static_cast<size_t>(alignment), static_cast<size_t>(size)) == 0
              ? SRSP_OK
              : SRSP_E_OUT_OF_MEMORY;
 #endif
@@ -71,15 +70,13 @@ void SRSP_CALL host_free(void* /*user*/, void* ptr) {
 srsp_status SRSP_CALL host_publish(void* user, srsp_str topic, srsp_bytes payload,
                                    uint64_t /*schema_hash*/) {
   auto* host = static_cast<DemoHost*>(user);
-  std::printf("[PUBLISH t=%.3f] %.*s (%llu bytes)\n", host->sim_time,
-              static_cast<int>(topic.size), topic.data,
-              static_cast<unsigned long long>(payload.size));
+  std::printf("[PUBLISH t=%.3f] %.*s (%llu bytes)\n", host->sim_time, static_cast<int>(topic.size),
+              topic.data, static_cast<unsigned long long>(payload.size));
   return SRSP_OK;
 }
 
-srsp_status SRSP_CALL host_shm_map(void* /*user*/, srsp_str /*name*/,
-                                   uint64_t /*size*/, int32_t /*writable*/,
-                                   void** /*out*/) {
+srsp_status SRSP_CALL host_shm_map(void* /*user*/, srsp_str /*name*/, uint64_t /*size*/,
+                                   int32_t /*writable*/, void** /*out*/) {
   return SRSP_E_UNSUPPORTED;
 }
 
@@ -107,9 +104,9 @@ void close_library(LibraryHandle handle) {
 std::string last_library_error() {
   const DWORD code = GetLastError();
   char* buffer = nullptr;
-  FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                     FORMAT_MESSAGE_IGNORE_INSERTS,
-                 nullptr, code, 0, reinterpret_cast<char*>(&buffer), 0, nullptr);
+  FormatMessageA(
+      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+      nullptr, code, 0, reinterpret_cast<char*>(&buffer), 0, nullptr);
   std::string message = buffer != nullptr ? buffer : "unknown error";
   LocalFree(buffer);
   return message;
@@ -139,23 +136,20 @@ std::string last_library_error() {
 
 /* ---- demo --------------------------------------------------------------- */
 
-bool invoke(const srsp_plugin_v1* plugin, DemoHost& host, const char* method,
-            std::string* out) {
+bool invoke(const srsp_plugin_v1* plugin, DemoHost& host, const char* method, std::string* out) {
   srsp_buffer response{nullptr, 0};
   srsp_error error{sizeof(srsp_error), SRSP_OK, nullptr, nullptr};
   const srsp_str name{method, static_cast<uint64_t>(std::strlen(method))};
   const srsp_bytes request{nullptr, 0};
 
-  const srsp_status status =
-      plugin->call(plugin->self, name, request, &response, &error);
+  const srsp_status status = plugin->call(plugin->self, name, request, &response, &error);
   if (status != SRSP_OK) {
     std::printf("  ! %s failed: code=%d %s\n", method, static_cast<int>(status),
                 error.message != nullptr ? error.message : "");
     return false;
   }
   if (out != nullptr && response.data != nullptr) {
-    out->assign(reinterpret_cast<const char*>(response.data),
-                static_cast<size_t>(response.size));
+    out->assign(reinterpret_cast<const char*>(response.data), static_cast<size_t>(response.size));
   }
   host_free(&host, response.data);
   return true;
@@ -167,26 +161,17 @@ int main(int argc, char** argv) {
   const char* path = argc > 1 ? argv[1] : "srsp_hello.dll";
 
   DemoHost host;
-  srsp_host_v1 host_api{sizeof(srsp_host_v1),
-                        &host,
-                        host_log,
-                        host_time_tai,
-                        host_alloc,
-                        host_free,
-                        host_publish,
-                        host_shm_map,
-                        host_shm_unmap,
-                        host_time_tai_ns};
+  srsp_host_v1 host_api{sizeof(srsp_host_v1), &host,           host_log,     host_time_tai,
+                        host_alloc,           host_free,       host_publish, host_shm_map,
+                        host_shm_unmap,       host_time_tai_ns};
 
   LibraryHandle library = open_library(path);
   if (library == nullptr) {
-    std::fprintf(stderr, "cannot open plugin '%s': %s\n", path,
-                 last_library_error().c_str());
+    std::fprintf(stderr, "cannot open plugin '%s': %s\n", path, last_library_error().c_str());
     return 1;
   }
 
-  auto query = reinterpret_cast<srsp_plugin_query_fn>(
-      find_symbol(library, SRSP_PLUGIN_ENTRY));
+  auto query = reinterpret_cast<srsp_plugin_query_fn>(find_symbol(library, SRSP_PLUGIN_ENTRY));
   if (query == nullptr) {
     std::fprintf(stderr, "missing entry point '%s'\n", SRSP_PLUGIN_ENTRY);
     close_library(library);
@@ -200,8 +185,8 @@ int main(int argc, char** argv) {
     return 3;
   }
 
-  std::printf("loaded %s %s (ABI %u.%u)\n", plugin->id, plugin->version,
-              SRSP_ABI_MAJOR, SRSP_ABI_MINOR);
+  std::printf("loaded %s %s (ABI %u.%u)\n", plugin->id, plugin->version, SRSP_ABI_MAJOR,
+              SRSP_ABI_MINOR);
 
   srsp_error error{sizeof(srsp_error), SRSP_OK, nullptr, nullptr};
   const srsp_status init_status =
@@ -209,8 +194,7 @@ int main(int argc, char** argv) {
           ? plugin->init(plugin->self, &host_api, SRSP_STR_LITERAL("{}"), &error)
           : SRSP_E_INVALID_STATE;
   if (init_status != SRSP_OK) {
-    std::fprintf(stderr, "init failed: %s\n",
-                 error.message != nullptr ? error.message : "unknown");
+    std::fprintf(stderr, "init failed: %s\n", error.message != nullptr ? error.message : "unknown");
     close_library(library);
     return 4;
   }

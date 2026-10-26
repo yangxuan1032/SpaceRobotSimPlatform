@@ -5,11 +5,12 @@
 #ifndef SRSP_CORE_DIAGNOSTICS_HPP
 #define SRSP_CORE_DIAGNOSTICS_HPP
 
-#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
+
+#include <cstddef>
 
 namespace srsp::core {
 
@@ -56,9 +57,7 @@ class Diagnostics {
 
   [[nodiscard]] std::size_t count() const noexcept { return records_.size(); }
   [[nodiscard]] std::size_t count(Severity severity) const noexcept;
-  [[nodiscard]] const std::vector<Diagnostic>& records() const noexcept {
-    return records_;
-  }
+  [[nodiscard]] const std::vector<Diagnostic>& records() const noexcept { return records_; }
 
  private:
   Sink sink_;

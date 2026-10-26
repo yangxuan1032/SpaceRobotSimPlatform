@@ -7,22 +7,23 @@
 #include <cstring>
 
 #if defined(_WIN32)
-#  include <windows.h>
+#include <windows.h>
 #else
-#  include <fcntl.h>
-#  include <poll.h>
-#  include <sys/wait.h>
-#  include <unistd.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 namespace srsp::bridge {
 
 #if defined(_WIN32)
 
-SidecarProcess::~SidecarProcess() { close_handles(); }
+SidecarProcess::~SidecarProcess() {
+  close_handles();
+}
 
-bool SidecarProcess::start(const std::string& executable,
-                           const std::vector<std::string>& args) {
+bool SidecarProcess::start(const std::string& executable, const std::vector<std::string>& args) {
   if (running()) {
     return false;
   }
@@ -51,9 +52,8 @@ bool SidecarProcess::start(const std::string& executable,
   startup.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
 
   PROCESS_INFORMATION info{};
-  const BOOL ok = ::CreateProcessA(
-      nullptr, command.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW,
-      nullptr, nullptr, &startup, &info);
+  const BOOL ok = ::CreateProcessA(nullptr, command.data(), nullptr, nullptr, TRUE,
+                                   CREATE_NO_WINDOW, nullptr, nullptr, &startup, &info);
   ::CloseHandle(write_end);
   if (!ok) {
     ::CloseHandle(read_end);
@@ -71,14 +71,13 @@ bool SidecarProcess::read_byte(char* out, int timeout_ms) {
   const DWORD start = ::GetTickCount();
   for (;;) {
     DWORD available = 0;
-    if (!::PeekNamedPipe(static_cast<HANDLE>(pipe_read_), nullptr, 0, nullptr,
-                         &available, nullptr)) {
+    if (!::PeekNamedPipe(static_cast<HANDLE>(pipe_read_), nullptr, 0, nullptr, &available,
+                         nullptr)) {
       return false;
     }
     if (available > 0) {
       DWORD read = 0;
-      if (!::ReadFile(static_cast<HANDLE>(pipe_read_), out, 1, &read, nullptr) ||
-          read != 1) {
+      if (!::ReadFile(static_cast<HANDLE>(pipe_read_), out, 1, &read, nullptr) || read != 1) {
         return false;
       }
       return true;
@@ -144,10 +143,11 @@ void SidecarProcess::close_handles() {
 
 #else  // POSIX
 
-SidecarProcess::~SidecarProcess() { close_handles(); }
+SidecarProcess::~SidecarProcess() {
+  close_handles();
+}
 
-bool SidecarProcess::start(const std::string& executable,
-                           const std::vector<std::string>& args) {
+bool SidecarProcess::start(const std::string& executable, const std::vector<std::string>& args) {
   if (running()) {
     return false;
   }

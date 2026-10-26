@@ -7,16 +7,16 @@
  */
 #include <srsp/bridge/sidecar_server.hpp>
 
-#include <cstdio>
 #include <cstring>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include <cstdio>
+
 namespace {
 
-std::string option_value(const std::vector<std::string>& args,
-                         const std::string& name) {
+std::string option_value(const std::vector<std::string>& args, const std::string& name) {
   for (size_t i = 0; i + 1 < args.size(); ++i) {
     if (args[i] == name) {
       return args[i + 1];
@@ -37,8 +37,7 @@ int main(int argc, char** argv) {
   const std::string token = option_value(args, "--token");
   const std::string plugin = option_value(args, "--plugin");
   if (port_text.empty() || token.empty() || plugin.empty()) {
-    std::fputs("usage: srsp-sidecar --port <n> --token <t> --plugin <path>\n",
-               stderr);
+    std::fputs("usage: srsp-sidecar --port <n> --token <t> --plugin <path>\n", stderr);
     return 2;
   }
 

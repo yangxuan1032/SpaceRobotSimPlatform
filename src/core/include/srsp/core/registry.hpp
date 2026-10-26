@@ -28,10 +28,10 @@ struct PluginRecord {
 
 /** @brief Record of one capability implementation. */
 struct CapabilityRecord {
-  std::string name;      ///< Capability name without the major, e.g. srsp.dynamics/solver.
-  uint32_t major = 1;    ///< Capability contract major version.
-  std::string plugin_id; ///< Owning plugin id.
-  int priority = 0;      ///< Higher wins when several implementations match.
+  std::string name;       ///< Capability name without the major, e.g. srsp.dynamics/solver.
+  uint32_t major = 1;     ///< Capability contract major version.
+  std::string plugin_id;  ///< Owning plugin id.
+  int priority = 0;       ///< Higher wins when several implementations match.
 };
 
 /**
@@ -62,12 +62,9 @@ class Registry {
    * @param major Contract major version.
    * @return The highest-priority record, or nullptr when none matches.
    */
-  [[nodiscard]] const CapabilityRecord* resolve(std::string_view name,
-                                                uint32_t major) const;
+  [[nodiscard]] const CapabilityRecord* resolve(std::string_view name, uint32_t major) const;
 
-  [[nodiscard]] const std::vector<PluginRecord>& plugins() const noexcept {
-    return plugins_;
-  }
+  [[nodiscard]] const std::vector<PluginRecord>& plugins() const noexcept { return plugins_; }
   [[nodiscard]] const std::vector<CapabilityRecord>& capabilities() const noexcept {
     return capabilities_;
   }

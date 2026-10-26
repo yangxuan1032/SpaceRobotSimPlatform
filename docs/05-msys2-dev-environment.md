@@ -437,8 +437,11 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | 数值回归 | 黄金轨迹 + `state_hash` | `tests/integration/golden/` |
 | 性能基准 | Google Benchmark | `srsp_bench` |
 | 静态检查 | clang-tidy、cppcheck | `tools/ci/static-analysis.sh`（随 M1 提供） |
-| 格式 | clang-format（`.clang-format`） | `clang-format -i` / 编辑器保存时格式化 |
+| 格式 | clang-format（`.clang-format`） | **门禁**：`ctest -R format_check`（`tests/style/check_format.py`）；修复：`clang-format -i` |
+| 文档与数据 | JSON/YAML 解析 + Markdown 链接 | **门禁**：`ctest -R docs_check`（`tests/docs/check_docs.py`） |
 | 内存/线程 | Linux ASan/UBSan、TSan；Windows 用 Dr. Memory | `linux-clang-asan` 预设 |
+
+格式门禁说明：`format_check` 遍历 `src/ apps/ tests/ examples/` 下的 C/C++ 源文件，用 `clang-format --dry-run --Werror` 校验；机器上没有 clang-format 时脚本打印 SKIP 并以 0 退出（CI 的 Linux job 通过 apt 安装 `clang-format`，因此该门禁在 CI 生效）。
 
 覆盖率：Linux + gcov/lcov（`SRSP_COVERAGE=ON`），目标核心模块 ≥ 70%。
 
