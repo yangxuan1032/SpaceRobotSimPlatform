@@ -1,0 +1,10 @@
+find_package(Qt6 COMPONENTS Gui QUIET)
+if(NOT Qt6_FOUND)
+  message(STATUS "Qt6 Gui not found; the Qt renderer backend is skipped")
+  return()
+endif()
+
+add_library(srsp_render_qt STATIC qt_renderer.cpp)
+target_include_directories(srsp_render_qt PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(srsp_render_qt PUBLIC srsp_render Qt6::Gui)
+set_target_properties(srsp_render_qt PROPERTIES POSITION_INDEPENDENT_CODE ON)

@@ -13,3 +13,5 @@ if(MSVC)
 else()
   target_compile_options(srsp_render PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+add_subdirectory(backends/qt)
