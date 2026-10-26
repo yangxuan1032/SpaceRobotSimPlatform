@@ -1,3 +1,8 @@
+# Model-specific logs, plans and caches stay local. Only shared AI tooling
+# (tools/ai, AGENTS.md, ai-models.json) and the shared module tests
+# (<model>/ModuleTest) are versioned.
+/*/Logs/
+!/*/Logs/.gitkeep
 # Per-model cache roots (one namespace per AI model)
 /*/Temp/*
 !/*/Temp/.gitkeep
