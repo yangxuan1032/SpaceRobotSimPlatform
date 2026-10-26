@@ -53,30 +53,6 @@ jobs:
       - name: test
         run: ctest --preset win-ucrt64-debug --output-on-failure
 
-  linux-gcc:
-    name: linux / GCC
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: install toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            cmake ninja-build g++ pkg-config \
-            python3 python3-jsonschema python3-yaml \
-            libprotobuf-dev protobuf-compiler protobuf-compiler-grpc \
-            libgrpc++-dev nlohmann-json3-dev catch2 clang-format
-
-      - name: configure
-        run: cmake --preset linux-gcc-debug
-
-      - name: build
-        run: cmake --build --preset linux-gcc-debug
-
-      - name: test
-        run: ctest --preset linux-gcc-debug --output-on-failure
-
   docs:
     name: docs and data files
     runs-on: ubuntu-24.04

@@ -572,3 +572,15 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | Vulkan SDK（延后） | `C:\VulkanSDK\<version>`（`VULKAN_SDK`） |
 
 规则：互操作脚本必须使用**绝对路径解释器**（如 `deepseek\Temp\venv\Scripts\python.exe`），禁止裸 `python`，避免 PATH 串台（P24/P30）。
+### 12.5 CI 作业范围（2026-10-26 更新）
+
+按「当前只支持 Windows 10 + UCRT64」的决策，CI 取消搁置平台的测试作业：
+
+| 作业 | 状态 | 原因 |
+|---|---|---|
+| `windows-ucrt64` | ✅ 保留 | 主力构建与 34/34 测试 |
+| `docs`（JSON/YAML/链接检查） | ✅ 保留 | 与平台无关 |
+| `linux-gcc` | ❌ 已移除 | Linux 跨平台推迟到 1.2；本地 WSL2 亦未安装 |
+| MSVC / CLANG64 | 未纳入 | MSVC 待 vcvars 环境（P27）；CLANG64 已移除（P28） |
+
+恢复条件：1.2 跨平台里程碑启动时，重新加入 `linux-gcc` 作业（直接复用本次删除前的定义，见 git 历史）。
