@@ -30,3 +30,17 @@ set(SRSP_ENV "${SRSP_ENV}" CACHE INTERNAL "Identified build environment")
 set(SRSP_ENV_DEPS_OK "${SRSP_ENV_DEPS_OK}" CACHE INTERNAL
     "MSYS2/apt dependencies are usable in this environment")
 message(STATUS "SRSP environment: ${SRSP_ENV} (dependencies available: ${SRSP_ENV_DEPS_OK})")
+
+# Optional build cache: enables ccache for C and C++ when it is installed.
+# Keep it switchable so CI or a bisect can disable it without editing files.
+option(SRSP_USE_CCACHE "Use ccache for C/C++ compilation when available" ON)
+if(SRSP_USE_CCACHE)
+  find_program(SRSP_CCACHE_PROGRAM ccache)
+  if(SRSP_CCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER "${SRSP_CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${SRSP_CCACHE_PROGRAM}")
+    message(STATUS "ccache enabled: ${SRSP_CCACHE_PROGRAM}")
+  else()
+    message(STATUS "ccache not found; building without a compiler cache")
+  endif()
+endif()
