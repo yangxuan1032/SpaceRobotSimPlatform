@@ -138,6 +138,19 @@ SRSP 是一套面向**空间机器人**（在轨服务、目标捕获、舱外�
 
 ---
 
+### 4.3.1 设备与线程所有权（GPU / 批量前置）
+
+v1 只有 CPU 路径，但接口按“可接 GPU”设计。所有权规则现在就定下来，避免后期插件各自建上下文：
+
+| 资源 | 所有者 | 规则 |
+|---|---|---|
+| GPU 设备、队列、命令缓冲 | **host（内核）** | 插件不得自建 `VkInstance`/CUDA context；通过 host 提供的原语借用（对应预留接口 R2/R9） |
+| 显存池 / buffer | host | 按 world 生命周期分配；插件不持有跨调用指针 |
+| 批处理线程池 | host | 插件不得创建长期线程读写仿真状态（与本表 Sim/Render/IO 约束一致） |
+| 渲染线程 | 渲染插件 | 与 compute 共用队列时由 host 仲裁；渲染丢帧不得阻塞 Sim |
+| 边车子进程内的 GPU | 边车自身 | 与主进程设备互不可见；跨进程只传数据，不传句柄 |
+
+**不变量**：任何插件在 `init` 之后都不得假设“自己独占设备”；host 可以在同一设备上串行调度多个 world 的 compute。
 ## 5. 运行时视图
 
 ### 5.1 宏步调度循环
@@ -223,6 +236,36 @@ sequenceDiagram
 
 ---
 
+### 5.1.1 面向世界集合与 GPU 的循环扩展（设计，1.x 保持单世界）
+
+v1 实现是单世界、纯 CPU；为 M4 的批量世界与 GPU 计算预留以下形态（**当前不改实现**）：
+
+```
+for each macro step:
+    t_next = t + dt
+    dispatch(event_queue.pop_until(t_next))          # 顺序：t, priority, seq
+
+    for world in worlds_due(t):                      # 新增：world 维度
+        for sensor in sensors_due(world, t):  sample -> publish(world, topic, blob)
+        for ctrl   in controllers_due(world, t): update -> commands(world)
+        for force  in force_providers(world):    accumulate(state, env, forces)
+
+    compute.dispatch(world_batch, backend)           # 新增：批量计算阶段
+        # CPU 后端：按 world 串行/线程池；GPU 后端：一次提交多 world
+        # 结果写回各自的 state；失败时该 batch 降级到 CPU 重试一次
+
+    record(world snapshots)                          # 录制按 world 分 channel
+    render(subset_of_worlds)                         # 渲染可只取可见子集，允许丢帧
+
+    budget.check(plugin_calls)                       # 新增：时间预算
+        # 超预算 → fail_policy（degrade/skip-step）+ 诊断事件，记录到宏步耗时分解
+```
+
+三条配套规则：
+
+1. **确定性**：`worlds_due` 顺序按 `world_id` 升序；GPU 归约顺序固定；跨后端只承诺 D2（见 §6.3 的 D0/D1/D2 分级）。
+2. **失败隔离**：单个 world 的 compute 失败不影响同批其他 world；batch 失败降级 CPU，仍失败则标记该 world 暂停并保留状态。
+3. **录制**：channel 命名 `sim/<world_id>/<topic>`；`state_hash` 前缀含 `world_id`（预留字段，见 A16）。
 ## 6. 关键机制
 
 ### 6.1 服务注册与能力发现
