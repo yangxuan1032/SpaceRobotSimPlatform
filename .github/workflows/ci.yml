@@ -39,6 +39,8 @@ jobs:
             mingw-w64-ucrt-x86_64-python
             mingw-w64-ucrt-x86_64-python-jsonschema
             mingw-w64-ucrt-x86_64-python-yaml
+            mingw-w64-ucrt-x86_64-python-grpcio
+            mingw-w64-ucrt-x86_64-python-grpcio-tools
 
       - name: configure
         run: |

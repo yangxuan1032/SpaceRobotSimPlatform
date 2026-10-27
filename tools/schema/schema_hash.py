@@ -27,7 +27,10 @@ def collect() -> dict[str, str]:
     for path in sorted(SCHEMA_DIR.rglob("*.json")):
         if path.name == MANIFEST.name:
             continue
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        # Normalise line endings: a Windows checkout may materialise CRLF while
+        # CI or Linux uses LF, and the hash must not depend on that.
+        raw = path.read_bytes().replace(b"\r\n", b"\n")
+        digest = hashlib.sha256(raw).hexdigest()
         hashes[path.relative_to(ROOT).as_posix()] = digest
     return hashes
 

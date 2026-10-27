@@ -32,7 +32,24 @@ else()
 endif()
 
 # Cross-language path: a Python sidecar driven by the same C++ host.
+#
+# The sidecar script needs grpcio; probing it at configure time turns a missing
+# package into a visible skip instead of a red test that looks like a host bug
+# (the CI job installs mingw-w64-ucrt-x86_64-python-grpcio for this reason).
+set(SRSP_PY_SIDECAR_READY OFF)
 if(TARGET srsp_sidecar AND DEFINED Python3_EXECUTABLE)
+  execute_process(
+    COMMAND "${Python3_EXECUTABLE}" -c "import grpc"
+    RESULT_VARIABLE SRSP_GRPC_PROBE
+    OUTPUT_QUIET ERROR_QUIET)
+  if(SRSP_GRPC_PROBE EQUAL 0)
+    set(SRSP_PY_SIDECAR_READY ON)
+  else()
+    message(STATUS "python-grpcio not importable; Python sidecar tests are skipped")
+  endif()
+endif()
+
+if(SRSP_PY_SIDECAR_READY)
   add_test(NAME integration.cli_demo_sidecar_python
     COMMAND srsp_cli demo --transport sidecar
             --sidecar-exe "${Python3_EXECUTABLE}"
