@@ -44,3 +44,11 @@ if(Python3_Interpreter_FOUND)
 else()
   message(STATUS "Python3 not found; docs and schema tests are disabled")
 endif()
+# Schema hash gate: api/schema/SCHEMA_HASHES.json must match the files on disk
+# (docs/02 section 18). Uses only the Python standard library.
+if(Python3_FOUND)
+  add_test(NAME schema_hash_check
+           COMMAND ${Python3_EXECUTABLE}
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../tools/schema/schema_hash.py --check)
+  set_tests_properties(schema_hash_check PROPERTIES TIMEOUT 60)
+endif()

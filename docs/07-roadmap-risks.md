@@ -389,3 +389,45 @@ M1 出口判据的逐项实测记录，与 `deepseek/Logs/Plan/2026-10-26-m1-exe
 | 变更与问题记录 | `<model>/Logs/Log/{CHANGELOG,ISSUES}.md` | 本地保留，不入库（A17） |
 
 维护规则：新增事实先判断归属；若与已有来源冲突，以本表指定的来源为准并修正另一处。
+---
+
+## 15. 关键未知项登记（2026-10-27）
+
+尚未决定、但必须在某个节点前决定的事项。每项给出证据现状、待决定内容、建议责任方与截止触发，避免长期悬空。
+
+| # | 未知项 | 当前证据 | 待决定 | 截止触发 |
+|---|---|---|---|---|
+| U1 | SRM 柔性是否进入 1.x | docs/03 §3.7 定义预留 | 保持预留 or 进入版本范围（需列状态字段与导入验证） | SRM schema freeze 前 |
+| U2 | 关节 frame 与 Pinocchio 对照规范 | docs/03 §12 仍列 M0 待定 | 零位、父子 frame、关节轴、effort 符号 | solver 对照入 CI 前 |
+| U3 | 姿态与角速度约定 | docs/03 已写 `quat_wb`、body-frame 角速度 | 是否确认并移出“待定” | 下一个 schema 发布前 |
+| U4 | 图像颜色/HDR 枚举 | docs/03 §4.2 有 format/color_space | display transform 与 sensor raw 的枚举与范围 | QRhi image contract freeze 前 |
+| U5 | MCAP 的 Arrow schema encoding | docs/03 §9/§13 目标与现状不同 | 是否采用官方 Arrow schema encoding | Summary/seek 实现前 |
+| U6 | 300 µs 统计工况 | docs/05 §11 是 100 体链单步 | 固定拓扑/积分器/计时边界 | 1.1 benchmark gate 定稿前 |
+| U7 | Linux 支持等级 | 1.2 计划，CI 作业已删 | build-only / developer-supported / user-supported | 1.2 RC 前 |
+| U8 | 强沙箱承诺 | 当前仅声明签名与限额 | Windows Job/AppContainer、Linux cgroup 最低承诺 | 对外支持第三方插件前 |
+| U9 | 集群语义边界 | 本文件 §17 | 单机批量 vs 跨机分布式的边界与术语 | M4 启动前 |
+
+## 16. 目标 → 证据追踪矩阵（2026-10-27）
+
+| 目标 | 设计落点 | 当前证据 | 后续验收证据 | 阶段 |
+|---|---|---|---|---|
+| 可替换插件 | docs/01 §8 A01/A16、docs/02 §15 | 能力寻址 + ABI 测试（35 项） | 两 solver 同场景切换 + 插件锁文件 | 1.1 |
+| 跨语言 | A07、docs/02 §16 | MuJoCo 边车原型已跑通 | Python sidecar handshake/invoke/checkpoint 套件 | 1.1 |
+| 确定性回放 | docs/01 §5.1.2、§6.3 | 200/2 000 步 `state_hash` 一致 | 10 分钟长稳回放 | 1.1 |
+| 录制可消费 | A08/A15、docs/03 §13 | 官方 mcap SDK 顺序读取一致 | Summary + 压缩 + schema hash 校验 | 1.1 |
+| 渲染可见 | A13、docs/01 §6.2.1 | Qt 后端离屏测试 | QRhi 1080p ≥ 30 fps、双原点 1e7 m 无抖动 | 1.1 |
+| 性能达标 | docs/01 §7、P25 | 9.06 ms（已豁免） | ABA/CRBA 后 ≤300 µs 或正式豁免 | 1.1 |
+| GPU/批量 | A16、docs/01 §4.3.1/§5.1.1 | 仅设计 | 1e3 world 批量 step；1e4 刚体吞吐 | M4 |
+| 跨平台 | A14、docs/07 §13 | 无（Windows-only） | Linux 构建 + sanitizer 全绿 | 1.2 |
+
+## 17. 集群术语边界（2026-10-27）
+
+gpt 设计包把“分布式集群”列为 v1 非目标；本项目的 M4 计划包含“单机多 world 批量”。两者不冲突，但必须把术语钉死：
+
+| 术语 | 定义 | 状态 |
+|---|---|---|
+| **单机批量** | 一个进程内、一个 GPU/CPU 后端上并行推进 N 个 world | **计划内**（M4） |
+| **跨机分布式** | 多台机器各自运行 world，通过网络同步状态/事件 | **非目标**（1.x 不做） |
+| **云端多用户** | 多租户、鉴权、会话隔离 | **非目标** |
+
+任何文档提到“集群”时必须指明是“单机批量”还是“跨机分布式”。

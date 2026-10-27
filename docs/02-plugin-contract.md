@@ -628,3 +628,43 @@ if __name__ == "__main__":
 - 能力协商在加载期完成：manifest 声明的 `capability@major` 若与 host 支持集不匹配，加载即失败（`SRSP_E_VERSION_MISMATCH` 或 `SRSP_E_UNSUPPORTED`）；
 - `Diagnostic.remedy`：错误码表必须给出默认 remedy 文案（例：`SRSP_E_UNSUPPORTED` → “升级 host 或改用受支持的实现”），由内核填充，插件可覆盖；
 - 负例测试：`tests/abi/unsupported_capability.cpp` 校验错误码表的唯一性、非零性与 `SRSP_E_UNSUPPORTED` 的存在/取值；随批量能力实现再补运行时负例。
+---
+
+## 16. 信任级别与装载策略
+
+| 级别 | 类型 | 装载策略 | 故障影响 |
+|---|---|---|---|
+| **T0** 平台内置 | 同仓/同发行制品，签名可信 | 自动加载；能力与 schema 仍校验 | 进程内故障可终止宿主 |
+| **T1** 管理原生 | 用户安装、签名验证、能力声明通过 | 明确授权后 in-proc；权限审计 | 无法提供强故障隔离 |
+| **T2** 隔离插件 | 非原生运行时、来源不充分信任、实验插件 | sidecar；最小文件/网络权限、CPU/内存/运行时限额 | 可单独终止与重启，输出经 schema 校验 |
+| **T3** 开发插件 | `--dev` 本地插件 | 允许 unsigned；UI 持续提示 + 审计记录 | 不用于发布验收 |
+
+**关键澄清**：manifest 的权限声明是**授权输入**，不代表操作系统已实施沙箱；强隔离能力必须由 OS 后端报告（Windows Job/AppContainer、Linux cgroup/seccomp）。权限拒绝不得静默降级。
+
+## 17. BlobRef：大块数据的生命周期
+
+大块数据（状态块、图像、点云）不复制进控制消息，统一用 `BlobRef`：
+
+```
+BlobRef {
+  const uint8_t* data;   // host 分配，插件只读
+  uint64_t size;
+  uint64_t generation;   // 与快照 generation 对齐
+  uint64_t lease_id;     // 0 表示无 lease
+}
+```
+
+规则：
+1. 只有 host 能 `alloc/free`；插件在 `release` 前保证不访问；
+2. 跨边界传递 `BlobRef` 必须带 `generation`，接收方可用它检测“快照已被复用”；
+3. sidecar 传输时序列化为“共享内存句柄 + 偏移 + 长度 + generation”，不传裸指针；
+4. 录制器获得的是 lease 拷贝，落盘完成后再 release。
+
+## 18. Schema Registry 与 schema hash
+
+- **schema 版本独立于 ABI 版本**：ABI 用 `struct_size` + 次版本；schema 用自身 `$id`/版本字段；
+- 每个 schema 计算 **SHA-256**，形成 `api/schema/SCHEMA_HASHES.json`（由 `tools/schema/schema_hash.py` 生成，可复现）；
+- 录制文件（MCAP）在 Schema 记录的 metadata 中写入 schema hash 与 ABI 版本；
+- 回放/消费方校验 hash 不匹配 → 拒绝解析并给出 remedy（升级 host 或使用对应 schema 版本）。
+
+当前状态：hash 工具与清单为新增；写入 MCAP metadata 与校验逻辑列入 1.1（与 A15 的 Summary 补齐同批）。
