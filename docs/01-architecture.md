@@ -294,35 +294,40 @@ v1 支持**单进程内 N 个机器人**（起步 N ≤ 8）协同，跨进程/�
 
 ## 7. 质量属性目标
 
-| 属性 | 指标（目标值，x86-64 / -O2） | 验证方式 |
+| 属性 | 指标（目标值，x86-64 / -O2） | 验证方式 | 当前实测 / 状态 |
 |---|---|---|
-| 动力学性能 | 100 刚体 + 30 关节，单步 ≤ 300 μs | 基准测试（Google Benchmark） |
-| 插件开销 | 进程内单次调用 p99 ≤ 20 μs；边车单宏步 ≤ 1 ms | 微基准 + 端到端 |
-| 渲染 | 1080p、2M 三角形、60 fps；4 视口不降主视口帧率 | GPU 计时查询 + 帧分析 |
-| 启动 | 冷启动 ≤ 3 s，热启动 ≤ 1.5 s | 启动打点 |
-| 内存 | 典型场景 ≤ 2 GB | 进程 RSS 采样 |
-| 确定性 | 同平台同构建 10 分钟回放哈希一致 | 回归用例 |
-| 稳定性 | 8 小时连续运行无内存增长（< 2%） | soak test |
-| 可用性 | 边车崩溃后 ≤ 3 s 恢复或降级提示 | 故障注入 |
+| 动力学性能 | 100 刚体 + 30 关节，单步 ≤ 300 μs | 基准测试（Google Benchmark） | **9.06 ms（豁免到 1.1）** |
+| 插件开销 | 进程内单次调用 p99 ≤ 20 μs；边车单宏步 ≤ 1 ms | 微基准 + 端到端 | 未实测 |
+| 渲染 | 1080p、2M 三角形、60 fps；4 视口不降主视口帧率 | GPU 计时查询 + 帧分析 | Qt 软件后端，未达（1.1 QRhi） |
+| 启动 | 冷启动 ≤ 3 s，热启动 ≤ 1.5 s | 启动打点 | 未实测 |
+| 内存 | 典型场景 ≤ 2 GB | 进程 RSS 采样 | 未实测 |
+| 确定性 | 同平台同构建 10 分钟回放哈希一致 | 回归用例 | 200/2 000 步一致（长稳未跑） |
+| 稳定性 | 8 小时连续运行无内存增长（< 2%） | soak test | 未做 |
+| 可用性 | 边车崩溃后 ≤ 3 s 恢复或降级提示 | 故障注入 | 重启一次已测（P2 相关） |
 
 ---
 
 ## 8. 架构决策摘要（ADR Index）
 
-| ADR | 决策 | 主要理由 | 详见 |
-|---|---|---|---|
-| A01 | 内核 C++20，插件契约为纯 C ABI | 跨语言 FFI 成本最低，ABI 稳定可控 | 02 |
-| A02 | 控制面 Protobuf，数据面 Arrow C Data Interface | 一个语义两种传输；零拷贝、生态成熟 | 02/03 |
-| A03 | 进程内 + 边车双传输 | 性能与语言自由/隔离兼得 | 02 |
-| A04 | 自定义模型 IR（SRM），URDF/SDF/MJCF 仅作导入器 | 空间机器人需要柔性、动量交换、推力器等扩展 | 03 |
-| A05 | 场景用 glTF 2.0 + 自定义扩展 | 工具链成熟、可复用 DCC 资产 | 03 |
-| A06 | 渲染器为插件，默认 bgfx | 多后端、可控管线、BSD 许可 | 04 |
-| A07 | Python 不内嵌，作为边车 | 规避 MinGW/MSVC ABI 与 GIL 风险，可用完整生态 | 04/05 |
-| A08 | 录制用 MCAP | 自描述、可索引、跨语言、Foxglove 可直接看 | 03/04 |
-| A09 | Windows 用 MSYS2 UCRT64 原生工具链 | 满足约束、包生态完整、产物为原生 Win64 | 05 |
-| A10 | 打包可重定位 runtime + `.srpkg` 插件包 | 离线部署、插件独立升级 | 06 |
-| A11 | 内核对外暴露宿主侧 C API（`core_api.h`） | Rust CLI、Python SDK、Web 服务等非 C++ 应用可嵌入内核；与插件 ABI 同规则 | 02/api |
-| A12 | Windows 多工具链：UCRT64-GCC 为主，UCRT64-Clang / CLANG64 / MSVC 为辅 | 第二编译器与 sanitizer 走 Clang（同 libstdc++ 可互链），CLANG64 仅作 libc++ 验证层；插件按 `os-arch-toolchain` 分发，跨工具链只允许 C ABI 加载或边车 | 02/05/06 |
+| ADR | 决策 | 主要理由 | 详见 | 状态 |
+|---|---|---|---|---|
+| A01 | 内核 C++20，插件契约为纯 C ABI | 跨语言 FFI 成本最低，ABI 稳定可控 | 02 | 有效 |
+| A02 | 控制面 Protobuf，数据面 Arrow C Data Interface | 一个语义两种传输；零拷贝、生态成熟 | 02/03 | **待修订**：当前状态面为 typed raw block，Arrow 未实现 |
+| A03 | 进程内 + 边车双传输 | 性能与语言自由/隔离兼得 | 02 | 有效 |
+| A04 | 自定义模型 IR（SRM），URDF/SDF/MJCF 仅作导入器 | 空间机器人需要柔性、动量交换、推力器等扩展 | 03 | 有效（URDF/MJCF 子集已实现） |
+| A05 | 场景用 glTF 2.0 + 自定义扩展 | 工具链成熟、可复用 DCC 资产 | 03 | 有效（尚未实现渲染侧加载） |
+| A06 | 渲染器为插件，默认 bgfx | 多后端、可控管线、BSD 许可 | 04 | **superseded → A13**（2026-10-26） |
+| A07 | Python 不内嵌，作为边车 | 规避 MinGW/MSVC ABI 与 GIL 风险，可用完整生态 | 04/05 | 有效（MuJoCo 边车原型已验证） |
+| A08 | 录制用 MCAP | 自描述、可索引、跨语言、Foxglove 可直接看 | 03/04 | 有效（子集，无 Summary → A15） |
+| A09 | Windows 用 MSYS2 UCRT64 原生工具链 | 满足约束、包生态完整、产物为原生 Win64 | 05 | 有效 |
+| A10 | 打包可重定位 runtime + `.srpkg` 插件包 | 离线部署、插件独立升级 | 06 | 未实现（M3） |
+| A11 | 内核对外暴露宿主侧 C API（`core_api.h`） | Rust CLI、Python SDK、Web 服务等非 C++ 应用可嵌入内核；与插件 ABI 同规则 | 02/api | 有效（插件加载已接线） |
+| A12 | Windows 多工具链：UCRT64-GCC 为主，UCRT64-Clang / CLANG64 / MSVC 为辅 | 第二编译器与 sanitizer 走 Clang（同 libstdc++ 可互链），CLANG64 仅作 libc++ 验证层；插件按 `os-arch-toolchain` 分发，跨工具链只允许 C ABI 加载或边车 | 02/05/06 | **收窄 → A14**（CLANG64 已移除，MSVC 未验证） |
+| A13 | 渲染后端分层：`renderer.null` / `renderer.qt` / 计划中的 `renderer.rhi`（QRhi，D3D11/Vulkan） | bgfx 无 MSYS2 包且集成成本高；QRhi 零新增依赖、可与 compute 共用设备、保留跨平台可能 | 04 附录 A | 有效（null/qt 已实现，rhi 待 1.1） |
+| A14 | 当前受支持工具链 = UCRT64 GCC（主）+ UCRT64 Clang（次）；MSVC 待验证，CLANG64 experimental | CLANG64 的 libc++ 环境不可靠（P28）；MSVC 缺 vcvars 验证（P27）；收窄可保证 CI 与本地一致 | 05 | 有效（2026-10-26） |
+| A15 | MCAP 采用子集实现：写入 Magic/Header/Schema/Channel/Message/DataEnd/Footer，暂不写 Summary 与压缩 | 顺序读取与官方 SDK 已实测兼容；Summary/压缩列入 1.1 | 03 §13 | 有效（2026-10-26） |
+| A16 | GPU 与批量世界：能力寻址 + host 拥有设备；确定性分 D0/D1/D2；批量能力命名 `srsp.dynamics/batch@1` | 为集群与 GPU 预留接口而不在 ABI 放未实现符号 | 07 §13 | 设计已定（1.1/M4 落地） |
+| A17 | 模型命名空间治理：仅 `tools/ai`、`AGENTS.md`、`ai-models.json`、`<model>/ModuleTest` 入库；`<model>/Logs`、`<model>/Temp` 本地保留 | 避免个人计划/缓存进入共享历史 | 05/AGENTS | 有效（2026-10-26） |
 
 ---
 
