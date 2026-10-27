@@ -605,3 +605,26 @@ if __name__ == "__main__":
 | R12 | 确定性模式 D0/D1/D2 | manifest 与测试显式声明 | 1.1 |
 
 **未实现能力的统一行为**：调用未实现的预留能力必须返回 `SRSP_E_UNSUPPORTED`，禁止静默成功（与 docs/07 竞品扩展点规则一致）。
+---
+
+## 15. ABI 兼容矩阵与错误码约定
+
+### 15.1 保证与不保证
+
+| 项 | 保证 | 说明 |
+|---|---|---|
+| 结构体布局 | ✅ 保证 | 只允许通过 `struct_size` 追加字段；字段不得重排、不得改类型 |
+| 枚举宽度 | ✅ 保证 | 32 位；只增不改；未识别值必须按 `SRSP_E_UNSUPPORTED` 处理 |
+| 调用约定 | ✅ 保证 | `SRSP_EXPORT` 显式导出；C ABI，无 C++ 名字修饰 |
+| 字符串 | ✅ 保证 | UTF-8，长度前缀，不保证 NUL 结尾 |
+| 内存所有权 | ✅ 保证 | 跨边界分配/释放一律走 `host->alloc/free` |
+| C++ 类型跨边界 | ❌ 不保证 | 禁止 `std::string`/`std::vector`/异常/迭代器出现在 ABI 中 |
+| 调试/迭代器 ABI | ❌ 不保证 | Debug/Release 混用同一插件不受支持 |
+| 运行时 CRT | ⚠️ 约束 | 插件使用静态 CRT；不得跨边界传递 CRT 资源（FILE*、locale 等） |
+
+### 15.2 错误码约定
+
+- `SRSP_E_UNSUPPORTED`（=2）用于**能力未实现**：调用方请求了本实现不支持的预留能力（如 `srsp.dynamics/batch@1`、`compute`）时必须返回它，**禁止静默成功或返回 `SRSP_OK`**；
+- 能力协商在加载期完成：manifest 声明的 `capability@major` 若与 host 支持集不匹配，加载即失败（`SRSP_E_VERSION_MISMATCH` 或 `SRSP_E_UNSUPPORTED`）；
+- `Diagnostic.remedy`：错误码表必须给出默认 remedy 文案（例：`SRSP_E_UNSUPPORTED` → “升级 host 或改用受支持的实现”），由内核填充，插件可覆盖；
+- 负例测试：`tests/abi/unsupported_capability.cpp` 校验错误码表的唯一性、非零性与 `SRSP_E_UNSUPPORTED` 的存在/取值；随批量能力实现再补运行时负例。
