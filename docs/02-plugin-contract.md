@@ -664,7 +664,7 @@ BlobRef {
 
 - **schema 版本独立于 ABI 版本**：ABI 用 `struct_size` + 次版本；schema 用自身 `$id`/版本字段；
 - 每个 schema 计算 **SHA-256**，形成 `api/schema/SCHEMA_HASHES.json`（由 `tools/schema/schema_hash.py` 生成，可复现）；
-- 录制文件（MCAP）在 Schema 记录的 metadata 中写入 schema hash 与 ABI 版本；
+- 录制文件（MCAP）在 **Channel 记录 metadata** 中写入 `schema_hash` 与 `abi`（MCAP 的 Schema 记录没有 metadata 字段，metadata 属于 Channel）；
 - 回放/消费方校验 hash 不匹配 → 拒绝解析并给出 remedy（升级 host 或使用对应 schema 版本）。
 
 当前状态：hash 工具与清单为新增；写入 MCAP metadata 与校验逻辑列入 1.1（与 A15 的 Summary 补齐同批）。

@@ -107,14 +107,19 @@ std::uint32_t McapWriter::add_schema(const std::string& name, const std::string&
 }
 
 std::uint32_t McapWriter::add_channel(std::uint32_t schema_id, const std::string& topic,
-                                      const std::string& message_encoding) {
+                                      const std::string& message_encoding,
+                                      const std::map<std::string, std::string>& metadata) {
   const std::uint32_t channel_id = static_cast<std::uint32_t>(channels_.size()) + 1;
   std::vector<std::uint8_t> payload;
   put_u16(payload, channel_id);
   put_u16(payload, schema_id);
   put_string(payload, topic);
   put_string(payload, message_encoding);
-  put_u32(payload, 0);  // metadata: empty map
+  put_u32(payload, static_cast<std::uint32_t>(metadata.size()));
+  for (const auto& [key, value] : metadata) {
+    put_string(payload, key);
+    put_string(payload, value);
+  }
   if (!write_record(kOpChannel, payload)) {
     return 0;
   }
@@ -123,6 +128,7 @@ std::uint32_t McapWriter::add_channel(std::uint32_t schema_id, const std::string
   info.schema_id = schema_id;
   info.topic = topic;
   info.message_encoding = message_encoding;
+  info.metadata = metadata;
   info.schema_name = pending_schema_name_;
   info.schema_encoding = pending_schema_encoding_;
   channels_.push_back(std::move(info));
@@ -244,6 +250,20 @@ bool McapReader::open(const std::string& path) {
       const std::uint32_t encoding_size = read_u32(payload + cursor);
       cursor += 4;
       info.message_encoding.assign(reinterpret_cast<const char*>(payload + cursor), encoding_size);
+      cursor += encoding_size;
+      const std::uint32_t meta_count = read_u32(payload + cursor);
+      cursor += 4;
+      for (std::uint32_t m = 0; m < meta_count; ++m) {
+        const std::uint32_t key_size = read_u32(payload + cursor);
+        cursor += 4;
+        std::string key(reinterpret_cast<const char*>(payload + cursor), key_size);
+        cursor += key_size;
+        const std::uint32_t value_size = read_u32(payload + cursor);
+        cursor += 4;
+        std::string value(reinterpret_cast<const char*>(payload + cursor), value_size);
+        cursor += value_size;
+        info.metadata.emplace(std::move(key), std::move(value));
+      }
       channels_.push_back(std::move(info));
     } else if (opcode == kOpMessage) {
       Message message;

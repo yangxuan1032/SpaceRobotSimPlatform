@@ -78,3 +78,27 @@ TEST_CASE("state hashing is stable and distinguishes states", "[mcap]") {
   CHECK_FALSE(first == different);
   CHECK(first.to_hex().size() == 32u);
 }
+TEST_CASE("mcap preserves channel metadata", "[mcap]") {
+  const std::string path = temp_path("srsp_mcap_metadata.mcap");
+  {
+    srsp::record::McapWriter writer;
+    REQUIRE(writer.open(path, "srsp.test"));
+    const auto schema = writer.add_schema("srsp.state/1", "raw-f64", "{}");
+    const std::map<std::string, std::string> metadata{{"schema_hash", "0123456789abcdef"},
+                                                      {"abi", "1"}};
+    const auto channel = writer.add_channel(schema, "sim.state", "raw-f64", metadata);
+    REQUIRE(channel == 1u);
+    const char payload[] = "abcd";
+    REQUIRE(writer.write_message(channel, 1, 1000, payload, 4));
+    REQUIRE(writer.close());
+  }
+
+  srsp::record::McapReader reader;
+  REQUIRE(reader.open(path));
+  REQUIRE(reader.channels().size() == 1u);
+  const auto& metadata = reader.channels()[0].metadata;
+  CHECK(metadata.size() == 2u);
+  CHECK(metadata.at("schema_hash") == "0123456789abcdef");
+  CHECK(metadata.at("abi") == "1");
+  std::filesystem::remove(path);
+}

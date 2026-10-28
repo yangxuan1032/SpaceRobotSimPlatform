@@ -13,6 +13,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -35,6 +36,7 @@ struct ChannelInfo {
   std::string schema_name;
   std::string schema_encoding;
   std::string schema_data;
+  std::map<std::string, std::string> metadata;  ///< Channel metadata (schema hash, abi).
 };
 
 /** @brief Writes a flat MCAP subset. */
@@ -52,7 +54,8 @@ class McapWriter {
 
   /** @brief Registers a channel bound to a schema and returns its id (1-based). */
   std::uint32_t add_channel(std::uint32_t schema_id, const std::string& topic,
-                            const std::string& message_encoding);
+                            const std::string& message_encoding,
+                            const std::map<std::string, std::string>& metadata = {});
 
   /** @brief Appends a message for an existing channel. */
   bool write_message(std::uint32_t channel_id, std::uint64_t sequence, std::uint64_t log_time_ns,
