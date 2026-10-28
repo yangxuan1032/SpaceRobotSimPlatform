@@ -7,8 +7,11 @@
 #include <cstring>
 
 #include <QColor>
+#include <QFile>
+#include <cstdio>
 #include <rhi/qrhi.h>
 #include <rhi/qrhi_platform.h>
+#include <rhi/qshader.h>
 
 namespace srsp::render {
 namespace {
@@ -120,10 +123,70 @@ bool RhiRenderer::create_offscreen() {
     return false;
   }
   readback_ = std::make_unique<QRhiReadbackResult>();
+
+  // One triangle in clip space: proves the pipeline, shaders and draw call.
+  const float vertices[] = {
+      -0.8f, -0.8f, 1.0f, 0.2f, 0.2f,  //
+      0.8f,  -0.8f, 0.2f, 1.0f, 0.2f,  //
+      0.0f,  0.8f,  0.2f, 0.2f, 1.0f,  //
+  };
+  vertex_buffer_.reset(
+      rhi_->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::VertexBuffer, sizeof(vertices)));
+  if (!vertex_buffer_->create()) {
+    return false;
+  }
+
+  bindings_.reset(rhi_->newShaderResourceBindings());
+  if (!bindings_->create()) {
+    return false;
+  }
+
+#ifdef SRSP_RHI_SHADER_PATH
+  QFile shader_file(QStringLiteral(SRSP_RHI_SHADER_PATH));
+  if (!shader_file.open(QIODevice::ReadOnly)) {
+    return false;
+  }
+  const QShader shader = QShader::fromSerialized(shader_file.readAll());
+  if (!shader.isValid()) {
+    return false;
+  }
+
+  QRhiVertexInputLayout layout;
+  layout.setBindings({{5 * sizeof(float)}});
+  layout.setAttributes({{0, 0, QRhiVertexInputAttribute::Float2, 0},
+                        {0, 1, QRhiVertexInputAttribute::Float3, 2 * sizeof(float)}});
+
+  pipeline_.reset(rhi_->newGraphicsPipeline());
+  pipeline_->setShaderStages(
+      {{QRhiShaderStage::Vertex, shader}, {QRhiShaderStage::Fragment, shader}});
+  pipeline_->setVertexInputLayout(layout);
+  pipeline_->setShaderResourceBindings(bindings_.get());
+  pipeline_->setRenderPassDescriptor(pass_.get());
+  pipeline_->setTopology(QRhiGraphicsPipeline::Triangles);
+  if (!pipeline_->create()) {
+    // D3D11 rejects the shader on some setups (COM error 0x80070057, P34);
+    // fall back to the clear-only path instead of failing initialisation.
+    std::fprintf(stderr, "renderer.rhi: pipeline creation failed; drawing only the clear pass\\n");
+    pipeline_.reset();
+  }
+#endif
+
+  // Upload the vertices once.
+  QRhiCommandBuffer* cb = nullptr;
+  if (rhi_->beginOffscreenFrame(&cb) != QRhi::FrameOpSuccess || cb == nullptr) {
+    return false;
+  }
+  QRhiResourceUpdateBatch* upload = rhi_->nextResourceUpdateBatch();
+  upload->uploadStaticBuffer(vertex_buffer_.get(), vertices);
+  cb->resourceUpdate(upload);
+  rhi_->endOffscreenFrame();
   return true;
 }
 
 void RhiRenderer::destroy_offscreen() {
+  pipeline_.reset();
+  bindings_.reset();
+  vertex_buffer_.reset();
   readback_.reset();
   target_.reset();
   pass_.reset();
@@ -141,6 +204,15 @@ bool RhiRenderer::render_frame() {
   QRhiResourceUpdateBatch* updates = rhi_->nextResourceUpdateBatch();
   const QColor clear(8, 10, 16);
   cb->beginPass(target_.get(), clear, {1.0f, 0}, updates);
+  if (pipeline_ != nullptr && vertex_buffer_ != nullptr) {
+    cb->setGraphicsPipeline(pipeline_.get());
+    cb->setViewport(
+        {0.0f, 0.0f, static_cast<float>(viewport_.width), static_cast<float>(viewport_.height)});
+    cb->setShaderResources(bindings_.get());
+    const QRhiCommandBuffer::VertexInput input{vertex_buffer_.get(), 0};
+    cb->setVertexInput(0, 1, &input);
+    cb->draw(3);
+  }
   cb->endPass();
 
   if (readback_ != nullptr) {

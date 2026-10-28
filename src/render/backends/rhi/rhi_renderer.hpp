@@ -23,6 +23,9 @@ class QRhiTexture;
 class QRhiTextureRenderTarget;
 class QRhiRenderPassDescriptor;
 class QRhiReadbackResult;
+class QRhiBuffer;
+class QRhiGraphicsPipeline;
+class QRhiShaderResourceBindings;
 
 namespace srsp::render {
 
@@ -57,6 +60,9 @@ class RhiRenderer final : public Renderer {
   std::unique_ptr<QRhiTextureRenderTarget> target_;
   std::unique_ptr<QRhiRenderPassDescriptor> pass_;
   std::unique_ptr<QRhiReadbackResult> readback_;
+  std::unique_ptr<QRhiBuffer> vertex_buffer_;
+  std::unique_ptr<QRhiShaderResourceBindings> bindings_;
+  std::unique_ptr<QRhiGraphicsPipeline> pipeline_;
   std::string backend_ = "none";
   Viewport viewport_{};
   CameraView camera_{};

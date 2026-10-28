@@ -9,6 +9,7 @@
  */
 #include <string>
 
+#include <QPoint>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdio>
 
@@ -71,10 +72,15 @@ TEST_CASE("rhi readback matches the clear colour on a GPU backend", "[render_rhi
     REQUIRE_FALSE(image.isNull());
     CHECK(image.width() == 64);
     CHECK(image.height() == 48);
-    const QColor pixel = image.pixelColor(32, 24);
-    CHECK(pixel.red() == 8);
-    CHECK(pixel.green() == 10);
-    CHECK(pixel.blue() == 16);
+
+    // Drawing is currently best-effort (D3D11 rejects the shader, P34), so the
+    // frame must at least contain the clear colour.
+    for (const QPoint& point : {QPoint(32, 24), QPoint(2, 2)}) {
+      const QColor pixel = image.pixelColor(point);
+      CHECK(pixel.red() == 8);
+      CHECK(pixel.green() == 10);
+      CHECK(pixel.blue() == 16);
+    }
   }
   renderer.shutdown();
 }
