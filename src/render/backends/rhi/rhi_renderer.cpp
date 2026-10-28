@@ -8,6 +8,7 @@
 
 #include <QColor>
 #include <rhi/qrhi.h>
+#include <rhi/qrhi_platform.h>
 
 namespace srsp::render {
 namespace {
@@ -26,30 +27,50 @@ RendererCapabilities RhiRenderer::capabilities() const noexcept {
 }
 
 bool rhi_backend_available() {
-  // Probing would hit the same init-params problem as initialize().
-  return false;
+  QRhiNullInitParams params;
+  return QRhi::probe(QRhi::Null, &params);
 }
 
 bool RhiRenderer::initialize(void* /*native_window*/, const Viewport& viewport,
                              std::string* error) {
-  // D3D11/Null creation needs the backend-specific init params
-  // (QRhiD3D11InitParams / QRhiNullInitParams); passing nullptr crashes inside
-  // QRhi (access violation, observed on Qt 6.11). Until the params are wired
-  // and verified, fail explicitly instead of taking the process down.
+  if (initialized_) {
+    if (error != nullptr) {
+      *error = "renderer already initialised";
+    }
+    return false;
+  }
   if (viewport.width < kMinViewport || viewport.height < kMinViewport) {
     if (error != nullptr) {
       *error = "viewport must be positive";
     }
     return false;
   }
-  if (error != nullptr) {
-    *error =
-        "renderer.rhi: backend init params not wired yet "
-        "(tracked as ISSUES P33; docs/07 U10)";
+
+  // The Null backend is public in qrhi_platform.h and needs no window, so it
+  // keeps CI and headless runs working. D3D11 needs QRhiD3D11InitParams, which
+  // Qt 6.11 does not expose in the public headers (ISSUES P33); wiring it via
+  // the private backend header is the next step.
+  QRhiNullInitParams params;
+  rhi_.reset(QRhi::create(QRhi::Null, &params));
+  if (rhi_ == nullptr) {
+    if (error != nullptr) {
+      *error = "QRhi Null backend is unavailable";
+    }
+    return false;
   }
-  backend_ = "unavailable";
+  backend_ = "null";
   gpu_ = false;
-  return false;
+  viewport_ = viewport;
+  if (!create_offscreen()) {
+    if (error != nullptr) {
+      *error = "failed to create the offscreen render target";
+    }
+    shutdown();
+    return false;
+  }
+  frames_ = 0;
+  initialized_ = true;
+  return true;
 }
 bool RhiRenderer::resize(const Viewport& viewport) {
   if (!initialized_ || viewport.width < kMinViewport || viewport.height < kMinViewport) {

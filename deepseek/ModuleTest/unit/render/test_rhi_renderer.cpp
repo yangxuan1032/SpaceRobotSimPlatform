@@ -1,11 +1,11 @@
 /**
  * @file test_rhi_renderer.cpp
- * @brief Contract test for the renderer.rhi skeleton.
+ * @brief Contract tests for renderer.rhi.
  *
- * The backend is a skeleton: QRhi device creation needs backend-specific init
- * params, and passing nullptr crashes on Qt 6.11 (ISSUES P33). Until that is
- * wired, initialize() must fail explicitly instead of crashing, and the
- * renderer must stay inert.
+ * The backend currently uses the QRhi Null implementation, which is public and
+ * headless. D3D11 needs backend init params that Qt 6.11 does not expose in its
+ * public headers (ISSUES P33); the test therefore asserts behaviour relative to
+ * the Null backend without pretending a GPU device exists.
  */
 #include <string>
 
@@ -16,27 +16,46 @@
 using srsp::render::RhiRenderer;
 using srsp::render::Viewport;
 
-TEST_CASE("rhi renderer fails safely until init params are wired", "[render_rhi]") {
+TEST_CASE("rhi renderer initialises on the null backend", "[render_rhi]") {
   RhiRenderer renderer;
   std::string error;
-  CHECK_FALSE(renderer.initialize(nullptr, Viewport{320, 180}, &error));
-  CHECK(error.find("init params") != std::string::npos);
+  REQUIRE(renderer.initialize(nullptr, Viewport{320, 180}, &error));
+  CHECK(renderer.backend_name() == "null");
   CHECK(std::string(renderer.name()) == "rhi");
-  CHECK(renderer.frame_count() == 0u);
-  CHECK_FALSE(renderer.render_frame());
-}
 
-TEST_CASE("rhi renderer validates the viewport first", "[render_rhi]") {
-  RhiRenderer renderer;
-  std::string error;
-  CHECK_FALSE(renderer.initialize(nullptr, Viewport{0, 0}, &error));
-  CHECK(error.find("viewport") != std::string::npos);
-}
-
-TEST_CASE("rhi renderer reports its capabilities", "[render_rhi]") {
-  RhiRenderer renderer;
   const auto capabilities = renderer.capabilities();
   CHECK(capabilities.gpu == false);
   CHECK(capabilities.compute == false);
   CHECK(capabilities.max_viewports == 1);
+
+  renderer.shutdown();
+  CHECK(renderer.frame_count() == 0u);
+}
+
+TEST_CASE("rhi renderer renders frames offscreen", "[render_rhi]") {
+  RhiRenderer renderer;
+  REQUIRE(renderer.initialize(nullptr, Viewport{64, 48}, nullptr));
+  REQUIRE(renderer.render_frame());
+  REQUIRE(renderer.render_frame());
+  CHECK(renderer.frame_count() == 2u);
+  CHECK(renderer.resize(Viewport{128, 96}));
+  REQUIRE(renderer.render_frame());
+  CHECK(renderer.frame_count() == 3u);
+  renderer.shutdown();
+}
+
+TEST_CASE("rhi renderer validates the viewport", "[render_rhi]") {
+  RhiRenderer renderer;
+  CHECK_FALSE(renderer.initialize(nullptr, Viewport{0, 0}, nullptr));
+  REQUIRE(renderer.initialize(nullptr, Viewport{16, 16}, nullptr));
+  CHECK_FALSE(renderer.resize(Viewport{-1, 16}));
+  renderer.shutdown();
+}
+
+TEST_CASE("null backend does not claim a GPU or compute", "[render_rhi]") {
+  RhiRenderer renderer;
+  REQUIRE(renderer.initialize(nullptr, Viewport{32, 24}, nullptr));
+  CHECK_FALSE(renderer.capabilities().gpu);
+  CHECK(srsp::render::rhi_backend_available());
+  renderer.shutdown();
 }
