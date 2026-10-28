@@ -266,6 +266,21 @@ orbital_servicer.srm/
 | `acc_w` | `FixedSizeList<double,3>` | 可选，仅调试/传感器需要 |
 | `alpha_b` | `FixedSizeList<double,3>` | 可选 |
 
+### 4.1.1 关节 frame 与零位规范（U2 已决，2026-10-28）
+
+用于 SRM ↔ URDF ↔ Pinocchio 对照，三者必须能一一映射：
+
+| 项 | 规范 |
+|---|---|
+| 零位 | `q = 0` 对应模型作者给定的关节 frame（URDF 的 `origin xyz/rpy`）；**不额外引入偏置** |
+| 父子链 | `T_world_child = T_world_parent · T_origin(xyz, rpy) · R_axis(q)`；平动关节为 `T_origin · Translate(axis·q)` |
+| 子体原点 | 与关节 frame 原点重合（即 URDF 的 joint frame = child link frame） |
+| 关节轴 | 关节 frame 中的**单位向量**；实现必须归一化后使用；正方向按右手定则 |
+| 力矩符号 | 正力矩驱动正向 `q̇`；`tau` 与 `q` 同号约定 |
+| COM | `com` 在**子体 frame** 中给出；空间惯量由 `I_c` 与 `com` 组合 |
+| 对照容差 | 同一模型下 M(q)、h(q,v) 绝对误差 ≤ 1e-9；J 绝对误差 ≤ 1e-9 |
+
+Pinocchio 对照步骤：① 用 `pin.Model` 按上表逐关节 `addJoint(parent, jointModel, SE3(R_origin, p_origin))`；② `appendBodyToJoint` 用 `Inertia(mass, com, I_c)`；③ 随机 q、v 下比较 `crba` 的 M 与 `computeGeneralizedGravity`+`rnea` 的 h。
 **`state.joints`**：`id, q, qd, tau, motor_tau, limit_flag`
 **`state.actuators`**：`id, kind, momentum, speed, thrust, mass_flow, enabled`
 **`state.meta`**：单行，`t_tai_ns, step_index, dt, energy{kinetic,potential}, momentum_total`
@@ -558,6 +573,14 @@ message SensorFrame {
 
 ---
 
+### 9.1 Arrow 编码决策（U5 已决，2026-10-28）
+
+| 项 | 决定 |
+|---|---|
+| 1.x 录制编码 | 状态通道用 `raw-f64`（`double` 数组），并在 Channel metadata 写 `schema_hash` 与 `abi` |
+| 1.x 是否用 Arrow | **否**：MCAP 内的 Arrow IPC record batch 留到 2.0；当前不需要零拷贝跨语言分析 |
+| 2.0 规划 | Schema.encoding = `arrow`，schema data 为 Arrow IPC schema；消息体为 IPC record batch；state 表定义不变（列名/类型沿用 §4） |
+| 兼容性 | 读取端遇到未知 `message_encoding` 必须跳过并告警，不得崩溃（已由 reader 的通用 record 解析保证） |
 ## 10. 版本演进
 
 | 变更类型 | 允许 | 处理 |

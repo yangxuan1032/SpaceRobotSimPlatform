@@ -397,11 +397,11 @@ M1 出口判据的逐项实测记录，与 `deepseek/Logs/Plan/2026-10-26-m1-exe
 
 | # | 未知项 | 当前证据 | 待决定 | 截止触发 |
 |---|---|---|---|---|
-| U1 | SRM 柔性是否进入 1.x | docs/03 §3.7 定义预留 | 保持预留 or 进入版本范围（需列状态字段与导入验证） | SRM schema freeze 前 |
-| U2 | 关节 frame 与 Pinocchio 对照规范 | docs/03 §12 仍列 M0 待定 | 零位、父子 frame、关节轴、effort 符号 | solver 对照入 CI 前 |
+| U1 | SRM 柔性 | **已决（2026-10-28）**：1.x 保持预留，不实现；schema freeze 时再评估 | 关闭 | — |
+| U2 | 关节 frame 规范 | **已决（2026-10-28）**：零位无偏置、子体原点=关节 frame、轴归一化、正力矩驱动正向 q̇、容差 1e-9（docs/03 §4.1.1） | 关闭 | — |
 | U3 | 姿态与角速度约定 | **已决（2026-10-28）**：契约用 `omega_b`，求解器内部可用世界系，边界强制转换（docs/03 §4） | 关闭 | — |
-| U4 | 图像颜色/HDR 枚举 | docs/03 §4.2 有 format/color_space | display transform 与 sensor raw 的枚举与范围 | QRhi image contract freeze 前 |
-| U5 | MCAP 的 Arrow schema encoding | docs/03 §9/§13 目标与现状不同 | 是否采用官方 Arrow schema encoding | Summary/seek 实现前 |
+| U4 | 图像颜色/HDR | **已决（2026-10-28）**：传感器 raw 为线性 RGB，格式 `rgb8/rgba8/rgb16/mono16`；显示变换与 raw 分离；HDR 不在 1.x | 关闭 | — |
+| U5 | MCAP Arrow encoding | **已决（2026-10-28）**：1.x 用 `raw-f64` + Channel metadata（schema_hash/abi）；Arrow IPC 留 2.0（docs/03 §9.1） | 关闭 | — |
 | U6 | 300 µs 统计工况 | **已决（2026-10-28）**：docs/05 §11.1 固定拓扑/积分器/窗口/构建 | 关闭 | — |
 | U7 | Linux 支持等级 | **已决（2026-10-28）**：当前为 `planned`（无 CI）；1.2 恢复作业后升为 `supported` | 关闭 | — |
 | U8 | 强沙箱承诺 | 当前仅声明签名与限额 | Windows Job/AppContainer、Linux cgroup 最低承诺 | 对外支持第三方插件前 |
