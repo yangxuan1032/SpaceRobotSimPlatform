@@ -403,7 +403,7 @@ M1 出口判据的逐项实测记录，与 `deepseek/Logs/Plan/2026-10-26-m1-exe
 | U4 | 图像颜色/HDR 枚举 | docs/03 §4.2 有 format/color_space | display transform 与 sensor raw 的枚举与范围 | QRhi image contract freeze 前 |
 | U5 | MCAP 的 Arrow schema encoding | docs/03 §9/§13 目标与现状不同 | 是否采用官方 Arrow schema encoding | Summary/seek 实现前 |
 | U6 | 300 µs 统计工况 | **已决（2026-10-28）**：docs/05 §11.1 固定拓扑/积分器/窗口/构建 | 关闭 | — |
-| U7 | Linux 支持等级 | 1.2 计划，CI 作业已删 | build-only / developer-supported / user-supported | 1.2 RC 前 |
+| U7 | Linux 支持等级 | **已决（2026-10-28）**：当前为 `planned`（无 CI）；1.2 恢复作业后升为 `supported` | 关闭 | — |
 | U8 | 强沙箱承诺 | 当前仅声明签名与限额 | Windows Job/AppContainer、Linux cgroup 最低承诺 | 对外支持第三方插件前 |
 | U9 | 集群语义边界 | 本文件 §17 | 单机批量 vs 跨机分布式的边界与术语 | M4 启动前 |
 
@@ -418,7 +418,7 @@ M1 出口判据的逐项实测记录，与 `deepseek/Logs/Plan/2026-10-26-m1-exe
 | 渲染可见 | A13、docs/01 §6.2.1 | Qt 后端离屏测试 | QRhi 1080p ≥ 30 fps、双原点 1e7 m 无抖动 | 1.1 |
 | 性能达标 | docs/01 §7、P25 | 9.06 ms（已豁免） | ABA/CRBA 后 ≤300 µs 或正式豁免 | 1.1 |
 | GPU/批量 | A16、docs/01 §4.3.1/§5.1.1 | 仅设计 | 1e3 world 批量 step；1e4 刚体吞吐 | M4 |
-| 跨平台 | A14、docs/07 §13 | 无（Windows-only） | Linux 构建 + sanitizer 全绿 | 1.2 |
+| 跨平台 | A14、docs/07 §13 | Windows-only；Linux = planned（无 CI 作业） | Linux 构建 + sanitizer 全绿 | 1.2 |
 
 ## 17. 集群术语边界（2026-10-27）
 

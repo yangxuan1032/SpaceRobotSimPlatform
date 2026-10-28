@@ -584,6 +584,8 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | MSVC / CLANG64 | 未纳入 | MSVC 待 vcvars 环境（P27）；CLANG64 已移除（P28） |
 
 恢复条件：1.2 跨平台里程碑启动时，重新加入 `linux-gcc` 作业（直接复用本次删除前的定义，见 git 历史）。
+
+按 docs/01 §7.1 的支持等级规则，**Linux 当前为 planned**：没有 CI 作业即不算 supported；UCRT64 Clang 与 MSVC 为 **unverified**（本地可构建但无 CI 证据），CLANG64 为 **experimental**（预设已移除）。
 ### 11.1 300 µs 基准的固定工况（U6 已决，2026-10-28）
 
 为避免不同人测出不同数字，`bench.dynamics` 的统计工况固定如下：

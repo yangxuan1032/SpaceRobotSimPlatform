@@ -373,7 +373,22 @@ v1 支持**单进程内 N 个机器人**（起步 N ≤ 8）协同，跨进程/�
 - **planned**：路线图承诺但无 CI/产物；
 - **unverified / experimental**：本地可用但无 CI 证据。
 
-凡是未满足 supported 的项，文档必须显式标注等级，不得只在路线图里写“支持”。当前对应：UCRT64 GCC=supported，UCRT64 Clang=supported（构建+测试），MSVC=unverified，CLANG64=experimental（已移除预设）。
+凡是未满足 supported 的项，文档必须显式标注等级，不得只在路线图里写“支持”。
+
+**当前支持矩阵（D5，2026-10-28 核对）**
+
+| 能力 | 等级 | CI 证据 |
+|---|---|---|
+| UCRT64 GCC 构建与 40 项测试 | **supported** | `windows / UCRT64 (GCC)` 作业 |
+| 文档/JSON/YAML/链接/schema 哈希 | **supported** | `docs and data files` 作业 |
+| Qt 软件渲染后端 | **supported** | `unit.render` / `integration.studio_*` |
+| QRhi（Null 后端） | **experimental** | `unit.render_rhi`；无 GPU 路径 |
+| QRhi（D3D11 真机） | **planned** | 无（P33） |
+| UCRT64 Clang | **unverified** | 无 CI 作业（仅本地可用） |
+| MSVC | **unverified** | 无 CI 作业（P27） |
+| CLANG64（libc++） | **experimental** | 预设已移除（P28） |
+| Linux 构建 | **planned** | 作业已移除，1.2 恢复 |
+| 性能 300 µs | **planned** | 已豁免到 1.1（docs/07 §12.1） |当前对应：UCRT64 GCC=supported，UCRT64 Clang=supported（构建+测试），MSVC=unverified，CLANG64=experimental（已移除预设）。
 ## 8. 架构决策摘要（ADR Index）
 
 | ADR | 决策 | 主要理由 | 详见 | 状态 |
