@@ -16,8 +16,10 @@
 #include <srsp/bridge/sidecar_process.hpp>
 #endif
 
+#include <chrono>
 #include <cstring>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <cstdio>
@@ -45,6 +47,7 @@ void print_usage() {
   std::fputs(
       "usage:\n"
       "  srsp-cli version\n"
+      "  srsp-cli soak --plugin <path> [--minutes N] [--sleep-ms N]\n"
       "  srsp-cli demo --transport inproc --plugin <path> [--method <name>]\n",
       stderr);
 }
@@ -162,6 +165,81 @@ int run_sidecar_demo(const std::vector<std::string>& args) {
 }
 #endif  // SRSP_HAVE_SIDECAR
 
+/// Long-running loop used by the soak test: keeps the context and plugin
+/// loaded while repeating one call, so leaks show up over time.
+int run_soak(const std::vector<std::string>& args) {
+  const std::string plugin_path = option_value(args, "--plugin");
+  const std::string minutes_text = option_value(args, "--minutes");
+  const std::string sleep_text = option_value(args, "--sleep-ms");
+  const double minutes = minutes_text.empty() ? 1.0 : std::stod(minutes_text);
+  const int sleep_ms = sleep_text.empty() ? 5 : std::stoi(sleep_text);
+
+  if (plugin_path.empty()) {
+    std::fputs("error: --plugin <path> is required for soak\n", stderr);
+    return kExitFailure;
+  }
+  if (minutes <= 0.0) {
+    std::fputs("error: --minutes must be positive\n", stderr);
+    return kExitFailure;
+  }
+
+  srsp_error err{};
+  srsp_context_config config{};
+  config.struct_size = sizeof(srsp_context_config);
+  config.flags = SRSP_CTX_FLAG_HEADLESS;
+
+  srsp_context* ctx = nullptr;
+  if (srsp_context_create(&config, &ctx, &err) != SRSP_OK) {
+    std::fprintf(stderr, "error: context create failed: %s\n",
+                 err.message != nullptr ? err.message : "unknown");
+    return kExitFailure;
+  }
+  if (srsp_load_plugin(ctx, to_str(plugin_path), &err) != SRSP_OK) {
+    std::fprintf(stderr, "error: load failed: %s\n",
+                 err.message != nullptr ? err.message : "unknown");
+    srsp_context_destroy(ctx);
+    return kExitFailure;
+  }
+
+  const auto start = std::chrono::steady_clock::now();
+  const auto deadline = start + std::chrono::duration<double>(minutes * 60.0);
+  std::uint64_t iterations = 0;
+  std::uint64_t failures = 0;
+  auto next_report = start + std::chrono::seconds(30);
+
+  while (std::chrono::steady_clock::now() < deadline) {
+    srsp_buffer response{};
+    if (srsp_plugin_call(ctx, srsp_str{}, to_str("core.ping"), srsp_bytes{}, &response, &err) ==
+        SRSP_OK) {
+      srsp_buffer_release(ctx, &response);
+    } else {
+      ++failures;
+    }
+    ++iterations;
+    if (sleep_ms > 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+    }
+    const auto now = std::chrono::steady_clock::now();
+    if (now >= next_report) {
+      const double elapsed = std::chrono::duration<double>(now - start).count();
+      std::printf("SOAK elapsed=%.1fs iterations=%llu failures=%llu\n", elapsed,
+                  static_cast<unsigned long long>(iterations),
+                  static_cast<unsigned long long>(failures));
+      std::fflush(stdout);
+      next_report = now + std::chrono::seconds(30);
+    }
+  }
+
+  srsp_unload_plugin(ctx, nullptr);
+  srsp_context_destroy(ctx);
+
+  const double elapsed =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+  std::printf("SUMMARY elapsed=%.1fs iterations=%llu failures=%llu\n", elapsed,
+              static_cast<unsigned long long>(iterations),
+              static_cast<unsigned long long>(failures));
+  return failures == 0 ? 0 : kExitFailure;
+}
 int run_demo(const std::vector<std::string>& args) {
   const std::string transport = option_value(args, "--transport");
   const std::string plugin_path = option_value(args, "--plugin");
@@ -249,6 +327,9 @@ int main(int argc, char** argv) {
   }
   if (command == "demo") {
     return run_demo(args);
+  }
+  if (command == "soak") {
+    return run_soak(args);
   }
   if (command == "--help" || command == "-h" || command == "help") {
     print_usage();
