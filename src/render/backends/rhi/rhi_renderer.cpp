@@ -27,8 +27,12 @@ RendererCapabilities RhiRenderer::capabilities() const noexcept {
 }
 
 bool rhi_backend_available() {
-  QRhiNullInitParams params;
-  return QRhi::probe(QRhi::Null, &params);
+  QRhiD3D11InitParams d3d_params;
+  if (QRhi::probe(QRhi::D3D11, &d3d_params)) {
+    return true;
+  }
+  QRhiNullInitParams null_params;
+  return QRhi::probe(QRhi::Null, &null_params);
 }
 
 bool RhiRenderer::initialize(void* /*native_window*/, const Viewport& viewport,
@@ -46,20 +50,33 @@ bool RhiRenderer::initialize(void* /*native_window*/, const Viewport& viewport,
     return false;
   }
 
-  // The Null backend is public in qrhi_platform.h and needs no window, so it
-  // keeps CI and headless runs working. D3D11 needs QRhiD3D11InitParams, which
-  // Qt 6.11 does not expose in the public headers (ISSUES P33); wiring it via
-  // the private backend header is the next step.
-  QRhiNullInitParams params;
-  rhi_.reset(QRhi::create(QRhi::Null, &params));
-  if (rhi_ == nullptr) {
-    if (error != nullptr) {
-      *error = "QRhi Null backend is unavailable";
-    }
-    return false;
+  // D3D11 first: QRhiD3D11InitParams is declared in rhi/qrhi_platform.h and
+  // must be non-null (passing nullptr crashes inside QRhi, see ISSUES P33).
+  QRhiD3D11InitParams d3d_params;
+#if defined(QT_DEBUG)
+  d3d_params.enableDebugLayer = true;
+#endif
+  if (QRhi::probe(QRhi::D3D11, &d3d_params)) {
+    rhi_.reset(QRhi::create(QRhi::D3D11, &d3d_params));
   }
-  backend_ = "null";
-  gpu_ = false;
+  if (rhi_ != nullptr) {
+    backend_ = "d3d11";
+    gpu_ = true;
+  } else {
+    // Fallback for headless machines and CI: the Null backend exercises the
+    // same pipeline without a device.
+    QRhiNullInitParams null_params;
+    rhi_.reset(QRhi::create(QRhi::Null, &null_params));
+    if (rhi_ == nullptr) {
+      if (error != nullptr) {
+        *error = "no QRhi backend available (tried d3d11 and null)";
+      }
+      return false;
+    }
+    backend_ = "null";
+    gpu_ = false;
+  }
+
   viewport_ = viewport;
   if (!create_offscreen()) {
     if (error != nullptr) {

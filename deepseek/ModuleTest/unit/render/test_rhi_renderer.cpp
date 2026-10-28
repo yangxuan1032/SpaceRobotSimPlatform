@@ -10,6 +10,7 @@
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
+#include <cstdio>
 
 #include "rhi_renderer.hpp"
 
@@ -20,11 +21,11 @@ TEST_CASE("rhi renderer initialises on the null backend", "[render_rhi]") {
   RhiRenderer renderer;
   std::string error;
   REQUIRE(renderer.initialize(nullptr, Viewport{320, 180}, &error));
-  CHECK(renderer.backend_name() == "null");
+  CHECK((renderer.backend_name() == "d3d11" || renderer.backend_name() == "null"));
   CHECK(std::string(renderer.name()) == "rhi");
 
   const auto capabilities = renderer.capabilities();
-  CHECK(capabilities.gpu == false);
+  CHECK(capabilities.gpu == (renderer.backend_name() == "d3d11"));
   CHECK(capabilities.compute == false);
   CHECK(capabilities.max_viewports == 1);
 
@@ -55,7 +56,25 @@ TEST_CASE("rhi renderer validates the viewport", "[render_rhi]") {
 TEST_CASE("null backend does not claim a GPU or compute", "[render_rhi]") {
   RhiRenderer renderer;
   REQUIRE(renderer.initialize(nullptr, Viewport{32, 24}, nullptr));
-  CHECK_FALSE(renderer.capabilities().gpu);
+  CHECK(renderer.capabilities().gpu == (renderer.backend_name() == "d3d11"));
   CHECK(srsp::render::rhi_backend_available());
+  renderer.shutdown();
+}
+TEST_CASE("rhi readback matches the clear colour on a GPU backend", "[render_rhi]") {
+  RhiRenderer renderer;
+  REQUIRE(renderer.initialize(nullptr, Viewport{64, 48}, nullptr));
+  std::printf("rhi backend: %s\n", renderer.backend_name().c_str());
+  REQUIRE(renderer.render_frame());
+
+  if (renderer.backend_name() == "d3d11") {
+    const QImage image = renderer.readback();
+    REQUIRE_FALSE(image.isNull());
+    CHECK(image.width() == 64);
+    CHECK(image.height() == 48);
+    const QColor pixel = image.pixelColor(32, 24);
+    CHECK(pixel.red() == 8);
+    CHECK(pixel.green() == 10);
+    CHECK(pixel.blue() == 16);
+  }
   renderer.shutdown();
 }
