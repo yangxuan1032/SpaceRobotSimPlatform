@@ -35,5 +35,5 @@
   "api/schema/examples/valid-multi-capability-mixed-tags.json": "a9da31e08941c89aaf9111a20c98395947fd36498d2e5a372971aa4f730d22b3",
   "api/schema/examples/valid-renderer-null.json": "427c6b661dac76f28dcf9483b9b5ec0c6e2a37455e53aa350fffb0fab3275b23",
   "api/schema/examples/valid-sidecar-python.json": "951383d61a2368f44a19fdd5e2b53ca81fe2cf77478c9c2d8c9f17168a5c6199",
-  "api/schema/plugin-manifest.schema.json": "9b0ba5133b8c5b1b3405badcf50e2c3c228500e0c338aa25820e50fdc716d6ce"
+  "api/schema/plugin-manifest.schema.json": "804da5319c0262ec6f726065c2c82af79d4ddb7517c1d81e90fe0218132cc386"
 }

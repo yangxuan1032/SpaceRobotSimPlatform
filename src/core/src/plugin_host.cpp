@@ -5,6 +5,8 @@
 #include <srsp/core/plugin_host.hpp>
 
 #if defined(SRSP_HAVE_MANIFEST)
+#include <srsp/core/trust.hpp>
+
 #include <nlohmann/json.hpp>
 #endif
 

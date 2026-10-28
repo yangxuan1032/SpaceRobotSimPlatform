@@ -149,6 +149,13 @@
         ]
       }
     },
+    "trust_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "default": 1,
+      "description": "0=T0 builtin, 1=T1 managed native, 2=T2 isolated (sidecar only), 3=T3 development. A declaration is authorisation input, not an OS sandbox (docs/02 section 16)."
+    },
     "permissions": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
