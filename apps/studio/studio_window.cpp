@@ -4,6 +4,7 @@
  */
 #include "studio_window.hpp"
 
+#include <array>
 #include <cmath>
 
 #include <QFormLayout>
@@ -20,6 +21,38 @@
 
 namespace srsp::studio {
 namespace {
+
+/// Converts a rotation matrix to a (x, y, z, w) quaternion.
+std::array<double, 4> quaternion_from_matrix(const Eigen::Matrix3d& r) {
+  std::array<double, 4> q{0.0, 0.0, 0.0, 1.0};
+  const double trace = r(0, 0) + r(1, 1) + r(2, 2);
+  if (trace > 0.0) {
+    const double s = std::sqrt(trace + 1.0) * 2.0;
+    q[3] = 0.25 * s;
+    q[0] = (r(2, 1) - r(1, 2)) / s;
+    q[1] = (r(0, 2) - r(2, 0)) / s;
+    q[2] = (r(1, 0) - r(0, 1)) / s;
+  } else if (r(0, 0) > r(1, 1) && r(0, 0) > r(2, 2)) {
+    const double s = std::sqrt(1.0 + r(0, 0) - r(1, 1) - r(2, 2)) * 2.0;
+    q[3] = (r(2, 1) - r(1, 2)) / s;
+    q[0] = 0.25 * s;
+    q[1] = (r(0, 1) + r(1, 0)) / s;
+    q[2] = (r(0, 2) + r(2, 0)) / s;
+  } else if (r(1, 1) > r(2, 2)) {
+    const double s = std::sqrt(1.0 + r(1, 1) - r(0, 0) - r(2, 2)) * 2.0;
+    q[3] = (r(0, 2) - r(2, 0)) / s;
+    q[0] = (r(0, 1) + r(1, 0)) / s;
+    q[1] = 0.25 * s;
+    q[2] = (r(1, 2) + r(2, 1)) / s;
+  } else {
+    const double s = std::sqrt(1.0 + r(2, 2) - r(0, 0) - r(1, 1)) * 2.0;
+    q[3] = (r(1, 0) - r(0, 1)) / s;
+    q[0] = (r(0, 2) + r(2, 0)) / s;
+    q[1] = (r(1, 2) + r(2, 1)) / s;
+    q[2] = 0.25 * s;
+  }
+  return q;
+}
 
 constexpr double kStepSeconds = 1e-3;
 
@@ -175,13 +208,19 @@ void StudioWindow::update_scene() {
     sphere.position_m[0] = poses[i].position.x();
     sphere.position_m[1] = poses[i].position.y();
     sphere.position_m[2] = poses[i].position.z();
-    sphere.radius_m = i == 0 ? 1.2 : 0.35;
+    sphere.radius_m = i == 0 ? 0.6 : 0.18;
+    sphere.mesh_uri = "box";
+    const auto quaternion = quaternion_from_matrix(poses[i].rotation);
+    for (std::size_t k = 0; k < 4; ++k) {
+      sphere.orientation[k] = quaternion[k];
+    }
     sphere.color[0] = i == 0 ? 0.9f : 0.4f;
     sphere.color[1] = i == 0 ? 0.7f : 0.8f;
     sphere.color[2] = i == 0 ? 0.2f : 0.4f;
     sphere.label = ids[i];
     scene.bodies.push_back(sphere);
   }
+  mesh_bodies_ = static_cast<int>(scene.bodies.size());
   if (viewport_ != nullptr) {
     static_cast<Viewport*>(viewport_)->set_scene(scene);
   }
@@ -196,6 +235,10 @@ void StudioWindow::refresh_properties() {
   properties_->addItem(QStringLiteral("step: %1").arg(steps_));
   properties_->addItem(
       QStringLiteral("time: %1 s").arg(static_cast<double>(steps_) * kStepSeconds));
+}
+
+int StudioWindow::mesh_body_count() const {
+  return mesh_bodies_;
 }
 
 int StudioWindow::tree_body_count() const {

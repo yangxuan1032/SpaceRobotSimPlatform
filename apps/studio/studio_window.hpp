@@ -48,6 +48,8 @@ class StudioWindow final : public QMainWindow {
 
   // Introspection for the headless self-test.
   [[nodiscard]] int tree_body_count() const;
+  /** @brief Bodies rendered with a mesh (procedural box) in the current scene. */
+  [[nodiscard]] int mesh_body_count() const;
   [[nodiscard]] int tree_joint_count() const;
   [[nodiscard]] bool playing() const noexcept { return playing_; }
   [[nodiscard]] int timeline_maximum() const;
@@ -75,6 +77,7 @@ class StudioWindow final : public QMainWindow {
   QPushButton* play_button_ = nullptr;
   bool playing_ = false;
   long long steps_ = 0;
+  int mesh_bodies_ = 0;
 };
 
 }  // namespace srsp::studio

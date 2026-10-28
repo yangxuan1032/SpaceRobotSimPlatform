@@ -140,6 +140,10 @@ int run_ui_selftest(int argc, char** argv) {
     std::fprintf(stderr, "FAIL: step count %lld\n", window.step_count());
     return 1;
   }
+  if (window.mesh_body_count() <= 0) {
+    std::fputs("FAIL: scene has no mesh bodies\n", stderr);
+    return 1;
+  }
   if (!window.properties_text().contains(QStringLiteral("step: 10"))) {
     std::fputs("FAIL: properties did not update\n", stderr);
     return 1;
