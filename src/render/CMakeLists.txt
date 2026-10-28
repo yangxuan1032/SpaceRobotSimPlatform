@@ -15,3 +15,5 @@ else()
 endif()
 
 add_subdirectory(backends/qt)
+
+add_subdirectory(backends/rhi)
