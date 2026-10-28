@@ -1,5 +1,6 @@
 add_subdirectory(diagnostics)
 add_subdirectory(dynamics)
+add_subdirectory(event)
 add_subdirectory(plugin_host)
 add_subdirectory(record)
 add_subdirectory(registry)
