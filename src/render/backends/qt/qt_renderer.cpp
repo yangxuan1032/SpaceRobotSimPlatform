@@ -6,6 +6,8 @@
 
 #include <srsp/render/projection.hpp>
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <vector>
 
@@ -43,6 +45,99 @@ void draw_stars(QPainter& painter, const srsp::render::Viewport& viewport, std::
   painter.restore();
 }
 
+/// Rotation matrix (row-major) from a body->world quaternion (x, y, z, w).
+std::array<double, 9> quat_to_matrix(const double q[4]) {
+  const double x = q[0];
+  const double y = q[1];
+  const double z = q[2];
+  const double w = q[3];
+  const double norm = std::sqrt(x * x + y * y + z * z + w * w);
+  const double s = norm > 0.0 ? 1.0 / norm : 1.0;
+  const double xx = x * s * x * s;
+  const double yy = y * s * y * s;
+  const double zz = z * s * z * s;
+  const double xy = x * s * y * s;
+  const double xz = x * s * z * s;
+  const double yz = y * s * z * s;
+  const double wx = w * s * x * s;
+  const double wy = w * s * y * s;
+  const double wz = w * s * z * s;
+  return {1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz),       2.0 * (xz + wy),
+          2.0 * (xy + wz),       1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx),
+          2.0 * (xz - wy),       2.0 * (yz + wx),       1.0 - 2.0 * (xx + yy)};
+}
+
+void rotate(const std::array<double, 9>& m, const double v[3], double out[3]) {
+  out[0] = m[0] * v[0] + m[1] * v[1] + m[2] * v[2];
+  out[1] = m[3] * v[0] + m[4] * v[1] + m[5] * v[2];
+  out[2] = m[6] * v[0] + m[7] * v[1] + m[8] * v[2];
+}
+
+double dot3(const double a[3], const double b[3]) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+/// Draws an oriented box mesh as six depth-sorted, shaded quads.
+void draw_box(QPainter& painter, const srsp::render::CameraView& camera,
+              const srsp::render::Viewport& viewport, const srsp::render::Sphere& body) {
+  const std::array<double, 9> rotation = quat_to_matrix(body.orientation);
+  const double half = body.radius_m;
+  const double signs[8][3] = {{-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1},
+                              {-1, -1, 1},  {1, -1, 1},  {1, 1, 1},  {-1, 1, 1}};
+
+  std::array<srsp::render::ScreenPoint, 8> projected{};
+  for (int i = 0; i < 8; ++i) {
+    const double local[3] = {signs[i][0] * half, signs[i][1] * half, signs[i][2] * half};
+    double rotated[3];
+    rotate(rotation, local, rotated);
+    const double world[3] = {body.position_m[0] + rotated[0], body.position_m[1] + rotated[1],
+                             body.position_m[2] + rotated[2]};
+    projected[static_cast<std::size_t>(i)] =
+        srsp::render::project(camera, viewport, world, camera.eye);
+    if (!projected[static_cast<std::size_t>(i)].visible) {
+      return;
+    }
+  }
+
+  const int faces[6][4] = {{0, 1, 2, 3}, {4, 5, 6, 7}, {0, 1, 5, 4},
+                           {2, 3, 7, 6}, {1, 2, 6, 5}, {0, 3, 7, 4}};
+  const double normals[6][3] = {{0, 0, -1}, {0, 0, 1}, {0, -1, 0},
+                                {0, 1, 0},  {1, 0, 0}, {-1, 0, 0}};
+  const double light[3] = {0.4, 0.6, 0.7};
+
+  struct Face {
+    double depth;
+    int index;
+  };
+  std::array<Face, 6> order{};
+  for (int f = 0; f < 6; ++f) {
+    double depth = 0.0;
+    for (int c = 0; c < 4; ++c) {
+      depth += projected[static_cast<std::size_t>(faces[f][c])].depth;
+    }
+    order[static_cast<std::size_t>(f)] = {depth, f};
+  }
+  std::sort(order.begin(), order.end(),
+            [](const Face& a, const Face& b) { return a.depth > b.depth; });
+
+  for (const Face& face : order) {
+    const int f = face.index;
+    double normal_world[3];
+    rotate(rotation, normals[static_cast<std::size_t>(f)], normal_world);
+    const double shade = 0.35 + 0.65 * std::max(0.0, dot3(normal_world, light));
+    QColor color = to_color(body.color);
+    color = QColor(static_cast<int>(color.red() * shade), static_cast<int>(color.green() * shade),
+                   static_cast<int>(color.blue() * shade));
+    QPolygonF polygon;
+    for (int c = 0; c < 4; ++c) {
+      const auto& point = projected[static_cast<std::size_t>(faces[f][c])];
+      polygon << QPointF(point.x, point.y);
+    }
+    painter.setPen(QPen(color.darker(140), 1.0));
+    painter.setBrush(QBrush(color));
+    painter.drawPolygon(polygon);
+  }
+}
 }  // namespace
 
 bool QtRenderer::initialize(void* native_window, const srsp::render::Viewport& viewport,

@@ -381,7 +381,7 @@ v1 支持**单进程内 N 个机器人**（起步 N ≤ 8）协同，跨进程/�
 |---|---|---|
 | UCRT64 GCC 构建与 40 项测试 | **supported** | `windows / UCRT64 (GCC)` 作业 |
 | 文档/JSON/YAML/链接/schema 哈希 | **supported** | `docs and data files` 作业 |
-| Qt 软件渲染后端 | **supported** | `unit.render` / `integration.studio_*` |
+| Qt 软件渲染后端（含程序化网格与双原点） | **supported** | `unit.render` / `unit.render_qt_box` / `integration.studio_*` |
 | QRhi（Null 后端） | **experimental** | `unit.render_rhi`；无 GPU 路径 |
 | QRhi（D3D11 真机） | **experimental** | 本地已验证（设备+清屏+读回像素断言）；CI 无 GPU，见 P33 |
 | UCRT64 Clang | **unverified** | 无 CI 作业（仅本地可用） |
