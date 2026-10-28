@@ -26,6 +26,7 @@ class QRhiReadbackResult;
 class QRhiBuffer;
 class QRhiGraphicsPipeline;
 class QRhiShaderResourceBindings;
+class QOffscreenSurface;
 
 namespace srsp::render {
 
@@ -48,6 +49,9 @@ class RhiRenderer final : public Renderer {
   /** @brief Backend actually created, e.g. "d3d11" or "null". */
   [[nodiscard]] const std::string& backend_name() const noexcept { return backend_; }
 
+  /** @brief True when a graphics pipeline was created (geometry is drawn). */
+  [[nodiscard]] bool has_geometry() const noexcept { return pipeline_ != nullptr; }
+
   /** @brief Last frame as an image; empty when the backend cannot read back. */
   [[nodiscard]] QImage readback() const;
 
@@ -63,6 +67,7 @@ class RhiRenderer final : public Renderer {
   std::unique_ptr<QRhiBuffer> vertex_buffer_;
   std::unique_ptr<QRhiShaderResourceBindings> bindings_;
   std::unique_ptr<QRhiGraphicsPipeline> pipeline_;
+  std::unique_ptr<QOffscreenSurface> fallback_surface_;
   std::string backend_ = "none";
   Viewport viewport_{};
   CameraView camera_{};

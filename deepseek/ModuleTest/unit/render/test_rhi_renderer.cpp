@@ -12,6 +12,7 @@
 #include <QPoint>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdio>
+#include <cstdlib>
 
 #include "rhi_renderer.hpp"
 
@@ -73,13 +74,18 @@ TEST_CASE("rhi readback matches the clear colour on a GPU backend", "[render_rhi
     CHECK(image.width() == 64);
     CHECK(image.height() == 48);
 
-    // Drawing is currently best-effort (D3D11 rejects the shader, P34), so the
-    // frame must at least contain the clear colour.
-    for (const QPoint& point : {QPoint(32, 24), QPoint(2, 2)}) {
-      const QColor pixel = image.pixelColor(point);
-      CHECK(pixel.red() == 8);
-      CHECK(pixel.green() == 10);
-      CHECK(pixel.blue() == 16);
+    // The corner is never covered by the triangle in clip space.
+    const QColor corner = image.pixelColor(2, 2);
+    CHECK(corner.red() == 8);
+    CHECK(corner.green() == 10);
+    CHECK(corner.blue() == 16);
+
+    if (renderer.has_geometry()) {
+      const QColor centre = image.pixelColor(32, 24);
+      const int delta =
+          std::abs(centre.red() - 8) + std::abs(centre.green() - 10) + std::abs(centre.blue() - 16);
+      INFO("centre=" << centre.red() << "," << centre.green() << "," << centre.blue());
+      CHECK(delta > 30);
     }
   }
   renderer.shutdown();

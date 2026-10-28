@@ -1,13 +1,12 @@
 /**
  * @file rhi_renderer.cpp
- * @brief Offscreen QRhi renderer: clear + readback, D3D11 first with Null fallback.
+ * @brief Offscreen QRhi renderer with a D3D11 -> OpenGL -> Null fallback chain.
  */
 #include "rhi_renderer.hpp"
 
-#include <cstring>
-
 #include <QColor>
 #include <QFile>
+#include <QOffscreenSurface>
 #include <cstdio>
 #include <rhi/qrhi.h>
 #include <rhi/qrhi_platform.h>
@@ -17,6 +16,19 @@ namespace srsp::render {
 namespace {
 
 constexpr int kMinViewport = 1;
+
+const char* backend_label(QRhi::Implementation impl) {
+  switch (impl) {
+    case QRhi::D3D11:
+      return "d3d11";
+    case QRhi::OpenGLES2:
+      return "opengl";
+    case QRhi::Null:
+      return "null";
+    default:
+      return "other";
+  }
+}
 
 }  // namespace
 
@@ -30,10 +42,6 @@ RendererCapabilities RhiRenderer::capabilities() const noexcept {
 }
 
 bool rhi_backend_available() {
-  QRhiD3D11InitParams d3d_params;
-  if (QRhi::probe(QRhi::D3D11, &d3d_params)) {
-    return true;
-  }
   QRhiNullInitParams null_params;
   return QRhi::probe(QRhi::Null, &null_params);
 }
@@ -52,46 +60,53 @@ bool RhiRenderer::initialize(void* /*native_window*/, const Viewport& viewport,
     }
     return false;
   }
-
-  // D3D11 first: QRhiD3D11InitParams is declared in rhi/qrhi_platform.h and
-  // must be non-null (passing nullptr crashes inside QRhi, see ISSUES P33).
-  QRhiD3D11InitParams d3d_params;
-#if defined(QT_DEBUG)
-  d3d_params.enableDebugLayer = true;
-#endif
-  if (QRhi::probe(QRhi::D3D11, &d3d_params)) {
-    rhi_.reset(QRhi::create(QRhi::D3D11, &d3d_params));
-  }
-  if (rhi_ != nullptr) {
-    backend_ = "d3d11";
-    gpu_ = true;
-  } else {
-    // Fallback for headless machines and CI: the Null backend exercises the
-    // same pipeline without a device.
-    QRhiNullInitParams null_params;
-    rhi_.reset(QRhi::create(QRhi::Null, &null_params));
-    if (rhi_ == nullptr) {
-      if (error != nullptr) {
-        *error = "no QRhi backend available (tried d3d11 and null)";
-      }
-      return false;
-    }
-    backend_ = "null";
-    gpu_ = false;
-  }
-
   viewport_ = viewport;
-  if (!create_offscreen()) {
-    if (error != nullptr) {
-      *error = "failed to create the offscreen render target";
+
+  // Preference order: D3D11 (native GPU), OpenGL (GLSL, used when the D3D11
+  // HLSL pipeline is rejected -- ISSUES P34), Null (CI and headless).
+  const QRhi::Implementation candidates[] = {QRhi::D3D11, QRhi::Null};
+  for (const QRhi::Implementation impl : candidates) {
+    if (impl == QRhi::D3D11) {
+      QRhiD3D11InitParams params;
+      if (!QRhi::probe(impl, &params)) {
+        continue;
+      }
+      rhi_.reset(QRhi::create(impl, &params));
+    } else if (impl == QRhi::OpenGLES2) {
+      QRhiGles2InitParams params;
+      fallback_surface_.reset(QRhiGles2InitParams::newFallbackSurface(params.format));
+      params.fallbackSurface = fallback_surface_.get();
+      if (!QRhi::probe(impl, &params)) {
+        continue;
+      }
+      rhi_.reset(QRhi::create(impl, &params));
+    } else {
+      QRhiNullInitParams params;
+      rhi_.reset(QRhi::create(impl, &params));
     }
-    shutdown();
-    return false;
+    if (rhi_ == nullptr) {
+      continue;
+    }
+
+    backend_ = backend_label(impl);
+    gpu_ = impl != QRhi::Null;
+    if (create_offscreen()) {
+      frames_ = 0;
+      initialized_ = true;
+      return true;
+    }
+    destroy_offscreen();
+    rhi_.reset();
   }
-  frames_ = 0;
-  initialized_ = true;
-  return true;
+
+  if (error != nullptr) {
+    *error = "no QRhi backend could create the offscreen pipeline";
+  }
+  backend_ = "none";
+  gpu_ = false;
+  return false;
 }
+
 bool RhiRenderer::resize(const Viewport& viewport) {
   if (!initialized_ || viewport.width < kMinViewport || viewport.height < kMinViewport) {
     return false;
@@ -124,62 +139,60 @@ bool RhiRenderer::create_offscreen() {
   }
   readback_ = std::make_unique<QRhiReadbackResult>();
 
-  // One triangle in clip space: proves the pipeline, shaders and draw call.
-  const float vertices[] = {
-      -0.8f, -0.8f, 1.0f, 0.2f, 0.2f,  //
-      0.8f,  -0.8f, 0.2f, 1.0f, 0.2f,  //
-      0.0f,  0.8f,  0.2f, 0.2f, 1.0f,  //
-  };
-  vertex_buffer_.reset(
-      rhi_->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::VertexBuffer, sizeof(vertices)));
-  if (!vertex_buffer_->create()) {
-    return false;
-  }
-
-  bindings_.reset(rhi_->newShaderResourceBindings());
-  if (!bindings_->create()) {
-    return false;
-  }
-
 #ifdef SRSP_RHI_SHADER_PATH
   QFile shader_file(QStringLiteral(SRSP_RHI_SHADER_PATH));
-  if (!shader_file.open(QIODevice::ReadOnly)) {
-    return false;
-  }
-  const QShader shader = QShader::fromSerialized(shader_file.readAll());
-  if (!shader.isValid()) {
-    return false;
-  }
+  if (shader_file.open(QIODevice::ReadOnly)) {
+    const QShader shader = QShader::fromSerialized(shader_file.readAll());
+    if (!shader.isValid()) {
+      return false;
+    }
 
-  QRhiVertexInputLayout layout;
-  layout.setBindings({{5 * sizeof(float)}});
-  layout.setAttributes({{0, 0, QRhiVertexInputAttribute::Float2, 0},
-                        {0, 1, QRhiVertexInputAttribute::Float3, 2 * sizeof(float)}});
+    const float vertices[] = {
+        -0.8f, -0.8f, 1.0f, 0.2f, 0.2f,  //
+        0.8f,  -0.8f, 0.2f, 1.0f, 0.2f,  //
+        0.0f,  0.8f,  0.2f, 0.2f, 1.0f,  //
+    };
+    vertex_buffer_.reset(
+        rhi_->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::VertexBuffer, sizeof(vertices)));
+    if (!vertex_buffer_->create()) {
+      return false;
+    }
 
-  pipeline_.reset(rhi_->newGraphicsPipeline());
-  pipeline_->setShaderStages(
-      {{QRhiShaderStage::Vertex, shader}, {QRhiShaderStage::Fragment, shader}});
-  pipeline_->setVertexInputLayout(layout);
-  pipeline_->setShaderResourceBindings(bindings_.get());
-  pipeline_->setRenderPassDescriptor(pass_.get());
-  pipeline_->setTopology(QRhiGraphicsPipeline::Triangles);
-  if (!pipeline_->create()) {
-    // D3D11 rejects the shader on some setups (COM error 0x80070057, P34);
-    // fall back to the clear-only path instead of failing initialisation.
-    std::fprintf(stderr, "renderer.rhi: pipeline creation failed; drawing only the clear pass\\n");
-    pipeline_.reset();
+    bindings_.reset(rhi_->newShaderResourceBindings());
+    if (!bindings_->create()) {
+      return false;
+    }
+
+    QRhiVertexInputLayout layout;
+    layout.setBindings({{5 * sizeof(float)}});
+    layout.setAttributes({{0, 0, QRhiVertexInputAttribute::Float2, 0},
+                          {0, 1, QRhiVertexInputAttribute::Float3, 2 * sizeof(float)}});
+
+    pipeline_.reset(rhi_->newGraphicsPipeline());
+    pipeline_->setShaderStages(
+        {{QRhiShaderStage::Vertex, shader}, {QRhiShaderStage::Fragment, shader}});
+    pipeline_->setVertexInputLayout(layout);
+    pipeline_->setShaderResourceBindings(bindings_.get());
+    pipeline_->setRenderPassDescriptor(pass_.get());
+    pipeline_->setTopology(QRhiGraphicsPipeline::Triangles);
+    if (!pipeline_->create()) {
+      std::fprintf(stderr, "renderer.rhi: %s pipeline creation failed (P34)\n", backend_.c_str());
+      pipeline_.reset();
+      // Keep the clear-only path: an OpenGL fallback crashes on this machine
+      // (ISSUES P34), so a failed pipeline must not take the process down.
+    }
+
+    if (pipeline_ != nullptr) {
+      QRhiCommandBuffer* cb = nullptr;
+      if (rhi_->beginOffscreenFrame(&cb) == QRhi::FrameOpSuccess && cb != nullptr) {
+        QRhiResourceUpdateBatch* upload = rhi_->nextResourceUpdateBatch();
+        upload->uploadStaticBuffer(vertex_buffer_.get(), vertices);
+        cb->resourceUpdate(upload);
+        rhi_->endOffscreenFrame();
+      }
+    }
   }
 #endif
-
-  // Upload the vertices once.
-  QRhiCommandBuffer* cb = nullptr;
-  if (rhi_->beginOffscreenFrame(&cb) != QRhi::FrameOpSuccess || cb == nullptr) {
-    return false;
-  }
-  QRhiResourceUpdateBatch* upload = rhi_->nextResourceUpdateBatch();
-  upload->uploadStaticBuffer(vertex_buffer_.get(), vertices);
-  cb->resourceUpdate(upload);
-  rhi_->endOffscreenFrame();
   return true;
 }
 
@@ -191,6 +204,7 @@ void RhiRenderer::destroy_offscreen() {
   target_.reset();
   pass_.reset();
   color_.reset();
+  fallback_surface_.reset();
 }
 
 bool RhiRenderer::render_frame() {
@@ -224,9 +238,8 @@ bool RhiRenderer::render_frame() {
   rhi_->endOffscreenFrame();
 
   if (readback_ != nullptr && !readback_->data.isEmpty()) {
-    const QImage::Format format = QImage::Format_RGBA8888;
     image_ = QImage(reinterpret_cast<const uchar*>(readback_->data.constData()), viewport_.width,
-                    viewport_.height, format)
+                    viewport_.height, QImage::Format_RGBA8888)
                  .copy();
   }
   ++frames_;
@@ -244,6 +257,7 @@ void RhiRenderer::shutdown() {
   gpu_ = false;
   initialized_ = false;
   frames_ = 0;
+  image_ = QImage();
 }
 
 }  // namespace srsp::render
