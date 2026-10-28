@@ -399,10 +399,10 @@ M1 出口判据的逐项实测记录，与 `deepseek/Logs/Plan/2026-10-26-m1-exe
 |---|---|---|---|---|
 | U1 | SRM 柔性是否进入 1.x | docs/03 §3.7 定义预留 | 保持预留 or 进入版本范围（需列状态字段与导入验证） | SRM schema freeze 前 |
 | U2 | 关节 frame 与 Pinocchio 对照规范 | docs/03 §12 仍列 M0 待定 | 零位、父子 frame、关节轴、effort 符号 | solver 对照入 CI 前 |
-| U3 | 姿态与角速度约定 | docs/03 已写 `quat_wb`、body-frame 角速度 | 是否确认并移出“待定” | 下一个 schema 发布前 |
+| U3 | 姿态与角速度约定 | **已决（2026-10-28）**：契约用 `omega_b`，求解器内部可用世界系，边界强制转换（docs/03 §4） | 关闭 | — |
 | U4 | 图像颜色/HDR 枚举 | docs/03 §4.2 有 format/color_space | display transform 与 sensor raw 的枚举与范围 | QRhi image contract freeze 前 |
 | U5 | MCAP 的 Arrow schema encoding | docs/03 §9/§13 目标与现状不同 | 是否采用官方 Arrow schema encoding | Summary/seek 实现前 |
-| U6 | 300 µs 统计工况 | docs/05 §11 是 100 体链单步 | 固定拓扑/积分器/计时边界 | 1.1 benchmark gate 定稿前 |
+| U6 | 300 µs 统计工况 | **已决（2026-10-28）**：docs/05 §11.1 固定拓扑/积分器/窗口/构建 | 关闭 | — |
 | U7 | Linux 支持等级 | 1.2 计划，CI 作业已删 | build-only / developer-supported / user-supported | 1.2 RC 前 |
 | U8 | 强沙箱承诺 | 当前仅声明签名与限额 | Windows Job/AppContainer、Linux cgroup 最低承诺 | 对外支持第三方插件前 |
 | U9 | 集群语义边界 | 本文件 §17 | 单机批量 vs 跨机分布式的边界与术语 | M4 启动前 |

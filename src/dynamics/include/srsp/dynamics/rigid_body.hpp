@@ -89,6 +89,23 @@ class RigidBodyDynamics {
   [[nodiscard]] Eigen::Matrix<double, 6, 1> momentum(const Eigen::VectorXd& q,
                                                      const Eigen::VectorXd& v) const;
 
+  /** @brief Rotation of the base body, world <- body. */
+  [[nodiscard]] Eigen::Matrix3d base_rotation(const Eigen::VectorXd& q) const;
+
+  /**
+   * @brief Converts a world-frame angular velocity to the body frame.
+   *
+   * The state contract stores `omega_b` (docs/03 section 4) while this solver
+   * integrates world-frame angular velocity; the runtime converts at the
+   * boundary and never assumes which frame a plugin uses.
+   */
+  [[nodiscard]] Eigen::Vector3d omega_world_to_body(const Eigen::VectorXd& q,
+                                                    const Eigen::Vector3d& omega_world) const;
+
+  /** @brief Converts a body-frame angular velocity to the world frame. */
+  [[nodiscard]] Eigen::Vector3d omega_body_to_world(const Eigen::VectorXd& q,
+                                                    const Eigen::Vector3d& omega_body) const;
+
   /** @brief Replaces the uniform gravity vector (default: 9.80665 m/s^2 down). */
   void set_gravity(const Eigen::Vector3d& gravity) { gravity_ = gravity; }
   [[nodiscard]] const Eigen::Vector3d& gravity() const noexcept { return gravity_; }

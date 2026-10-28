@@ -270,7 +270,12 @@ orbital_servicer.srm/
 **`state.actuators`**：`id, kind, momentum, speed, thrust, mass_flow, enabled`
 **`state.meta`**：单行，`t_tai_ns, step_index, dt, energy{kinetic,potential}, momentum_total`
 
-> 混合约定：线速度在世界系、角速度在体系，可减少一次旋转；插件必须在 `ModelInfo` 中声明其采用的约定，内核负责在跨插件边界转换。
+> **约定（U3 已决，2026-10-28）**：契约层固定「线速度在世界系、角速度在本体系」——`vel_w`、`omega_b`。
+>
+> - 契约（Arrow 表、MCAP、`state_hash`）一律使用 `omega_b`（body frame）；
+> - 求解器内部**允许**使用世界系角速度（当前 `srsp_dynamics` 的 `v[3..5]` 即世界系，配合 `q̇ = ½[0,ω_w]q`）；跨边界时必须转换：`ω_b = R(q_wb)ᵀ · ω_w`；
+> - 转换由运行时层（D2）负责，插件不得假设内核传入的角速度是体系还是世界系，必须以 `ModelInfo.omega_frame` 声明并在边界处转换；
+> - `srsp_dynamics` 提供 `omega_world_to_body(q, ω_w)` / `omega_body_to_world(q, ω_b)` 两个自由函数并有测试保证与积分一致。
 
 ### 4.2 BlobRef 与共享内存
 
@@ -587,7 +592,7 @@ message SensorFrame {
 
 1. 柔性附件是否进入 SRM 1.0，还是 1.1 再引入（影响动力学接口与验证范围）。
 2. 关节坐标系定义与 Pinocchio/URDF 的精确对照表（需一组黄金模型做数值比对）。
-3. `quat_wb` 与角速度约定的最终选择（当前：世界线速度 + 体系角速度）。
+3. ~~`quat_wb` 与角速度约定的最终选择~~ —— **已决（U3，2026-10-28）**：契约层用 `omega_b`（body frame），求解器内部可用世界系并强制在边界转换。
 4. 图像色彩空间与 HDR 管线（线性 sRGB → 显示 sRGB 的转换位置）。
 5. MCAP schema 编码对 Arrow 的支持方式（内嵌 IPC schema 还是自定义描述）。
 

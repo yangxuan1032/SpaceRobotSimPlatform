@@ -302,3 +302,25 @@ TEST_CASE("two-body orbit stays on the circular solution", "[dynamics]") {
   CHECK(std::abs(final_position.norm() - radius) < 1.0);
   CHECK(final_position.x() == Approx(radius).margin(50.0));
 }
+TEST_CASE("angular velocity converts between frames", "[dynamics]") {
+  // 90 deg about z: body x maps to world y.
+  const RigidBodyDynamics dynamics(single_body(1.0, 1.0, 1.0, 1.0));
+  Eigen::VectorXd q = dynamics.neutral_configuration();
+  const double s = std::sqrt(0.5);
+  q[3] = 0.0;
+  q[4] = 0.0;
+  q[5] = s;  // z
+  q[6] = s;  // w
+
+  const Eigen::Vector3d world_y(0.0, 1.0, 0.0);
+  const Eigen::Vector3d body = dynamics.omega_world_to_body(q, world_y);
+  CHECK(body.x() == Approx(1.0).margin(1e-12));
+  CHECK(body.y() == Approx(0.0).margin(1e-12));
+
+  const Eigen::Vector3d back = dynamics.omega_body_to_world(q, body);
+  CHECK(back.isApprox(world_y, 1e-12));
+
+  // The rotation itself: body x axis is world y under this yaw.
+  const Eigen::Vector3d x_axis = dynamics.base_rotation(q) * Eigen::Vector3d(1.0, 0.0, 0.0);
+  CHECK(x_axis.y() == Approx(1.0).margin(1e-12));
+}

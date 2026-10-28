@@ -460,6 +460,21 @@ Eigen::VectorXd RigidBodyDynamics::generalized_force(const Eigen::VectorXd& q,
   return tau;
 }
 
+Eigen::Matrix3d RigidBodyDynamics::base_rotation(const Eigen::VectorXd& q) const {
+  Eigen::Quaterniond orientation(q[6], q[3], q[4], q[5]);
+  orientation.normalize();
+  return orientation.toRotationMatrix();
+}
+
+Eigen::Vector3d RigidBodyDynamics::omega_world_to_body(const Eigen::VectorXd& q,
+                                                       const Eigen::Vector3d& omega_world) const {
+  return base_rotation(q).transpose() * omega_world;
+}
+
+Eigen::Vector3d RigidBodyDynamics::omega_body_to_world(const Eigen::VectorXd& q,
+                                                       const Eigen::Vector3d& omega_body) const {
+  return base_rotation(q) * omega_body;
+}
 void RigidBodyDynamics::step(Eigen::VectorXd* q, Eigen::VectorXd* v, const Eigen::VectorXd& tau,
                              double dt) const {
   const ForceFunction constant = [&tau](const Eigen::VectorXd&, const Eigen::VectorXd&) {

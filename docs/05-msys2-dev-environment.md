@@ -584,3 +584,19 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | MSVC / CLANG64 | 未纳入 | MSVC 待 vcvars 环境（P27）；CLANG64 已移除（P28） |
 
 恢复条件：1.2 跨平台里程碑启动时，重新加入 `linux-gcc` 作业（直接复用本次删除前的定义，见 git 历史）。
+### 11.1 300 µs 基准的固定工况（U6 已决，2026-10-28）
+
+为避免不同人测出不同数字，`bench.dynamics` 的统计工况固定如下：
+
+| 项 | 取值 |
+|---|---|
+| 拓扑 | 100 体**单链**，每体质量 10 kg，惯量 diag(0.05, 0.05, 0.01)，关节间距 0.2 m |
+| 关节 | 99 个转动关节，轴 `+z`，限位 ±π |
+| 积分器 | RK4，`dt = 1 ms` |
+| 预热 | 1 步（不计入统计） |
+| 统计窗口 | 50 步取平均（`mass_ms` / `bias_ms` / `step_ms` 各自独立） |
+| 构建 | Release（`-O2`/`-O3`），单线程，`-ffp-contract=off` |
+| 机器 | 记录 CPU 型号与频率；跨机器比较只看同型号 |
+| 判据 | `step_us ≤ 300` 为达标；当前 9 058 µs（已豁免到 1.1） |
+
+改动此工况必须同时更新本表与 `bench/bench_dynamics.cpp`，否则数字不可比。
