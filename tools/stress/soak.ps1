@@ -15,6 +15,8 @@ param(
   [int]$IntervalSec = 10,
   [double]$MaxRssGrowthPct = 2.0,
   [int]$MaxHandleGrowth = 5,
+  [string]$Workload = "ping",
+  [string]$Model = "",
   [string]$OutCsv = ""
 )
 
@@ -53,8 +55,11 @@ Write-Host "  cli:    $Cli"
 Write-Host "  plugin: $Plugin"
 Write-Host "  csv:    $OutCsv"
 
+$cliArgs = @("soak", "--plugin", $Plugin, "--minutes", "$Minutes", "--sleep-ms", "5", "--workload", $Workload)
+if (-not [string]::IsNullOrWhiteSpace($Model)) { $cliArgs += @("--model", $Model) }
+Write-Host "  workload: $Workload"
 $process = Start-Process -FilePath $Cli `
-  -ArgumentList @("soak", "--plugin", $Plugin, "--minutes", "$Minutes", "--sleep-ms", "5") `
+  -ArgumentList $cliArgs `
   -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru -WindowStyle Hidden
 
 $rows = New-Object System.Collections.Generic.List[object]

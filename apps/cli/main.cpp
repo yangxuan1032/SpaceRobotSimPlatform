@@ -11,6 +11,11 @@
  */
 #include <srsp/core_api.h>
 
+#if defined(SRSP_HAVE_SOLVER)
+#include <srsp/dynamics/rigid_body.hpp>
+#include <srsp/model/srm.hpp>
+#endif
+
 #if defined(SRSP_HAVE_SIDECAR)
 #include <srsp/bridge/sidecar_host.hpp>
 #include <srsp/bridge/sidecar_process.hpp>
@@ -47,7 +52,8 @@ void print_usage() {
   std::fputs(
       "usage:\n"
       "  srsp-cli version\n"
-      "  srsp-cli soak --plugin <path> [--minutes N] [--sleep-ms N]\n"
+      "  srsp-cli soak --plugin <path> [--minutes N] [--sleep-ms N] [--workload ping|step] "
+      "[--model <srm>]\n"
       "  srsp-cli demo --transport inproc --plugin <path> [--method <name>]\n",
       stderr);
 }
@@ -171,6 +177,9 @@ int run_soak(const std::vector<std::string>& args) {
   const std::string plugin_path = option_value(args, "--plugin");
   const std::string minutes_text = option_value(args, "--minutes");
   const std::string sleep_text = option_value(args, "--sleep-ms");
+  const std::string workload =
+      option_value(args, "--workload").empty() ? "ping" : option_value(args, "--workload");
+  const std::string model_path = option_value(args, "--model");
   const double minutes = minutes_text.empty() ? 1.0 : std::stod(minutes_text);
   const int sleep_ms = sleep_text.empty() ? 5 : std::stoi(sleep_text);
 
@@ -199,6 +208,54 @@ int run_soak(const std::vector<std::string>& args) {
                  err.message != nullptr ? err.message : "unknown");
     srsp_context_destroy(ctx);
     return kExitFailure;
+  }
+
+  if (workload == "step") {
+#if defined(SRSP_HAVE_SOLVER)
+    const std::string path = model_path.empty() ? "examples/models/arm6.srm.json" : model_path;
+    const auto loaded = srsp::model::load_from_file(path);
+    if (!loaded.ok()) {
+      std::fprintf(stderr, "error: cannot load model %s\n", path.c_str());
+      srsp_unload_plugin(ctx, nullptr);
+      srsp_context_destroy(ctx);
+      return kExitFailure;
+    }
+    const srsp::dynamics::RigidBodyDynamics dynamics(loaded.model);
+    Eigen::VectorXd q = dynamics.neutral_configuration();
+    Eigen::VectorXd v = Eigen::VectorXd::Zero(dynamics.nv());
+    const Eigen::VectorXd tau = Eigen::VectorXd::Zero(dynamics.nv());
+    const auto start = std::chrono::steady_clock::now();
+    const auto deadline = start + std::chrono::duration<double>(minutes * 60.0);
+    std::uint64_t steps = 0;
+    auto next_report = start + std::chrono::seconds(30);
+    while (std::chrono::steady_clock::now() < deadline) {
+      dynamics.step(&q, &v, tau, 1e-3);
+      ++steps;
+      if (sleep_ms > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+      }
+      const auto now = std::chrono::steady_clock::now();
+      if (now >= next_report) {
+        const double elapsed = std::chrono::duration<double>(now - start).count();
+        std::printf("SOAK elapsed=%.1fs steps=%llu\n", elapsed,
+                    static_cast<unsigned long long>(steps));
+        std::fflush(stdout);
+        next_report = now + std::chrono::seconds(30);
+      }
+    }
+    srsp_unload_plugin(ctx, nullptr);
+    srsp_context_destroy(ctx);
+    const double elapsed =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    std::printf("SUMMARY elapsed=%.1fs steps=%llu failures=0\n", elapsed,
+                static_cast<unsigned long long>(steps));
+    return 0;
+#else
+    std::fputs("error: this build has no solver support (--workload step)\n", stderr);
+    srsp_unload_plugin(ctx, nullptr);
+    srsp_context_destroy(ctx);
+    return kExitUnsupported;
+#endif
   }
 
   const auto start = std::chrono::steady_clock::now();
