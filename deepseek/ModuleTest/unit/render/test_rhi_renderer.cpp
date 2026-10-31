@@ -7,6 +7,8 @@
  * public headers (ISSUES P33); the test therefore asserts behaviour relative to
  * the Null backend without pretending a GPU device exists.
  */
+#include <srsp/render/scene.hpp>
+
 #include <string>
 
 #include <QPoint>
@@ -98,6 +100,50 @@ TEST_CASE("rhi renders the scene sphere on a GPU backend", "[render_rhi]") {
       INFO("centre=" << centre.red() << "," << centre.green() << "," << centre.blue());
       CHECK(delta > 30);
     }
+  }
+  renderer.shutdown();
+}
+TEST_CASE("backend availability matches the backend actually created", "[render_rhi]") {
+  RhiRenderer renderer;
+  REQUIRE(renderer.initialize(nullptr, Viewport{32, 32}, nullptr));
+  const bool gpu_backend = renderer.backend_name() == "d3d11";
+  CHECK(srsp::render::rhi_backend_available() == gpu_backend);
+  renderer.shutdown();
+}
+TEST_CASE("rhi renders scene boxes through the mesh path", "[render_rhi]") {
+  RhiRenderer renderer;
+  REQUIRE(renderer.initialize(nullptr, Viewport{256, 256}, nullptr));
+
+  srsp::render::Scene scene{};
+  srsp::render::Sphere first{};
+  first.position_m[0] = -0.8;
+  first.radius_m = 0.6;
+  first.color[0] = 0.9f;
+  first.color[1] = 0.3f;
+  first.color[2] = 0.2f;
+  first.mesh_uri = "box";
+  first.orientation[3] = 1.0;
+  scene.bodies.push_back(first);
+
+  srsp::render::Sphere second = first;
+  second.position_m[0] = 0.8;
+  scene.bodies.push_back(second);
+  renderer.set_scene(scene);
+  REQUIRE(renderer.render_frame());
+
+  if (renderer.backend_name() == "d3d11") {
+    const QImage image = renderer.readback();
+    REQUIRE_FALSE(image.isNull());
+    int foreground = 0;
+    for (int y = 0; y < image.height(); ++y) {
+      for (int x = 0; x < image.width(); ++x) {
+        if (image.pixelColor(x, y) != QColor(8, 10, 16)) {
+          ++foreground;
+        }
+      }
+    }
+    INFO("foreground=" << foreground);
+    CHECK(foreground > 500);
   }
   renderer.shutdown();
 }

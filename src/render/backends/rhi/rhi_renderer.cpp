@@ -78,6 +78,69 @@ std::vector<std::uint16_t> make_sphere_indices() {
   return indices;
 }
 
+/// Appends one oriented box (36 vertices, six shaded faces) in world space.
+void append_box(const Sphere& body, std::vector<float>& out) {
+  const double* q = body.orientation;
+  const double x = q[0];
+  const double y = q[1];
+  const double z = q[2];
+  const double w = q[3];
+  const double norm = std::sqrt(x * x + y * y + z * z + w * w);
+  const double s = norm > 0.0 ? 1.0 / norm : 1.0;
+  const double xx = x * s * x * s;
+  const double yy = y * s * y * s;
+  const double zz = z * s * z * s;
+  const double xy = x * s * y * s;
+  const double xz = x * s * z * s;
+  const double yz = y * s * z * s;
+  const double wx = w * s * x * s;
+  const double wy = w * s * y * s;
+  const double wz = w * s * z * s;
+  const double r[9] = {1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz),       2.0 * (xz + wy),
+                       2.0 * (xy + wz),       1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx),
+                       2.0 * (xz - wy),       2.0 * (yz + wx),       1.0 - 2.0 * (xx + yy)};
+  const double h = body.radius_m;
+  const double corners[8][3] = {{-h, -h, -h}, {h, -h, -h}, {h, h, -h}, {-h, h, -h},
+                                {-h, -h, h},  {h, -h, h},  {h, h, h},  {-h, h, h}};
+  const int faces[6][4] = {{0, 3, 2, 1}, {4, 5, 6, 7}, {0, 1, 5, 4},
+                           {2, 3, 7, 6}, {1, 2, 6, 5}, {0, 4, 7, 3}};
+  const double light[3] = {0.4, 0.6, 0.7};
+
+  for (int f = 0; f < 6; ++f) {
+    const double u[3] = {corners[faces[f][1]][0] - corners[faces[f][0]][0],
+                         corners[faces[f][1]][1] - corners[faces[f][0]][1],
+                         corners[faces[f][1]][2] - corners[faces[f][0]][2]};
+    const double v[3] = {corners[faces[f][3]][0] - corners[faces[f][0]][0],
+                         corners[faces[f][3]][1] - corners[faces[f][0]][1],
+                         corners[faces[f][3]][2] - corners[faces[f][0]][2]};
+    double local[3] = {u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2],
+                       u[0] * v[1] - u[1] * v[0]};
+    const double length =
+        std::sqrt(local[0] * local[0] + local[1] * local[1] + local[2] * local[2]);
+    if (length > 0.0) {
+      local[0] /= length;
+      local[1] /= length;
+      local[2] /= length;
+    }
+    const double normal[3] = {r[0] * local[0] + r[1] * local[1] + r[2] * local[2],
+                              r[3] * local[0] + r[4] * local[1] + r[5] * local[2],
+                              r[6] * local[0] + r[7] * local[1] + r[8] * local[2]};
+    const double shade = 0.35 + 0.65 * std::max(0.0, normal[0] * light[0] + normal[1] * light[1] +
+                                                         normal[2] * light[2]);
+    for (const int corner :
+         {faces[f][0], faces[f][1], faces[f][2], faces[f][0], faces[f][2], faces[f][3]}) {
+      const double px = corners[corner][0];
+      const double py = corners[corner][1];
+      const double pz = corners[corner][2];
+      out.push_back(static_cast<float>(body.position_m[0] + r[0] * px + r[1] * py + r[2] * pz));
+      out.push_back(static_cast<float>(body.position_m[1] + r[3] * px + r[4] * py + r[5] * pz));
+      out.push_back(static_cast<float>(body.position_m[2] + r[6] * px + r[7] * py + r[8] * pz));
+      out.push_back(static_cast<float>(body.color[0] * shade));
+      out.push_back(static_cast<float>(body.color[1] * shade));
+      out.push_back(static_cast<float>(body.color[2] * shade));
+    }
+  }
+}
 /// Perspective + look-at matrix for the renderer camera.
 QMatrix4x4 build_mvp(const CameraView& camera, const Viewport& viewport) {
   QMatrix4x4 view;
@@ -108,8 +171,10 @@ RendererCapabilities RhiRenderer::capabilities() const noexcept {
 }
 
 bool rhi_backend_available() {
-  QRhiNullInitParams null_params;
-  return QRhi::probe(QRhi::Null, &null_params);
+  // Mirrors the GPU path: the Null backend always succeeds, so probing it
+  // would claim GPU availability on machines (and CI) that have none.
+  QRhiD3D11InitParams params;
+  return QRhi::probe(QRhi::D3D11, &params);
 }
 
 bool RhiRenderer::initialize(void* /*native_window*/, const Viewport& viewport,
@@ -233,6 +298,11 @@ bool RhiRenderer::create_offscreen() {
       rhi_->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::IndexBuffer,
                       static_cast<quint32>(indices.size() * sizeof(std::uint16_t))));
   uniform_buffer_.reset(rhi_->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, 64));
+  box_buffer_.reset(rhi_->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer,
+                                    36u * 6u * 64u * sizeof(float)));
+  if (box_buffer_ == nullptr || !box_buffer_->create()) {
+    return false;
+  }
   if (!vertex_buffer_->create() || !index_buffer_->create() || !uniform_buffer_->create()) {
     return false;
   }
@@ -309,9 +379,30 @@ bool RhiRenderer::render_frame(bool capture) {
     updates->updateDynamicBuffer(uniform_buffer_.get(), 0, 64, mvp.constData());
   }
 
+  std::vector<float> box_vertices;
+  if (!scene_.bodies.empty()) {
+    box_vertices.reserve(scene_.bodies.size() * 36u * 6u);
+    for (const auto& body : scene_.bodies) {
+      append_box(body, box_vertices);
+    }
+    const quint32 bytes = static_cast<quint32>(box_vertices.size() * sizeof(float));
+    if (bytes <= 36u * 6u * 64u * sizeof(float)) {
+      updates->updateDynamicBuffer(box_buffer_.get(), 0, bytes, box_vertices.data());
+      box_vertices_ = static_cast<std::uint32_t>(box_vertices.size() / 6u);
+    }
+  }
+
   const QColor clear(8, 10, 16);
   cb->beginPass(target_.get(), clear, {1.0f, 0}, updates);
-  if (pipeline_ != nullptr && vertex_buffer_ != nullptr && index_buffer_ != nullptr) {
+  if (!scene_.bodies.empty() && box_vertices_ > 0) {
+    cb->setGraphicsPipeline(pipeline_.get());
+    cb->setViewport(
+        {0.0f, 0.0f, static_cast<float>(viewport_.width), static_cast<float>(viewport_.height)});
+    cb->setShaderResources(bindings_.get());
+    const QRhiCommandBuffer::VertexInput box_input{box_buffer_.get(), 0};
+    cb->setVertexInput(0, 1, &box_input);
+    cb->draw(box_vertices_);
+  } else if (pipeline_ != nullptr && vertex_buffer_ != nullptr && index_buffer_ != nullptr) {
     cb->setGraphicsPipeline(pipeline_.get());
     cb->setViewport(
         {0.0f, 0.0f, static_cast<float>(viewport_.width), static_cast<float>(viewport_.height)});

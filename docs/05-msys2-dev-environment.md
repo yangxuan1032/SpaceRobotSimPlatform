@@ -613,3 +613,8 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | 命令 | `bench_rhi 200`（Debug 构建；Release 未测） |
 
 说明：`present` 数字异常高是因为 D3D11 离屏提交后未同步，GPU 工作仍在异步执行；`bench_rhi` 已加入 `wait_idle()`（`QRhi::finish()`），但该后端下仍不阻塞，因此只把 `capture` 视为可信值。
+### 12.6 GPU 路径与 CI 的边界
+
+- CI runner **没有 GPU**：`unit.render_rhi` 会回退到 QRhi 的 Null 后端，只验证「初始化 + 清屏 + 读回」路径，**不验证 D3D11 绘制**；
+- `rhi_backend_available()` 只对 **D3D11** 做探测，因此 CI 上返回 false（而不是被 Null 后端掩盖），单元测试据此断言「可用性与实际后端一致」；
+- 结论：GPU 路径的 `supported` 等级需要**本地或专用 GPU runner** 的证据，CI 绿不等于 GPU 可用；支持矩阵中 QRhi 仍为 `experimental`。

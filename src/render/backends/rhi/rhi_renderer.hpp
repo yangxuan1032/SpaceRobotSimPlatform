@@ -80,6 +80,8 @@ class RhiRenderer final : public Renderer {
   std::unique_ptr<QRhiBuffer> vertex_buffer_;
   std::unique_ptr<QRhiBuffer> index_buffer_;
   std::unique_ptr<QRhiBuffer> uniform_buffer_;
+  std::unique_ptr<QRhiBuffer> box_buffer_;
+  std::uint32_t box_vertices_ = 0;
   std::unique_ptr<QRhiShaderResourceBindings> bindings_;
   std::unique_ptr<QRhiGraphicsPipeline> pipeline_;
   std::unique_ptr<QOffscreenSurface> fallback_surface_;
