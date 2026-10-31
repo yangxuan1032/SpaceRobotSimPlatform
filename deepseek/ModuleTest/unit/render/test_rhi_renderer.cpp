@@ -62,26 +62,37 @@ TEST_CASE("null backend does not claim a GPU or compute", "[render_rhi]") {
   CHECK(srsp::render::rhi_backend_available());
   renderer.shutdown();
 }
-TEST_CASE("rhi readback matches the clear colour on a GPU backend", "[render_rhi]") {
+TEST_CASE("rhi renders the scene sphere on a GPU backend", "[render_rhi]") {
   RhiRenderer renderer;
-  REQUIRE(renderer.initialize(nullptr, Viewport{64, 48}, nullptr));
+  REQUIRE(renderer.initialize(nullptr, Viewport{256, 256}, nullptr));
   std::printf("rhi backend: %s\n", renderer.backend_name().c_str());
   REQUIRE(renderer.render_frame());
 
   if (renderer.backend_name() == "d3d11") {
     const QImage image = renderer.readback();
     REQUIRE_FALSE(image.isNull());
-    CHECK(image.width() == 64);
-    CHECK(image.height() == 48);
+    CHECK(image.width() == 256);
+    CHECK(image.height() == 256);
 
     // The corner is never covered by the triangle in clip space.
+    int foreground = 0;
+    for (int y = 0; y < image.height(); ++y) {
+      for (int x = 0; x < image.width(); ++x) {
+        const QColor pixel = image.pixelColor(x, y);
+        if (pixel != QColor(8, 10, 16)) {
+          ++foreground;
+        }
+      }
+    }
+    INFO("foreground=" << foreground);
+    CHECK(foreground > 1000);
     const QColor corner = image.pixelColor(2, 2);
     CHECK(corner.red() == 8);
     CHECK(corner.green() == 10);
     CHECK(corner.blue() == 16);
 
     if (renderer.has_geometry()) {
-      const QColor centre = image.pixelColor(32, 24);
+      const QColor centre = image.pixelColor(128, 128);
       const int delta =
           std::abs(centre.red() - 8) + std::abs(centre.green() - 10) + std::abs(centre.blue() - 16);
       INFO("centre=" << centre.red() << "," << centre.green() << "," << centre.blue());

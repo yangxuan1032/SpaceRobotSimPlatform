@@ -11,6 +11,7 @@
 #define SRSP_RENDER_BACKEND_RHI_HPP
 
 #include <srsp/render/renderer.hpp>
+#include <srsp/render/scene.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -42,7 +43,16 @@ class RhiRenderer final : public Renderer {
   bool initialize(void* native_window, const Viewport& viewport, std::string* error) override;
   bool resize(const Viewport& viewport) override;
   void set_camera(const CameraView& camera) override;
+  /** @brief Supplies the scene to draw; the backend renders its bodies. */
+  void set_scene(const Scene& scene);
   bool render_frame() override;
+
+  /**
+   * @brief Renders one frame, optionally reading the colour texture back.
+   * @param capture When false the GPU-to-CPU copy is skipped, which is what
+   *        the frame-rate benchmark measures.
+   */
+  bool render_frame(bool capture);
   [[nodiscard]] std::uint64_t frame_count() const noexcept override { return frames_; }
   void shutdown() override;
 
@@ -51,6 +61,9 @@ class RhiRenderer final : public Renderer {
 
   /** @brief True when a graphics pipeline was created (geometry is drawn). */
   [[nodiscard]] bool has_geometry() const noexcept { return pipeline_ != nullptr; }
+
+  /** @brief Blocks until submitted GPU work completes (benchmarking only). */
+  void wait_idle();
 
   /** @brief Last frame as an image; empty when the backend cannot read back. */
   [[nodiscard]] QImage readback() const;
@@ -65,12 +78,16 @@ class RhiRenderer final : public Renderer {
   std::unique_ptr<QRhiRenderPassDescriptor> pass_;
   std::unique_ptr<QRhiReadbackResult> readback_;
   std::unique_ptr<QRhiBuffer> vertex_buffer_;
+  std::unique_ptr<QRhiBuffer> index_buffer_;
+  std::unique_ptr<QRhiBuffer> uniform_buffer_;
   std::unique_ptr<QRhiShaderResourceBindings> bindings_;
   std::unique_ptr<QRhiGraphicsPipeline> pipeline_;
   std::unique_ptr<QOffscreenSurface> fallback_surface_;
   std::string backend_ = "none";
   Viewport viewport_{};
   CameraView camera_{};
+  Scene scene_{};
+  std::uint32_t vertex_count_ = 0;
   bool initialized_ = false;
   bool gpu_ = false;
   QImage image_;
