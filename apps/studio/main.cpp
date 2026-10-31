@@ -106,6 +106,12 @@ int run_ui_selftest(int argc, char** argv) {
   QApplication app(argc, argv);
 
   const std::string path = model_path(argc, argv);
+  bool use_rhi = false;
+  for (int i = 1; i + 1 < argc; ++i) {
+    if (std::string(argv[i]) == "--renderer" && std::string(argv[i + 1]) == "rhi") {
+      use_rhi = true;
+    }
+  }
   const auto loaded = srsp::model::load_from_file(path);
   if (!loaded.ok()) {
     std::fprintf(stderr, "FAIL: cannot load %s (%zu issues)\n", path.c_str(), loaded.issues.size());
@@ -119,6 +125,9 @@ int run_ui_selftest(int argc, char** argv) {
     return 1;
   }
   StudioWindow window(&renderer, loaded.model);
+  if (use_rhi) {
+    window.set_renderer_mode(true);
+  }
   window.resize(1280, 720);
 
   if (window.tree_body_count() != static_cast<int>(loaded.model.bodies.size())) {
@@ -138,6 +147,15 @@ int run_ui_selftest(int argc, char** argv) {
   window.advance(10);
   if (window.step_count() != 10) {
     std::fprintf(stderr, "FAIL: step count %lld\n", window.step_count());
+    return 1;
+  }
+  if (use_rhi) {
+    // Offscreen platform: a hidden widget never paints, so drive the RHI path
+    // directly instead of relying on paintEvent.
+    window.render_rhi_once();
+  }
+  if (use_rhi && window.rhi_frames() == 0) {
+    std::fputs("FAIL: rhi renderer produced no frames\n", stderr);
     return 1;
   }
   if (window.mesh_body_count() <= 0) {

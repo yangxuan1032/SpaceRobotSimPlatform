@@ -28,3 +28,11 @@ else()
   target_compile_options(srsp_studio_render PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(srsp_studio PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+# The RHI backend is optional; studio_window.cpp lives in srsp_studio_render,
+# so the dependency belongs to that library.
+if(TARGET srsp_render_rhi)
+  target_link_libraries(srsp_studio_render PUBLIC srsp_render_rhi)
+  target_include_directories(srsp_studio_render PUBLIC
+    "${PROJECT_SOURCE_DIR}/src/render/backends/rhi")
+endif()

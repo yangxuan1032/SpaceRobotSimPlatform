@@ -22,6 +22,17 @@
 namespace srsp::studio {
 namespace {
 
+/// Camera used by the RHI viewport (the Qt painter keeps its own framing).
+srsp::render::CameraView studio_camera() {
+  srsp::render::CameraView camera{};
+  camera.eye[1] = -5.0;
+  camera.up[2] = 1.0;
+  camera.fov_deg = 45.0;
+  camera.near_m = 0.01;
+  camera.far_m = 1.0e9;
+  return camera;
+}
+
 /// Converts a rotation matrix to a (x, y, z, w) quaternion.
 std::array<double, 4> quaternion_from_matrix(const Eigen::Matrix3d& r) {
   std::array<double, 4> q{0.0, 0.0, 0.0, 1.0};
@@ -221,6 +232,7 @@ void StudioWindow::update_scene() {
     scene.bodies.push_back(sphere);
   }
   mesh_bodies_ = static_cast<int>(scene.bodies.size());
+  scene_ = scene;
   if (viewport_ != nullptr) {
     static_cast<Viewport*>(viewport_)->set_scene(scene);
   }
@@ -235,6 +247,35 @@ void StudioWindow::refresh_properties() {
   properties_->addItem(QStringLiteral("step: %1").arg(steps_));
   properties_->addItem(
       QStringLiteral("time: %1 s").arg(static_cast<double>(steps_) * kStepSeconds));
+}
+
+void StudioWindow::set_renderer_mode(bool use_rhi) {
+  use_rhi_ = use_rhi;
+  if (use_rhi_ && rhi_ == nullptr) {
+    rhi_ = std::make_unique<srsp::render::RhiRenderer>();
+    std::string error;
+    if (!rhi_->initialize(nullptr, srsp::render::Viewport{640, 480}, &error)) {
+      std::fprintf(stderr, "studio: rhi initialise failed: %s\n", error.c_str());
+      rhi_.reset();
+      use_rhi_ = false;
+    }
+  }
+}
+
+void StudioWindow::render_rhi_once() {
+  if (!use_rhi_ || rhi_ == nullptr) {
+    return;
+  }
+  rhi_->set_camera(studio_camera());
+  rhi_->set_scene(scene_);
+  const srsp::render::Viewport viewport{std::max(1, width()), std::max(1, height())};
+  if (rhi_->resize(viewport)) {
+    rhi_->render_frame();
+  }
+}
+
+std::uint64_t StudioWindow::rhi_frames() const {
+  return rhi_ != nullptr ? rhi_->frame_count() : 0;
 }
 
 int StudioWindow::mesh_body_count() const {

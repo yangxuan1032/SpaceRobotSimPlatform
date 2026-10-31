@@ -602,3 +602,14 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | 判据 | `step_us ≤ 300` 为达标；当前 9 058 µs（已豁免到 1.1） |
 
 改动此工况必须同时更新本表与 `bench/bench_dynamics.cpp`，否则数字不可比。
+### 11.2 GPU（renderer.rhi / D3D11）实测
+
+| 项 | 数值 |
+|---|---|
+| 场景 | 单个 32×16 UV 球体，正视相机，离屏 1920×1080 |
+| `present`（仅提交，跳过读回） | 0.07 ms / 帧 —— **只反映 CPU 提交，不是渲染速率** |
+| `capture`（提交 + 同步读回） | 均值 **5.97 ms**、P50 5.67 ms、P95 8.57 ms → **≈167 fps** |
+| 判定 | 以 `capture` 作为保守上界，**≥ 30 fps 达标**（1.1 目标 60 fps 需真实场景再测） |
+| 命令 | `bench_rhi 200`（Debug 构建；Release 未测） |
+
+说明：`present` 数字异常高是因为 D3D11 离屏提交后未同步，GPU 工作仍在异步执行；`bench_rhi` 已加入 `wait_idle()`（`QRhi::finish()`），但该后端下仍不阻塞，因此只把 `capture` 视为可信值。

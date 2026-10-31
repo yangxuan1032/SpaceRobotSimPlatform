@@ -14,10 +14,12 @@
 #include <srsp/model/srm.hpp>
 #include <srsp/render/scene.hpp>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
 #include <QMainWindow>
+#include <rhi_renderer.hpp>
 
 #include "qt_renderer.hpp"
 
@@ -48,6 +50,15 @@ class StudioWindow final : public QMainWindow {
 
   // Introspection for the headless self-test.
   [[nodiscard]] int tree_body_count() const;
+  /** @brief Switches the viewport between the Qt painter and the RHI backend. */
+  void set_renderer_mode(bool use_rhi);
+
+  /** @brief Renders one RHI frame into the offscreen target (tests/bench). */
+  void render_rhi_once();
+
+  /** @brief Frames rendered by the RHI backend (0 when not in use). */
+  [[nodiscard]] std::uint64_t rhi_frames() const;
+
   /** @brief Bodies rendered with a mesh (procedural box) in the current scene. */
   [[nodiscard]] int mesh_body_count() const;
   [[nodiscard]] int tree_joint_count() const;
@@ -63,6 +74,9 @@ class StudioWindow final : public QMainWindow {
   void on_timeline_moved(int value);
 
   QtRenderer* renderer_ = nullptr;
+  std::unique_ptr<srsp::render::RhiRenderer> rhi_;
+  bool use_rhi_ = false;
+  srsp::render::Scene scene_{};
   std::unique_ptr<srsp::model::Model> model_;
   std::unique_ptr<srsp::dynamics::RigidBodyDynamics> dynamics_;
   Eigen::VectorXd q_;
