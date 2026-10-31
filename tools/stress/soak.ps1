@@ -58,8 +58,15 @@ Write-Host "  csv:    $OutCsv"
 $cliArgs = @("soak", "--plugin", $Plugin, "--minutes", "$Minutes", "--sleep-ms", "5", "--workload", $Workload)
 if (-not [string]::IsNullOrWhiteSpace($Model)) { $cliArgs += @("--model", $Model) }
 Write-Host "  workload: $Workload"
+# The CLI is a MinGW binary: it needs the UCRT64 runtime DLLs on PATH even when
+# this script is launched from a shell that never sourced the MSYS2 environment.
+$mingwBin = "C:\msys64\ucrt64\bin"
+if (Test-Path $mingwBin) {
+  $env:PATH = "$mingwBin;$env:PATH"
+}
+
 $process = Start-Process -FilePath $Cli `
-  -ArgumentList $cliArgs `
+  -ArgumentList $cliArgs -WorkingDirectory $root `
   -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru -WindowStyle Hidden
 
 $rows = New-Object System.Collections.Generic.List[object]
@@ -107,6 +114,8 @@ if ($summaryLine -and $summaryLine.Line -match "failures=(\d+)") { $failures = [
 
 $verdict = "PASS"
 $reasons = @()
+if (-not $summaryLine) { $verdict = "FAIL"; $reasons += "no-summary" }
+if ($samples -eq 0) { $verdict = "FAIL"; $reasons += "no-samples" }
 if ($exitCode -ne 0) { $verdict = "FAIL"; $reasons += "exit=$exitCode" }
 if ($failures -ne 0) { $verdict = "FAIL"; $reasons += "failures=$failures" }
 if ($rssGrowth -gt $MaxRssGrowthPct) { $verdict = "FAIL"; $reasons += ("rss+{0:N2}%" -f $rssGrowth) }

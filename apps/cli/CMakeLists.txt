@@ -20,3 +20,9 @@ if(MSVC)
 else()
   target_compile_options(srsp_cli PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+# Recording support for srsp-cli soak --workload record.
+if(TARGET srsp_record)
+  target_link_libraries(srsp_cli PRIVATE srsp_record)
+  target_compile_definitions(srsp_cli PRIVATE SRSP_HAVE_RECORD=1)
+endif()

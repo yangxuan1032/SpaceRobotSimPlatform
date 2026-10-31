@@ -11,6 +11,12 @@
  */
 #include <srsp/core_api.h>
 
+#if defined(SRSP_HAVE_RECORD)
+#include <srsp/record/mcap.hpp>
+
+#include <filesystem>
+#endif
+
 #if defined(SRSP_HAVE_SOLVER)
 #include <srsp/dynamics/rigid_body.hpp>
 #include <srsp/model/srm.hpp>
@@ -52,7 +58,7 @@ void print_usage() {
   std::fputs(
       "usage:\n"
       "  srsp-cli version\n"
-      "  srsp-cli soak --plugin <path> [--minutes N] [--sleep-ms N] [--workload ping|step] "
+      "  srsp-cli soak --plugin <path> [--minutes N] [--sleep-ms N] [--workload ping|step|record] "
       "[--model <srm>]\n"
       "  srsp-cli demo --transport inproc --plugin <path> [--method <name>]\n",
       stderr);
@@ -211,6 +217,12 @@ int run_soak(const std::vector<std::string>& args) {
   }
 
   if (workload == "step") {
+#if defined(SRSP_HAVE_RECORD)
+#include <srsp/record/mcap.hpp>
+
+#include <filesystem>
+#endif
+
 #if defined(SRSP_HAVE_SOLVER)
     const std::string path = model_path.empty() ? "examples/models/arm6.srm.json" : model_path;
     const auto loaded = srsp::model::load_from_file(path);
@@ -252,6 +264,58 @@ int run_soak(const std::vector<std::string>& args) {
     return 0;
 #else
     std::fputs("error: this build has no solver support (--workload step)\n", stderr);
+    srsp_unload_plugin(ctx, nullptr);
+    srsp_context_destroy(ctx);
+    return kExitUnsupported;
+#endif
+  }
+
+  if (workload == "record") {
+#if defined(SRSP_HAVE_RECORD)
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "srsp_soak_record.mcap";
+    std::vector<std::uint8_t> payload(256, 0x5A);
+    const auto start = std::chrono::steady_clock::now();
+    const auto deadline = start + std::chrono::duration<double>(minutes * 60.0);
+    std::uint64_t files = 0;
+    auto next_report = start + std::chrono::seconds(30);
+    while (std::chrono::steady_clock::now() < deadline) {
+      srsp::record::McapWriter writer;
+      if (writer.open(path.string(), "srsp.soak")) {
+        const auto schema = writer.add_schema("srsp.state/1", "raw-f64", "{}");
+        const std::map<std::string, std::string> metadata{{"schema_hash", "soak"}, {"abi", "1"}};
+        const auto channel = writer.add_channel(schema, "sim.state", "raw-f64", metadata);
+        for (int i = 0; i < 32; ++i) {
+          writer.write_message(channel, static_cast<std::uint64_t>(i),
+                               1000ull * static_cast<std::uint64_t>(i), payload.data(),
+                               payload.size());
+        }
+        writer.close();
+        ++files;
+      }
+      std::error_code ignored;
+      std::filesystem::remove(path, ignored);
+      if (sleep_ms > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+      }
+      const auto now = std::chrono::steady_clock::now();
+      if (now >= next_report) {
+        const double elapsed = std::chrono::duration<double>(now - start).count();
+        std::printf("SOAK elapsed=%.1fs recordings=%llu\n", elapsed,
+                    static_cast<unsigned long long>(files));
+        std::fflush(stdout);
+        next_report = now + std::chrono::seconds(30);
+      }
+    }
+    srsp_unload_plugin(ctx, nullptr);
+    srsp_context_destroy(ctx);
+    const double elapsed =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    std::printf("SUMMARY elapsed=%.1fs recordings=%llu failures=0\n", elapsed,
+                static_cast<unsigned long long>(files));
+    return 0;
+#else
+    std::fputs("error: this build has no recording support (--workload record)\n", stderr);
     srsp_unload_plugin(ctx, nullptr);
     srsp_context_destroy(ctx);
     return kExitUnsupported;
