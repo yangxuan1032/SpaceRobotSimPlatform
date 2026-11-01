@@ -2,6 +2,9 @@
  * @file test_mcap.cpp
  * @brief Unit tests for the MCAP subset writer/reader and state hashing.
  */
+#include <srsp/core/blob.hpp>
+#include <srsp/record/blob_recorder.hpp>
+#include <srsp/record/blob_ref_codec.hpp>
 #include <srsp/record/mcap.hpp>
 #include <srsp/record/state_hash.hpp>
 
@@ -11,6 +14,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdio>
+#include <cstdlib>
 
 namespace {
 
@@ -48,7 +52,9 @@ TEST_CASE("mcap round-trips messages", "[mcap]") {
   CHECK(reader.messages()[1].log_time_ns == 2000u);
   CHECK(std::string(reader.messages()[0].data.begin(), reader.messages()[0].data.end()) ==
         "{\"step\":1}");
-  std::filesystem::remove(path);
+  if (std::getenv("SRSP_KEEP_MCAP") == nullptr) {
+    std::filesystem::remove(path);
+  }
 }
 
 TEST_CASE("mcap rejects a file with a broken magic", "[mcap]") {
@@ -63,7 +69,9 @@ TEST_CASE("mcap rejects a file with a broken magic", "[mcap]") {
   srsp::record::McapReader reader;
   CHECK_FALSE(reader.open(path));
   CHECK(reader.error().find("magic") != std::string::npos);
-  std::filesystem::remove(path);
+  if (std::getenv("SRSP_KEEP_MCAP") == nullptr) {
+    std::filesystem::remove(path);
+  }
 }
 
 TEST_CASE("state hashing is stable and distinguishes states", "[mcap]") {
@@ -100,5 +108,121 @@ TEST_CASE("mcap preserves channel metadata", "[mcap]") {
   CHECK(metadata.size() == 2u);
   CHECK(metadata.at("schema_hash") == "0123456789abcdef");
   CHECK(metadata.at("abi") == "1");
-  std::filesystem::remove(path);
+  if (std::getenv("SRSP_KEEP_MCAP") == nullptr) {
+    std::filesystem::remove(path);
+  }
+}
+TEST_CASE("mcap stores blob attachments with metadata", "[mcap]") {
+  const std::string path = temp_path("srsp_mcap_blob.mcap");
+  const std::vector<std::uint8_t> payload{0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03};
+  {
+    srsp::record::McapWriter writer;
+    REQUIRE(writer.open(path, "srsp.test"));
+    const auto schema = writer.add_schema("srsp.state/1", "raw-f64", "{}");
+    const auto channel = writer.add_channel(schema, "sim.state", "raw-f64");
+    REQUIRE(writer.write_message(channel, 1, 5000, payload.data(), payload.size()));
+    REQUIRE(writer.add_attachment("blob/7", 5000, "application/octet-stream", payload.data(),
+                                  payload.size()));
+    REQUIRE(writer.add_metadata("blob/7", {{"blob_generation", "3"}, {"schema_hash", "abc"}}));
+    REQUIRE(writer.close());
+  }
+
+  srsp::record::McapReader reader;
+  REQUIRE(reader.open(path));
+  REQUIRE(reader.attachments().size() == 1u);
+  const auto& attachment = reader.attachments()[0];
+  CHECK(attachment.name == "blob/7");
+  CHECK(attachment.log_time_ns == 5000u);
+  CHECK(attachment.data == payload);
+
+  REQUIRE(reader.metadata().count("blob/7") == 1u);
+  CHECK(reader.metadata().at("blob/7").at("blob_generation") == "3");
+  CHECK(reader.metadata().at("blob/7").at("schema_hash") == "abc");
+  if (std::getenv("SRSP_KEEP_MCAP") == nullptr) {
+    std::filesystem::remove(path);
+  }
+}
+TEST_CASE("blob recorder writes and releases", "[mcap][blob]") {
+  const std::string path = temp_path("srsp_blob_recorder.mcap");
+  srsp::core::BlobStore store;
+  const auto ref = store.store({1, 2, 3, 4});
+
+  {
+    srsp::record::McapWriter writer;
+    REQUIRE(writer.open(path, "srsp.test"));
+    srsp::record::BlobRecorder recorder(writer, store);
+    REQUIRE(recorder.write(ref, 1000));
+    CHECK(recorder.count() == 1u);
+    CHECK(store.size() == 0u);  // reference released after the attachment landed
+    REQUIRE(writer.close());
+  }
+
+  srsp::record::McapReader reader;
+  REQUIRE(reader.open(path));
+  REQUIRE(reader.attachments().size() == 1u);
+  CHECK(reader.attachments()[0].name == "blob/" + std::to_string(ref.id));
+  CHECK(reader.metadata().at(reader.attachments()[0].name).at("blob_generation") ==
+        std::to_string(ref.generation));
+  if (std::getenv("SRSP_KEEP_MCAP") == nullptr) {
+    std::filesystem::remove(path);
+  }
+}
+
+TEST_CASE("blob recorder refuses oversized payloads", "[mcap][blob]") {
+  const std::string path = temp_path("srsp_blob_limits.mcap");
+  srsp::core::BlobStore store;
+  const auto ref = store.store(std::vector<std::uint8_t>(8, 0x5A));
+
+  srsp::record::McapWriter writer;
+  REQUIRE(writer.open(path, "srsp.test"));
+  srsp::record::BlobLimits limits;
+  limits.max_blob_bytes = 4;
+  srsp::record::BlobRecorder recorder(writer, store, limits);
+  CHECK_FALSE(recorder.write(ref, 1));
+  CHECK(recorder.error().find("max_blob_bytes") != std::string::npos);
+  CHECK(store.size() == 1u);  // nothing was released on failure
+  REQUIRE(writer.close());
+  if (std::getenv("SRSP_KEEP_MCAP") == nullptr) {
+    std::filesystem::remove(path);
+  }
+}
+
+TEST_CASE("blob recorder rejects stale references", "[mcap][blob]") {
+  const std::string path = temp_path("srsp_blob_stale.mcap");
+  srsp::core::BlobStore store;
+  const auto ref = store.store({9, 9});
+  store.release(ref);
+
+  srsp::record::McapWriter writer;
+  REQUIRE(writer.open(path, "srsp.test"));
+  srsp::record::BlobRecorder recorder(writer, store);
+  CHECK_FALSE(recorder.write(ref, 1));
+  CHECK(recorder.error().find("stale") != std::string::npos);
+  REQUIRE(writer.close());
+  if (std::getenv("SRSP_KEEP_MCAP") == nullptr) {
+    std::filesystem::remove(path);
+  }
+}
+TEST_CASE("blobref wire format round-trips", "[mcap][blob]") {
+  const srsp::core::BlobRef ref{42, 7, 1024, 0};
+  std::uint8_t wire[srsp::record::kBlobRefWireSize]{};
+  srsp::record::encode_blob_ref(ref, wire);
+  CHECK(wire[0] == 42);
+  CHECK(wire[8] == 7);
+
+  srsp::core::BlobRef decoded{};
+  REQUIRE(srsp::record::decode_blob_ref(wire, sizeof(wire), &decoded));
+  CHECK(decoded.id == ref.id);
+  CHECK(decoded.generation == ref.generation);
+  CHECK(decoded.size_bytes == ref.size_bytes);
+  CHECK(decoded.flags == ref.flags);
+}
+
+TEST_CASE("blobref decoder rejects short and invalid input", "[mcap][blob]") {
+  std::uint8_t wire[srsp::record::kBlobRefWireSize]{};
+  srsp::core::BlobRef out{};
+  CHECK_FALSE(srsp::record::decode_blob_ref(wire, srsp::record::kBlobRefWireSize - 1, &out));
+
+  std::uint8_t zeros[srsp::record::kBlobRefWireSize]{};
+  CHECK_FALSE(srsp::record::decode_blob_ref(zeros, sizeof(zeros), &out));
 }

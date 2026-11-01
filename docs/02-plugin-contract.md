@@ -660,6 +660,14 @@ BlobRef {
 3. sidecar 传输时序列化为“共享内存句柄 + 偏移 + 长度 + generation”，不传裸指针；
 4. 录制器获得的是 lease 拷贝，落盘完成后再 release。
 
+### 17.1 录制形式（D4 已决，2026-11-01）
+
+- 载荷以 **MCAP Attachment** 记录写入：`name = "blob/<id>"`、`media_type = "application/octet-stream"`、`log_time` 与状态消息同一时钟；
+- 引用通道 `sim.blobref`：`u64 id, u64 generation, u64 size, u32 flags`（小端），与 `sim.state` 同时间轴对齐；
+- 元数据写入独立 **Metadata** 记录（键：`blob_generation`、`schema_hash`），不塞进 Attachment；
+- 回放：按 `t_tai_ns` 找引用与附件；附件缺失或 `generation` 不符时**告警并跳过**，不中断回放；
+- 生命周期：写入侧持有引用，附件落盘后 `release()`；单文件上限默认 256 MiB。
+
 ## 18. Schema Registry 与 schema hash
 
 - **schema 版本独立于 ABI 版本**：ABI 用 `struct_size` + 次版本；schema 用自身 `$id`/版本字段；

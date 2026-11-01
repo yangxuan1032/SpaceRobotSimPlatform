@@ -19,6 +19,8 @@ constexpr std::uint8_t kOpFooter = 0x02;
 constexpr std::uint8_t kOpSchema = 0x03;
 constexpr std::uint8_t kOpChannel = 0x04;
 constexpr std::uint8_t kOpMessage = 0x05;
+constexpr std::uint8_t kOpAttachment = 0x09;
+constexpr std::uint8_t kOpMetadata = 0x0C;
 constexpr std::uint8_t kOpDataEnd = 0x0F;
 
 void put_u8(std::vector<std::uint8_t>& out, std::uint8_t value) {
@@ -99,6 +101,8 @@ std::uint32_t McapWriter::add_schema(const std::string& name, const std::string&
   if (!write_record(kOpSchema, payload)) {
     return 0;
   }
+  ++schema_count_;
+  schemas_.push_back(SchemaEntry{schema_id, name, encoding, data});
   // Schema ids are tracked through the channel table; store the pending id.
   pending_schema_id_ = schema_id;
   pending_schema_name_ = name;
@@ -148,6 +152,57 @@ bool McapWriter::write_message(std::uint32_t channel_id, std::uint64_t sequence,
     return false;
   }
   ++messages_;
+  if (!has_time_) {
+    first_time_ = log_time_ns;
+    last_time_ = log_time_ns;
+    has_time_ = true;
+  } else {
+    first_time_ = std::min(first_time_, log_time_ns);
+    last_time_ = std::max(last_time_, log_time_ns);
+  }
+  return true;
+}
+
+bool McapWriter::add_attachment(const std::string& name, std::uint64_t log_time_ns,
+                                const std::string& media_type, const void* data, std::size_t size) {
+  if (!open_ || data == nullptr) {
+    return false;
+  }
+  const std::uint64_t record_offset = buffer_.size();
+  std::vector<std::uint8_t> payload;
+  put_u64(payload, log_time_ns);  // log_time
+  put_u64(payload, log_time_ns);  // create_time
+  put_string(payload, name);
+  put_string(payload, media_type);
+  put_u64(payload, static_cast<std::uint64_t>(size));
+  const auto* bytes = static_cast<const std::uint8_t*>(data);
+  payload.insert(payload.end(), bytes, bytes + size);
+  put_u32(payload, 0);  // crc: not computed in the subset
+  if (!write_record(kOpAttachment, payload)) {
+    return false;
+  }
+  attachment_entries_.push_back(
+      AttachmentEntry{record_offset, 9 + payload.size(), log_time_ns, size, name, media_type});
+  return true;
+}
+
+bool McapWriter::add_metadata(const std::string& name,
+                              const std::map<std::string, std::string>& entries) {
+  if (!open_) {
+    return false;
+  }
+  const std::uint64_t record_offset = buffer_.size();
+  std::vector<std::uint8_t> payload;
+  put_string(payload, name);
+  put_u32(payload, static_cast<std::uint32_t>(entries.size()));
+  for (const auto& [key, value] : entries) {
+    put_string(payload, key);
+    put_string(payload, value);
+  }
+  if (!write_record(kOpMetadata, payload)) {
+    return false;
+  }
+  metadata_entries_.push_back(MetadataEntry{record_offset, 9 + payload.size(), name});
   return true;
 }
 
@@ -156,19 +211,9 @@ bool McapWriter::close() {
     return false;
   }
 
-  // Records must appear as: magic, header, schema/channel/message, data end,
-  // footer, magic. The header is built last but inserted first.
   std::vector<std::uint8_t> header_payload;
   put_string(header_payload, profile_);
   put_string(header_payload, "srsp-mcap/0.1");
-
-  std::vector<std::uint8_t> data_end;
-  put_u32(data_end, 0);  // data_section_crc: not computed
-
-  std::vector<std::uint8_t> footer;
-  put_u64(footer, 0);  // summary_start: no summary
-  put_u64(footer, 0);  // summary_offset_start
-  put_u32(footer, 0);  // summary_crc
 
   const auto encode = [](std::uint8_t opcode, const std::vector<std::uint8_t>& payload) {
     std::vector<std::uint8_t> record;
@@ -180,6 +225,102 @@ bool McapWriter::close() {
     return record;
   };
 
+  // Absolute offsets: magic + header record + everything written so far.
+  const std::uint64_t base = 8ull + 9ull + header_payload.size();
+  std::vector<std::uint8_t> summary;
+  std::uint64_t cursor = base + buffer_.size() + 13ull;  // past the DataEnd record
+
+  struct Group {
+    std::uint8_t opcode = 0;
+    std::uint64_t start = 0;
+    std::uint64_t length = 0;
+  };
+  std::vector<Group> groups;
+  const auto append = [&](std::uint8_t opcode, const std::vector<std::uint8_t>& payload) {
+    const std::vector<std::uint8_t> record = encode(opcode, payload);
+    groups.push_back(Group{opcode, cursor, record.size()});
+    summary.insert(summary.end(), record.begin(), record.end());
+    cursor += record.size();
+  };
+
+  for (const auto& schema : schemas_) {
+    std::vector<std::uint8_t> payload;
+    put_u16(payload, static_cast<std::uint16_t>(schema.id));
+    put_string(payload, schema.name);
+    put_string(payload, schema.encoding);
+    put_u32(payload, static_cast<std::uint32_t>(schema.data.size()));
+    payload.insert(payload.end(), schema.data.begin(), schema.data.end());
+    append(0x03u, payload);
+  }
+  for (const auto& channel : channels_) {
+    std::vector<std::uint8_t> payload;
+    put_u16(payload, static_cast<std::uint16_t>(channel.id));
+    put_u16(payload, static_cast<std::uint16_t>(channel.schema_id));
+    put_string(payload, channel.topic);
+    put_string(payload, channel.message_encoding);
+    put_u32(payload, static_cast<std::uint32_t>(channel.metadata.size()));
+    for (const auto& [key, value] : channel.metadata) {
+      put_string(payload, key);
+      put_string(payload, value);
+    }
+    append(0x04u, payload);
+  }
+
+  std::vector<std::uint8_t> statistics;
+  put_u64(statistics, messages_);
+  put_u16(statistics, schema_count_);
+  put_u32(statistics, static_cast<std::uint32_t>(channels_.size()));
+  put_u32(statistics, static_cast<std::uint32_t>(attachment_entries_.size()));
+  put_u32(statistics, static_cast<std::uint32_t>(metadata_entries_.size()));
+  put_u32(statistics, 0);  // chunk_count
+  put_u64(statistics, first_time_);
+  put_u64(statistics, last_time_);
+  put_u32(statistics, 0);     // channel_message_counts: empty map
+  append(0x0Bu, statistics);  // Statistics
+
+  std::vector<std::uint8_t> attachment_index;
+  put_u32(attachment_index, static_cast<std::uint32_t>(attachment_entries_.size()));
+  for (const auto& entry : attachment_entries_) {
+    put_u64(attachment_index, base + entry.offset);
+    put_u64(attachment_index, entry.length);
+    put_u64(attachment_index, entry.log_time_ns);
+    put_u64(attachment_index, entry.log_time_ns);  // create_time
+    put_u64(attachment_index, entry.data_size);
+    put_string(attachment_index, entry.name);
+    put_string(attachment_index, entry.media_type);
+  }
+  append(0x0Au, attachment_index);  // AttachmentIndex
+
+  std::vector<std::uint8_t> metadata_index;
+  put_u32(metadata_index, static_cast<std::uint32_t>(metadata_entries_.size()));
+  for (const auto& entry : metadata_entries_) {
+    put_u64(metadata_index, base + entry.offset);
+    put_u64(metadata_index, entry.length);
+    put_string(metadata_index, entry.name);
+  }
+  append(0x0Du, metadata_index);  // MetadataIndex
+
+  const std::uint64_t summary_start = base + buffer_.size() + 13ull;
+  const std::uint64_t summary_offset_start = cursor;
+
+  std::vector<std::uint8_t> summary_offsets;
+  put_u32(summary_offsets, static_cast<std::uint32_t>(groups.size()));
+  for (const auto& group : groups) {
+    summary_offsets.push_back(group.opcode);
+    put_u64(summary_offsets, group.start);
+    put_u64(summary_offsets, group.length);
+  }
+  const std::vector<std::uint8_t> offset_record = encode(0x0Eu, summary_offsets);
+  summary.insert(summary.end(), offset_record.begin(), offset_record.end());
+
+  std::vector<std::uint8_t> footer;
+  put_u64(footer, summary_start);
+  put_u64(footer, summary_offset_start);
+  put_u32(footer, 0);  // summary_crc: not computed
+
+  std::vector<std::uint8_t> data_end;
+  put_u32(data_end, 0);  // data_section_crc: not computed
+
   std::vector<std::uint8_t> file;
   file.insert(file.end(), std::begin(kMagic), std::end(kMagic));
   const std::vector<std::uint8_t> header_record = encode(kOpHeader, header_payload);
@@ -187,6 +328,7 @@ bool McapWriter::close() {
   file.insert(file.end(), buffer_.begin(), buffer_.end());
   const std::vector<std::uint8_t> end_record = encode(kOpDataEnd, data_end);
   file.insert(file.end(), end_record.begin(), end_record.end());
+  file.insert(file.end(), summary.begin(), summary.end());
   const std::vector<std::uint8_t> footer_record = encode(kOpFooter, footer);
   file.insert(file.end(), footer_record.begin(), footer_record.end());
   file.insert(file.end(), std::begin(kMagic), std::end(kMagic));
@@ -232,6 +374,15 @@ bool McapReader::open(const std::string& path) {
       return false;
     }
     const std::uint8_t* payload = file.data() + offset;
+    if (opcode == kOpDataEnd) {
+      in_summary_ = true;
+    }
+    // The summary repeats schema/channel records for indexing; skip them so the
+    // data view is not duplicated.
+    if (in_summary_ && (opcode == kOpSchema || opcode == kOpChannel || opcode == kOpMessage)) {
+      offset += length;
+      continue;
+    }
     if (opcode == kOpHeader) {
       std::size_t cursor = 0;
       const std::uint32_t profile_size = read_u32(payload + cursor);
@@ -265,6 +416,43 @@ bool McapReader::open(const std::string& path) {
         info.metadata.emplace(std::move(key), std::move(value));
       }
       channels_.push_back(std::move(info));
+    } else if (opcode == kOpAttachment) {
+      Attachment attachment;
+      attachment.log_time_ns = read_u64(payload);
+      std::size_t cursor = 16;  // log_time + create_time
+      const std::uint32_t name_size = read_u32(payload + cursor);
+      cursor += 4;
+      attachment.name.assign(reinterpret_cast<const char*>(payload + cursor), name_size);
+      cursor += name_size;
+      const std::uint32_t media_size = read_u32(payload + cursor);
+      cursor += 4;
+      attachment.media_type.assign(reinterpret_cast<const char*>(payload + cursor), media_size);
+      cursor += media_size;
+      const std::uint64_t data_size = read_u64(payload + cursor);
+      cursor += 8;
+      attachment.data.assign(payload + cursor, payload + cursor + data_size);
+      attachments_.push_back(std::move(attachment));
+    } else if (opcode == kOpMetadata) {
+      std::size_t cursor = 0;
+      const std::uint32_t name_size = read_u32(payload + cursor);
+      cursor += 4;
+      std::string name(reinterpret_cast<const char*>(payload + cursor), name_size);
+      cursor += name_size;
+      const std::uint32_t count = read_u32(payload + cursor);
+      cursor += 4;
+      std::map<std::string, std::string> entries;
+      for (std::uint32_t i = 0; i < count; ++i) {
+        const std::uint32_t key_size = read_u32(payload + cursor);
+        cursor += 4;
+        std::string key(reinterpret_cast<const char*>(payload + cursor), key_size);
+        cursor += key_size;
+        const std::uint32_t value_size = read_u32(payload + cursor);
+        cursor += 4;
+        std::string value(reinterpret_cast<const char*>(payload + cursor), value_size);
+        cursor += value_size;
+        entries.emplace(std::move(key), std::move(value));
+      }
+      metadata_.emplace(std::move(name), std::move(entries));
     } else if (opcode == kOpMessage) {
       Message message;
       message.channel_id = read_u16(payload);
