@@ -147,3 +147,56 @@ TEST_CASE("rhi renders scene boxes through the mesh path", "[render_rhi]") {
   }
   renderer.shutdown();
 }
+TEST_CASE("rhi renders the earth sphere", "[render_rhi]") {
+  RhiRenderer renderer;
+  REQUIRE(renderer.initialize(nullptr, Viewport{256, 256}, nullptr));
+
+  srsp::render::Scene scene{};
+  scene.has_earth = true;
+  scene.earth.position_m[0] = 0.0;
+  scene.earth.position_m[1] = 0.0;
+  scene.earth.position_m[2] = 0.0;
+  scene.earth.radius_m = 1.0;
+  scene.earth.color[0] = 0.15f;
+  scene.earth.color[1] = 0.35f;
+  scene.earth.color[2] = 0.75f;
+  renderer.set_scene(scene);
+  REQUIRE(renderer.render_frame());
+
+  if (renderer.backend_name() == "d3d11") {
+    const QImage image = renderer.readback();
+    REQUIRE_FALSE(image.isNull());
+    int foreground = 0;
+    for (int y = 0; y < image.height(); ++y) {
+      for (int x = 0; x < image.width(); ++x) {
+        if (image.pixelColor(x, y) != QColor(8, 10, 16)) {
+          ++foreground;
+        }
+      }
+    }
+    INFO("foreground=" << foreground);
+    CHECK(foreground > 1000);
+  }
+  renderer.shutdown();
+}
+TEST_CASE("rhi draws the star field", "[render_rhi]") {
+  RhiRenderer renderer;
+  REQUIRE(renderer.initialize(nullptr, Viewport{256, 256}, nullptr));
+  REQUIRE(renderer.render_frame());
+
+  if (renderer.backend_name() == "d3d11") {
+    const QImage image = renderer.readback();
+    REQUIRE_FALSE(image.isNull());
+    int lit = 0;
+    for (int y = 0; y < image.height(); ++y) {
+      for (int x = 0; x < image.width(); ++x) {
+        if (image.pixelColor(x, y) != QColor(8, 10, 16)) {
+          ++lit;
+        }
+      }
+    }
+    INFO("lit pixels=" << lit);
+    CHECK(lit > 20);
+  }
+  renderer.shutdown();
+}

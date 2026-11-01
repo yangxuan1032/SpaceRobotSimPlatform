@@ -22,6 +22,8 @@ namespace srsp::render {
 namespace {
 
 constexpr int kMinViewport = 1;
+/// Dynamic vertex buffer capacity: bodies plus one planet, in floats.
+constexpr quint32 kVertexCapacityFloats = 400000;
 constexpr int kSlices = 32;
 constexpr int kStacks = 16;
 
@@ -78,6 +80,52 @@ std::vector<std::uint16_t> make_sphere_indices() {
   return indices;
 }
 
+/// Appends a world-space UV sphere as non-indexed triangles.
+void append_sphere_world(const Sphere& body, const double sun[3], double ambient,
+                         std::vector<float>& out) {
+  const int slices = 24;
+  const int stacks = 12;
+  const double radius = body.radius_m;
+  const auto point = [&](int stack, int slice, double xyz[3]) {
+    const double phi = 3.14159265358979323846 * static_cast<double>(stack) / stacks;
+    const double theta = 2.0 * 3.14159265358979323846 * static_cast<double>(slice) / slices;
+    xyz[0] = body.position_m[0] + radius * std::sin(phi) * std::cos(theta);
+    xyz[1] = body.position_m[1] + radius * std::cos(phi);
+    xyz[2] = body.position_m[2] + radius * std::sin(phi) * std::sin(theta);
+  };
+
+  for (int stack = 0; stack < stacks; ++stack) {
+    for (int slice = 0; slice < slices; ++slice) {
+      double a[3];
+      double b[3];
+      double cpt[3];
+      double d[3];
+      point(stack, slice, a);
+      point(stack + 1, slice, b);
+      point(stack, slice + 1, cpt);
+      point(stack + 1, slice + 1, d);
+      const auto lit = [&](const double* p) {
+        const double nx = (p[0] - body.position_m[0]) / radius;
+        const double ny = (p[1] - body.position_m[1]) / radius;
+        const double nz = (p[2] - body.position_m[2]) / radius;
+        const double d = nx * sun[0] + ny * sun[1] + nz * sun[2];
+        return static_cast<float>((ambient + (1.0 - ambient) * std::max(0.0, d)));
+      };
+      const float s0 = lit(a);
+      const float s1 = lit(b);
+      const double* quad[6] = {a, b, cpt, cpt, b, d};
+      const float shades[6] = {s0, s1, s0, s0, s1, s1};
+      for (int i = 0; i < 6; ++i) {
+        out.push_back(static_cast<float>(quad[i][0]));
+        out.push_back(static_cast<float>(quad[i][1]));
+        out.push_back(static_cast<float>(quad[i][2]));
+        out.push_back(body.color[0] * shades[i]);
+        out.push_back(body.color[1] * shades[i]);
+        out.push_back(body.color[2] * shades[i]);
+      }
+    }
+  }
+}
 /// Appends one oriented box (36 vertices, six shaded faces) in world space.
 void append_box(const Sphere& body, std::vector<float>& out) {
   const double* q = body.orientation;
@@ -141,6 +189,31 @@ void append_box(const Sphere& body, std::vector<float>& out) {
     }
   }
 }
+/// Deterministic star field: 400 points on a sphere far outside the scene.
+std::vector<float> make_star_vertices() {
+  std::vector<float> data;
+  data.reserve(400 * 6);
+  std::uint32_t state = 0x12345678u;
+  const auto next = [&state]() {
+    state = state * 1664525u + 1013904223u;
+    return static_cast<double>(state) / 4294967296.0;
+  };
+  for (int i = 0; i < 400; ++i) {
+    const double z = 2.0 * next() - 1.0;
+    const double phi = 2.0 * 3.14159265358979323846 * next();
+    const double r = std::sqrt(std::max(0.0, 1.0 - z * z));
+    const double radius = 1.0e6;
+    const float brightness = static_cast<float>(0.4 + 0.6 * next());
+    data.push_back(static_cast<float>(radius * r * std::cos(phi)));
+    data.push_back(static_cast<float>(radius * r * std::sin(phi)));
+    data.push_back(static_cast<float>(radius * z));
+    data.push_back(brightness);
+    data.push_back(brightness);
+    data.push_back(brightness);
+  }
+  return data;
+}
+
 /// Perspective + look-at matrix for the renderer camera.
 QMatrix4x4 build_mvp(const CameraView& camera, const Viewport& viewport) {
   QMatrix4x4 view;
@@ -299,7 +372,7 @@ bool RhiRenderer::create_offscreen() {
                       static_cast<quint32>(indices.size() * sizeof(std::uint16_t))));
   uniform_buffer_.reset(rhi_->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, 64));
   box_buffer_.reset(rhi_->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer,
-                                    36u * 6u * 64u * sizeof(float)));
+                                    kVertexCapacityFloats * sizeof(float)));
   if (box_buffer_ == nullptr || !box_buffer_->create()) {
     return false;
   }
@@ -334,11 +407,32 @@ bool RhiRenderer::create_offscreen() {
     return false;
   }
 
+  const std::vector<float> stars = make_star_vertices();
+  star_buffer_.reset(rhi_->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::VertexBuffer,
+                                     static_cast<quint32>(stars.size() * sizeof(float))));
+  if (!star_buffer_->create()) {
+    return false;
+  }
+
+  star_pipeline_.reset(rhi_->newGraphicsPipeline());
+  star_pipeline_->setShaderStages(
+      {{QRhiShaderStage::Vertex, vertex_shader}, {QRhiShaderStage::Fragment, fragment_shader}});
+  star_pipeline_->setVertexInputLayout(layout);
+  star_pipeline_->setShaderResourceBindings(bindings_.get());
+  star_pipeline_->setRenderPassDescriptor(pass_.get());
+  star_pipeline_->setTopology(QRhiGraphicsPipeline::Points);
+  star_pipeline_->setDepthTest(false);
+  star_pipeline_->setDepthWrite(false);
+  if (!star_pipeline_->create()) {
+    star_pipeline_.reset();
+  }
+
   QRhiCommandBuffer* cb = nullptr;
   if (rhi_->beginOffscreenFrame(&cb) == QRhi::FrameOpSuccess && cb != nullptr) {
     QRhiResourceUpdateBatch* upload = rhi_->nextResourceUpdateBatch();
     upload->uploadStaticBuffer(vertex_buffer_.get(), vertices.data());
     upload->uploadStaticBuffer(index_buffer_.get(), indices.data());
+    upload->uploadStaticBuffer(star_buffer_.get(), stars.data());
     cb->resourceUpdate(upload);
     rhi_->endOffscreenFrame();
   }
@@ -350,6 +444,8 @@ void RhiRenderer::destroy_offscreen() {
   pipeline_.reset();
   bindings_.reset();
   uniform_buffer_.reset();
+  star_pipeline_.reset();
+  star_buffer_.reset();
   index_buffer_.reset();
   vertex_buffer_.reset();
   readback_.reset();
@@ -380,13 +476,17 @@ bool RhiRenderer::render_frame(bool capture) {
   }
 
   std::vector<float> box_vertices;
+  if (scene_.has_earth) {
+    const double ambient = scene_.eclipse ? 0.08 : 0.18;
+    append_sphere_world(scene_.earth, scene_.sun_direction, ambient, box_vertices);
+  }
   if (!scene_.bodies.empty()) {
-    box_vertices.reserve(scene_.bodies.size() * 36u * 6u);
+    box_vertices.reserve(box_vertices.size() + scene_.bodies.size() * 36u * 6u);
     for (const auto& body : scene_.bodies) {
       append_box(body, box_vertices);
     }
     const quint32 bytes = static_cast<quint32>(box_vertices.size() * sizeof(float));
-    if (bytes <= 36u * 6u * 64u * sizeof(float)) {
+    if (bytes <= kVertexCapacityFloats * sizeof(float)) {
       updates->updateDynamicBuffer(box_buffer_.get(), 0, bytes, box_vertices.data());
       box_vertices_ = static_cast<std::uint32_t>(box_vertices.size() / 6u);
     }
@@ -394,7 +494,16 @@ bool RhiRenderer::render_frame(bool capture) {
 
   const QColor clear(8, 10, 16);
   cb->beginPass(target_.get(), clear, {1.0f, 0}, updates);
-  if (!scene_.bodies.empty() && box_vertices_ > 0) {
+  if (star_pipeline_ != nullptr && star_buffer_ != nullptr) {
+    cb->setGraphicsPipeline(star_pipeline_.get());
+    cb->setViewport(
+        {0.0f, 0.0f, static_cast<float>(viewport_.width), static_cast<float>(viewport_.height)});
+    cb->setShaderResources(bindings_.get());
+    const QRhiCommandBuffer::VertexInput star_input{star_buffer_.get(), 0};
+    cb->setVertexInput(0, 1, &star_input);
+    cb->draw(400);
+  }
+  if (!box_vertices.empty() && box_vertices_ > 0) {
     cb->setGraphicsPipeline(pipeline_.get());
     cb->setViewport(
         {0.0f, 0.0f, static_cast<float>(viewport_.width), static_cast<float>(viewport_.height)});

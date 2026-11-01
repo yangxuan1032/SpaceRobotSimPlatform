@@ -84,6 +84,8 @@ class RhiRenderer final : public Renderer {
   std::uint32_t box_vertices_ = 0;
   std::unique_ptr<QRhiShaderResourceBindings> bindings_;
   std::unique_ptr<QRhiGraphicsPipeline> pipeline_;
+  std::unique_ptr<QRhiBuffer> star_buffer_;
+  std::unique_ptr<QRhiGraphicsPipeline> star_pipeline_;
   std::unique_ptr<QOffscreenSurface> fallback_surface_;
   std::string backend_ = "none";
   Viewport viewport_{};
