@@ -1,6 +1,7 @@
 /**
  * @file scheduler.hpp
  * @brief Fixed-step macro-step loop skeleton.
+ * @brief_zh 固定步长宏步循环骨架。
  *
  * Sensor sampling, controller updates, force accumulation and dynamics are
  * registered by callers as the step callback; this class only owns the loop
@@ -18,10 +19,12 @@
 namespace srsp::core {
 
 /** @brief Drives the simulation clock one macro step at a time. */
+/** @brief_zh 以宏步为单位推进仿真时钟。 */
 class Scheduler {
  public:
   /**
    * @brief Callback invoked once per macro step.
+   * @brief_zh 每个宏步调用一次的回调。
    * @param step_index Zero-based index after the clock advanced.
    * @param t_ns Simulation time in TAI nanoseconds.
    */
@@ -29,6 +32,7 @@ class Scheduler {
 
   /**
    * @brief Binds a clock and an optional diagnostics sink.
+   * @brief_zh 绑定时钟与可选的诊断接收器。
    * @param clock Clock advanced by each step; must outlive the scheduler.
    * @param diagnostics Optional collector for paused/failure diagnostics.
    */
@@ -36,12 +40,14 @@ class Scheduler {
 
   /**
    * @brief Executes exactly one macro step.
+   * @brief_zh 执行恰好一个宏步。
    * @return False when the clock is paused (a debug diagnostic is emitted).
    */
   bool step(const StepCallback& on_step);
 
   /**
    * @brief Executes up to @p max_steps macro steps.
+   * @brief_zh 最多执行 max_steps 个宏步。
    * @return Number of steps actually executed; stops early when paused.
    */
   uint64_t run(uint64_t max_steps, const StepCallback& on_step);

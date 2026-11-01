@@ -15,12 +15,15 @@
 namespace srsp::dynamics {
 
 /** @brief 6x6 spatial inertia about the body origin, world frame. */
+/** @brief_zh 体原点、世界系下的 6×6 空间惯量。 */
 using SpatialInertia = Eigen::Matrix<double, 6, 6>;
 
 /** @brief 6-vector ordered [linear; angular]. */
+/** @brief_zh 6 维向量，顺序为 [线速度; 角速度]。 */
 using SpatialVector = Eigen::Matrix<double, 6, 1>;
 
 /** @brief Skew-symmetric cross-product matrix of a 3-vector. */
+/** @brief_zh 三维向量的反对称叉乘矩阵。 */
 inline Eigen::Matrix3d skew(const Eigen::Vector3d& v) {
   Eigen::Matrix3d m;
   m << 0.0, -v.z(), v.y(), v.z(), 0.0, -v.x(), -v.y(), v.x(), 0.0;

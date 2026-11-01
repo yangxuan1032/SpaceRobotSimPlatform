@@ -31,31 +31,62 @@
 6. **注释合规检查**：源码不含 CJK（见 §5）；
 7. **产出证据**：构建命令、退出码、检查结果。
 
-## 4. Doxygen 规范（强制，英文）
+## 4. Doxygen 规范（强制，英文 + 中文对照）
+
+自 2026-11-01 起，公共符号的文档注释采用**英文主注释 + 中文对照**：
 
 | 对象 | 要求 |
 |---|---|
-| 文件 | `@file` + `@brief` |
-| 结构体/类 | `@brief`；每个成员 `///<` 说明 |
-| 函数 | `@brief`、`@param[in/out]`、`@return` / `@retval`、`@note` / `@warning` |
-| 枚举 | `@brief`；每个枚举值 `///<` |
-| 宏 | `@brief`；必要时 `@warning` |
+| 文件 | `@file` + `@brief`，下接 `@brief_zh` |
+| 结构体/类 | `@brief` / `@brief_zh`；每个成员 `///< English / 中文` |
+| 函数 | `@brief`、`@param[in/out]`、`@return` / `@retval`，随后以 `@zh` 段落给出中文对照 |
+| 枚举 | `@brief` / `@brief_zh`；每个枚举值 `///< English / 中文` |
+| 宏 | `@brief` / `@brief_zh`；必要时 `@warning` / `@warning_zh` |
 
-示例：
+### 4.1 格式定义
 
 ```cpp
-/** @file plugin_host.cpp @brief Plugin loading, lifecycle and unloading. */
+/**
+ * @file mcap.cpp
+ * @brief Minimal MCAP writer and reader for the recording subset.
+ * @brief_zh 录制子集的最小 MCAP 读写实现。
+ */
 
 /**
- * @brief Loads a plugin shared library and resolves its entry point.
- * @param[in]  path  Absolute path to the library file.
- * @param[out] out   Receives the plugin vtable on success.
- * @return SRSP_OK on success, SRSP_E_NOT_FOUND if the file is missing,
- *         SRSP_E_VERSION_MISMATCH if the plugin rejects the host ABI.
- * @note The caller owns nothing here; the table lives until process exit.
+ * @brief Writes a binary attachment used for BlobRef payloads.
+ * @param[in] name Attachment name, conventionally "blob/<id>".
+ * @param[in] log_time_ns Timestamp on the same clock as the messages.
+ * @return true on success, false when the writer is closed or the write fails.
+ * @zh 写出用于 BlobRef 载荷的二进制附件。
+ * @zh_param[in] name 附件名，约定为 "blob/<id>"。
+ * @zh_param[in] log_time_ns 与消息同一时钟的时间戳。
+ * @zh 返回：成功为 true；写入器已关闭或写失败为 false。
  */
-srsp_status load_plugin(const char* path, const srsp_plugin_v1** out);
+bool add_attachment(const std::string& name, std::uint64_t log_time_ns);
 ```
+
+### 4.2 规则
+
+1. **英文在前、中文在后**，一一对应；中文不得替代英文；
+2. 中文行前缀统一为 `@brief_zh`、`@zh`、`@zh_param`、`@warning_zh`；
+3. 行内成员注释：`///< English text / 中文文本`；
+4. 英文段与中文段都遵守「解释为什么，不复述代码」；
+5. 私有实现可只写英文；**公共头文件必须双语**；
+6. 中文标点用全角，英文用半角，不在同一行混排（成员行注释除外）；
+7. Doxygen 若启用，需在 `Doxyfile` 中加别名，避免未知命令告警：
+   ```text
+   ALIASES = "brief_zh=@brief" "zh=@details" "zh_param=@param" "warning_zh=@warning"
+   ```
+
+### 4.3 变量命名与注释
+
+| 变量类型 | 注释要求 |
+|---|---|
+| 结构体成员 | 行尾 `///<` 双语，含单位（如 `m`, `rad/s`, `TAI ns`） |
+| 函数参数 | `@param[in/out]` 英文 + `@zh_param` 中文，含取值范围与单位 |
+| 局部变量 | 仅当含义不直观时注释，单行英文即可 |
+| 常量 | `///<` 说明取值理由（如预算、上限） |
+
 
 ## 5. 验收命令
 
@@ -66,9 +97,10 @@ cmake --build --preset win-ucrt64-debug
 # 2) documentation coverage (doxygen config must set WARN_IF_UNDOCUMENTED=YES)
 doxygen Doxyfile 2>&1 | Select-String "warning"
 
-# 3) comments must be English: no CJK in source files
+# 3) Chinese must appear only in the paired zh lines (brief_zh / zh / zh_param)
 Get-ChildItem api,src,plugins,apps,tests -Recurse -Include *.h,*.hpp,*.cpp,*.c |
-  Select-String -Pattern '[\u4e00-\u9fff]'
+  Select-String -Pattern '[\u4e00-\u9fff]' |
+  Where-Object { $_.Line -notmatch '_zh|///<.*/' }
 ```
 
 三条都必须干净（第 3 条无输出）。
@@ -78,8 +110,9 @@ Get-ChildItem api,src,plugins,apps,tests -Recurse -Include *.h,*.hpp,*.cpp,*.c |
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | `CMake Error: SRSP_AI_MODEL is not set` | 未注入环境 | `. .\tools\ai\Enter-AgentEnv.ps1 -Model <slug>` |
-| 注释里出现中文 | 习惯性写中文 | 改为英文；中文只写在 Markdown 文档 |
-| 公共函数缺 `@param` | 只写了 `@brief` | 补齐参数与返回值 |
+| 中文写在纯英文行 | 习惯性写中文 | 中文只放在 `_zh` 行或 `///< ... /` 后半段 |
+| 公共头只有英文 | 漏写中文对照 | 补 `@brief_zh` / `@zh` / `@zh_param` |
+| 公共函数缺 `@param` | 只写了 `@brief` | 补齐参数与返回值（中英各一份） |
 | 新增告警 | 未加 `-Wall -Wextra` 检查 | 清理后再提交 |
 
 ## 7. 产物

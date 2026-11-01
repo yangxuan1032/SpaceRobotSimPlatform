@@ -39,10 +39,10 @@
 6. 数值：SI 单位、`double`、四元数 `[x,y,z,w]`；
 7. 错误：返回 `srsp_status` / `bool` + 出参，不用异常做常规控制流。
 
-## 4. 注释
+## 4. 注释（英文 + 中文对照）
 
-1. **所有注释与提交信息用英文**（文档用中文）；
-2. 公共类型、函数、参数、返回值必须有 Doxygen：
+1. **公共符号必须双语**：英文主注释 + 中文对照（格式见 `tools/ai/skills/module-build/SKILL.md` §4）；私有实现可只写英文；提交信息只用英文；
+2. 公共类型、函数、参数、返回值必须有 Doxygen，并附中文对照：
    ```cpp
    /**
     * @brief Integrates one step with classical RK4.
@@ -50,6 +50,11 @@
     * @param v Velocity (in/out).
     * @param tau Joint torques.
     * @param dt Step size, s.
+    * @zh 使用经典 RK4 积分一步。
+    * @zh_param[in,out] q 广义坐标。
+    * @zh_param[in,out] v 广义速度。
+    * @zh_param[in] tau 关节力矩。
+    * @zh_param[in] dt 步长，单位秒。
     */
    ```
 3. 注释解释**为什么**，不复述代码；不写「increment i」这类；

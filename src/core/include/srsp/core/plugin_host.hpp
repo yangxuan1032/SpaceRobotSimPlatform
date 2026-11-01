@@ -1,6 +1,7 @@
 /**
  * @file plugin_host.hpp
  * @brief Loading, lifetime and invocation of in-process SRSP plugins.
+ * @brief_zh 进程内 SRSP 插件的加载、生命周期与调用。
  *
  * The host owns one dynamically loaded plugin library at a time. It validates
  * the ABI major version, the returned vtable and its `struct_size` before any
@@ -19,6 +20,7 @@ namespace srsp::core {
 
 /**
  * @brief Owns a loaded plugin library and forwards lifecycle calls to it.
+ * @brief_zh 持有一个已加载的插件库，并向其转发生命周期调用。
  *
  * Lifetime rules:
  * - `load()` must succeed before `init()` / `call()` / `checkpoint()` /
@@ -31,6 +33,7 @@ class PluginHost {
  public:
   /**
    * @brief Creates a host with the given kernel service table.
+   * @brief_zh 使用给定的内核服务表创建宿主。
    * @param services Host services handed to the plugin on `query`/`init`.
    */
   explicit PluginHost(srsp_host_v1 services) noexcept;
@@ -43,6 +46,7 @@ class PluginHost {
 
   /**
    * @brief Opens the library and resolves the plugin entry point.
+   * @brief_zh 打开库并解析插件入口点。
    * @param library_path Absolute or relative path to the shared library.
    * @param err Optional error details.
    * @return SRSP_OK on success; SRSP_E_NOT_FOUND if the file cannot be opened;
@@ -54,6 +58,7 @@ class PluginHost {
 
   /**
    * @brief Loads the plugin described by an SRSP manifest (`plugin.json`).
+   * @brief_zh 按 SRSP 清单（plugin.json）加载插件。
    *
    * The manifest is the source of truth for the plugin id and the ABI major
    * version; its `transport.library` entry selects the library for the current
@@ -69,22 +74,28 @@ class PluginHost {
   srsp_status load_with_manifest(std::string_view manifest_path, srsp_error* err) noexcept;
 
   /** @brief Calls `shutdown` (if initialised) and unloads the library. */
+  /** @brief_zh 调用 shutdown（若已初始化）并卸载库。 */
   void unload() noexcept;
 
   /** @brief True when a library is loaded and its vtable passed validation. */
+  /** @brief_zh 库已加载且虚表校验通过时为真。 */
   [[nodiscard]] bool loaded() const noexcept { return plugin_ != nullptr; }
 
   /** @brief True when `init()` succeeded and `shutdown` has not run yet. */
+  /** @brief_zh init() 已成功且尚未执行 shutdown 时为真。 */
   [[nodiscard]] bool initialized() const noexcept { return initialized_; }
 
   /** @brief Returns the validated vtable, or nullptr when not loaded. */
+  /** @brief_zh 返回已校验的虚表；未加载时为 nullptr。 */
   [[nodiscard]] const srsp_plugin_v1* plugin() const noexcept { return plugin_; }
 
   /** @brief Plugin id from the manifest; empty when loaded by raw path. */
+  /** @brief_zh 清单中的插件 id；按原始路径加载时为空。 */
   [[nodiscard]] const std::string& plugin_id() const noexcept { return plugin_id_; }
 
   /**
    * @brief Initialises the plugin with a JSON configuration.
+   * @brief_zh 用 JSON 配置初始化插件。
    * @param config_json UTF-8 JSON, not NUL terminated.
    * @param err Optional error details.
    */
@@ -92,6 +103,7 @@ class PluginHost {
 
   /**
    * @brief Invokes a capability method on the plugin.
+   * @brief_zh 调用插件上的能力方法。
    * @param method Stable method name, e.g. "core.ping".
    * @param request Encoded request bytes (may be empty).
    * @param response Receives a buffer allocated by the plugin.
@@ -101,9 +113,11 @@ class PluginHost {
                    srsp_error* err) noexcept;
 
   /** @brief Serialises plugin state; SRSP_E_UNSUPPORTED if not implemented. */
+  /** @brief_zh 序列化插件状态；未实现时返回 SRSP_E_UNSUPPORTED。 */
   srsp_status checkpoint(srsp_buffer* out, srsp_error* err) noexcept;
 
   /** @brief Restores plugin state; SRSP_E_UNSUPPORTED if not implemented. */
+  /** @brief_zh 恢复插件状态；未实现时返回 SRSP_E_UNSUPPORTED。 */
   srsp_status restore(srsp_bytes in, srsp_error* err) noexcept;
 
  private:
