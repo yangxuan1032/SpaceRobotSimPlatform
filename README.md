@@ -71,6 +71,9 @@
 | [04 子系统与技术选型](docs/04-subsystems-and-stack.md) | 动力学、力/接触、空间环境、传感器、渲染、UI、脚本；技术栈总表与备选对比 |
 | [05 MSYS2 开发环境](docs/05-msys2-dev-environment.md) | 安装清单、环境变量、VSCode、CMake Presets、依赖策略、CI、排错手册 |
 | [06 打包与跨平台交付](docs/06-packaging.md) | 产物矩阵、目录布局、DLL 收集、安装器、AppImage/deb、`.srpkg`、签名、冒烟 |
+| [08 插件数据交互接口](docs/08-plugin-data-interface.md) | 插件数据面：通道、线格式、BlobRef、错误约定 |
+| [09 代码与文件规范](docs/09-code-standards.md) | 命名、注释、格式、测试与提交规范 |
+| [10 VSCode 工作流](docs/10-vscode-workflow.md) | 构建/测试任务与快捷键 |
 | [07 路线图与风险](docs/07-roadmap-risks.md) | M0–M4 里程碑、出口标准、团队、风险登记、质量门禁、前两周清单 |
 
 ---

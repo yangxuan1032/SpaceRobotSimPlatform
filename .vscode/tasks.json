@@ -115,6 +115,53 @@
       "windows": { "command": "C:/msys64/ucrt64/bin/clang-format.exe" },
       "problemMatcher": [],
       "group": "none"
+    },
+    {
+      "label": "SRSP: build + test (dev loop)",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "${input:preset}"],
+      "windows": {
+        "command": "pwsh",
+        "args": [
+          "-NoProfile",
+          "-Command",
+          "C:/msys64/ucrt64/bin/cmake.exe --build --preset ${input:preset}; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; C:/msys64/ucrt64/bin/ctest.exe --preset ${input:preset} --output-on-failure"
+        ]
+      },
+      "problemMatcher": ["$gcc"],
+      "group": "test",
+      "detail": "Build then run the suite; use this as the one-key progress check"
+    },
+    {
+      "label": "SRSP: bench dynamics",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "${input:preset}", "--target", "bench_dynamics"],
+      "windows": { "command": "C:/msys64/ucrt64/bin/cmake.exe" },
+      "problemMatcher": ["$gcc"],
+      "detail": "Build the dynamics benchmark (run the binary from the build bin dir)"
+    },
+    {
+      "label": "SRSP: studio (RHI viewport)",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "${input:preset}", "--target", "srsp_studio"],
+      "windows": { "command": "C:/msys64/ucrt64/bin/cmake.exe" },
+      "problemMatcher": ["$gcc"],
+      "detail": "Build the studio; run it with --renderer rhi to use D3D11"
+    },
+    {
+      "label": "SRSP: soak (1 minute smoke)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile", "-File", "${workspaceFolder}/tools/stress/soak.ps1",
+        "-Minutes", "1", "-IntervalSec", "10", "-Workload", "record"
+      ],
+      "windows": { "command": "pwsh" },
+      "problemMatcher": [],
+      "detail": "One-minute record soak; raise -Minutes for a long run"
     }
   ],
   "inputs": [
