@@ -250,3 +250,14 @@ M0 已基本收尾（契约、内核骨架、双传输、CLI、CI）。接下来
 3. MCAP 录制与回放（`state_hash` 一致）；
 4. 空间环境（星历/光照/eclipse）与 `dynamics.rigid` 对照 Pinocchio；
 5. 补审计遗留项 D3（selection pin/score）与 D4（`Diagnostic.remedy`）。
+---
+
+## 11. 许可证
+
+本项目采用 **MIT License**，全文见 [`LICENSE`](LICENSE)。
+
+```
+Copyright (c) 2026 SRSP contributors
+```
+
+允许自由使用、修改、分发与再许可，需保留版权与许可声明；软件按「原样」提供，不附带任何明示或暗示担保。
