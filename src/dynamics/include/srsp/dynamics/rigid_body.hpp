@@ -69,6 +69,13 @@ class RigidBodyDynamics {
   /** @brief Joint-space mass matrix M(q), nv x nv, symmetric positive definite. */
   [[nodiscard]] Eigen::MatrixXd mass_matrix(const Eigen::VectorXd& q) const;
 
+  /**
+   * @brief Reference mass matrix: sums every body contribution over all dofs.
+   *
+   * Slow but direct; used to validate the optimised assembly.
+   */
+  [[nodiscard]] Eigen::MatrixXd mass_matrix_reference(const Eigen::VectorXd& q) const;
+
   /** @brief Generalised force of gravity, Q_g (nv). */
   [[nodiscard]] Eigen::VectorXd gravity_force(const Eigen::VectorXd& q) const;
 

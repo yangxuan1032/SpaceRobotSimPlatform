@@ -111,3 +111,19 @@ TEST_CASE("golden reference satisfies M a + h = tau", "[dynamics][golden]") {
     CHECK((measured - accel).norm() <= tolerance);
   }
 }
+TEST_CASE("optimised assembly matches the reference mass matrix", "[dynamics][golden]") {
+  const RigidBodyDynamics dynamics = make_chain();
+  std::mt19937 rng(20261101);
+  std::uniform_real_distribution<double> angle(-0.6, 0.6);
+
+  for (int trial = 0; trial < 5; ++trial) {
+    Eigen::VectorXd q = dynamics.neutral_configuration();
+    for (int i = 0; i < q.size(); ++i) {
+      q[i] += angle(rng);
+    }
+    const Eigen::MatrixXd fast = dynamics.mass_matrix(q);
+    const Eigen::MatrixXd reference = dynamics.mass_matrix_reference(q);
+    INFO("trial=" << trial << " max_diff=" << (fast - reference).cwiseAbs().maxCoeff());
+    CHECK(fast.isApprox(reference, 1e-10));
+  }
+}

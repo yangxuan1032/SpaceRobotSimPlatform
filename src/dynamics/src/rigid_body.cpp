@@ -232,7 +232,7 @@ Eigen::MatrixXd RigidBodyDynamics::jacobian(const Eigen::VectorXd& q,
   return compute_jacobians(q)[static_cast<std::size_t>(it->second)];
 }
 
-Eigen::MatrixXd RigidBodyDynamics::mass_matrix(const Eigen::VectorXd& q) const {
+Eigen::MatrixXd RigidBodyDynamics::mass_matrix_reference(const Eigen::VectorXd& q) const {
   const auto poses = forward_kinematics(q);
   const auto jacobians = compute_jacobians(q);
   Eigen::MatrixXd mass = Eigen::MatrixXd::Zero(nv_, nv_);
@@ -250,6 +250,58 @@ Eigen::MatrixXd RigidBodyDynamics::mass_matrix(const Eigen::VectorXd& q) const {
   return mass;
 }
 
+Eigen::MatrixXd RigidBodyDynamics::mass_matrix(const Eigen::VectorXd& q) const {
+  const auto poses = forward_kinematics(q);
+  const auto jacobians = compute_jacobians(q);
+  Eigen::MatrixXd mass = Eigen::MatrixXd::Zero(nv_, nv_);
+
+  // Ancestor dof list per body: the six base dofs plus every joint on the chain.
+  std::vector<std::vector<int>> ancestor_dofs(bodies_.size());
+  for (std::size_t i = 0; i < bodies_.size(); ++i) {
+    std::vector<int> dofs;
+    int body = static_cast<int>(i);
+    while (body > 0) {
+      const BodyState& state = bodies_[static_cast<std::size_t>(body)];
+      dofs.push_back(6 + state.joint);
+      body = state.parent;
+    }
+    for (int dof = 0; dof < 6; ++dof) {
+      dofs.push_back(dof);
+    }
+    ancestor_dofs[i] = std::move(dofs);
+  }
+
+  for (std::size_t i = 0; i < bodies_.size(); ++i) {
+    const BodyState& body = bodies_[i];
+    const auto& dofs = ancestor_dofs[i];
+    const auto count = static_cast<Eigen::Index>(dofs.size());
+
+    Eigen::MatrixXd linear(3, count);
+    Eigen::MatrixXd angular(3, count);
+    for (Eigen::Index k = 0; k < count; ++k) {
+      linear.col(k) =
+          jacobians[i].col(static_cast<Eigen::Index>(dofs[static_cast<std::size_t>(k)])).head(3);
+      angular.col(k) =
+          jacobians[i].col(static_cast<Eigen::Index>(dofs[static_cast<std::size_t>(k)])).tail(3);
+    }
+
+    const Eigen::Vector3d c = poses[i].rotation * body.com;
+    const Eigen::MatrixXd com_jac = linear - skew(c) * angular;
+    const Eigen::Matrix3d inertia_world =
+        poses[i].rotation * body.inertia * poses[i].rotation.transpose();
+
+    Eigen::MatrixXd block = Eigen::MatrixXd::Zero(count, count);
+    block.noalias() += body.mass * com_jac.transpose() * com_jac;
+    block.noalias() += angular.transpose() * inertia_world * angular;
+
+    for (Eigen::Index a = 0; a < count; ++a) {
+      for (Eigen::Index b = 0; b < count; ++b) {
+        mass(dofs[static_cast<std::size_t>(a)], dofs[static_cast<std::size_t>(b)]) += block(a, b);
+      }
+    }
+  }
+  return mass;
+}
 Eigen::VectorXd RigidBodyDynamics::gravity_force(const Eigen::VectorXd& q) const {
   const auto poses = forward_kinematics(q);
   const auto jacobians = compute_jacobians(q);
