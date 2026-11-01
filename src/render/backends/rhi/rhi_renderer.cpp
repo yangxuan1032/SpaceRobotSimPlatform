@@ -485,11 +485,21 @@ bool RhiRenderer::render_frame(bool capture) {
     for (const auto& body : scene_.bodies) {
       append_box(body, box_vertices);
     }
+  }
+  // Upload whatever the frame built (earth alone is a valid scene).
+  box_vertices_ = 0;
+  if (!box_vertices.empty()) {
     const quint32 bytes = static_cast<quint32>(box_vertices.size() * sizeof(float));
     if (bytes <= kVertexCapacityFloats * sizeof(float)) {
       updates->updateDynamicBuffer(box_buffer_.get(), 0, bytes, box_vertices.data());
       box_vertices_ = static_cast<std::uint32_t>(box_vertices.size() / 6u);
     }
+  }
+
+  if (qEnvironmentVariableIsSet("SRSP_RHI_DEBUG")) {
+    std::fprintf(stderr, "rhi: bodies=%zu has_earth=%d eclipse=%d verts=%zu drawn=%u\n",
+                 scene_.bodies.size(), scene_.has_earth ? 1 : 0, scene_.eclipse ? 1 : 0,
+                 box_vertices.size() / 6u, box_vertices_);
   }
 
   const QColor clear(8, 10, 16);

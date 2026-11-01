@@ -200,3 +200,41 @@ TEST_CASE("rhi draws the star field", "[render_rhi]") {
   }
   renderer.shutdown();
 }
+TEST_CASE("eclipse dims the earth", "[render_rhi]") {
+  RhiRenderer renderer;
+  REQUIRE(renderer.initialize(nullptr, Viewport{128, 128}, nullptr));
+  if (renderer.backend_name() != "d3d11") {
+    return;
+  }
+
+  srsp::render::Scene scene{};
+  scene.has_earth = true;
+  scene.earth.radius_m = 1.0;
+  scene.earth.color[0] = 0.15f;
+  scene.earth.color[1] = 0.35f;
+  scene.earth.color[2] = 0.75f;
+  scene.sun_direction[0] = 1.0;
+
+  const auto brightness = [&] {
+    REQUIRE(renderer.render_frame());
+    const QImage image = renderer.readback();
+    REQUIRE_FALSE(image.isNull());
+    long long sum = 0;
+    for (int y = 0; y < image.height(); ++y) {
+      for (int x = 0; x < image.width(); ++x) {
+        const QColor pixel = image.pixelColor(x, y);
+        sum += pixel.red() + pixel.green() + pixel.blue();
+      }
+    }
+    return sum;
+  };
+
+  renderer.set_scene(scene);
+  const long long lit = brightness();
+  scene.eclipse = true;
+  renderer.set_scene(scene);
+  const long long dark = brightness();
+  INFO("lit=" << lit << " dark=" << dark);
+  CHECK(dark < lit);
+  renderer.shutdown();
+}
