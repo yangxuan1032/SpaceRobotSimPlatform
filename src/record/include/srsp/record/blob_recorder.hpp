@@ -1,6 +1,7 @@
 /**
  * @file blob_recorder.hpp
  * @brief Bridges BlobStore references into MCAP attachments (D4).
+ * @brief_zh 将 BlobStore 引用桥接为 MCAP 附件（D4）。
  *
  * The recorder owns the policy that the raw writer does not: payloads above the
  * limit are refused with a reason instead of truncating, and the store reference
@@ -18,12 +19,14 @@
 namespace srsp::record {
 
 /** @brief Capacity policy for recorded blobs. */
+/** @brief_zh 录制 blob 的容量策略。 */
 struct BlobLimits {
   std::uint64_t max_blob_bytes = 256ull * 1024ull * 1024ull;
   std::uint32_t max_blobs = 4096;
 };
 
 /** @brief Writes BlobRef payloads as attachments plus a metadata record. */
+/** @brief_zh 将 BlobRef 载荷写成附件并附一条元数据记录。 */
 class BlobRecorder {
  public:
   BlobRecorder(McapWriter& writer, srsp::core::BlobStore& store, BlobLimits limits = {})
@@ -31,6 +34,7 @@ class BlobRecorder {
 
   /**
    * @brief Records @p ref's payload at @p log_time_ns.
+   * @brief_zh 在 log_time_ns 时刻记录 ref 的载荷。
    * @return False when the writer is closed, the attachment fails, or a limit
    *         is exceeded; @ref error() then explains why.
    */

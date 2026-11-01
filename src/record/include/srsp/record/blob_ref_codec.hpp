@@ -1,6 +1,7 @@
 /**
  * @file blob_ref_codec.hpp
  * @brief Wire encoding for the `sim.blobref` channel (D4).
+ * @brief_zh sim.blobref 通道的线格式编码（D4）。
  *
  * Layout (little endian, 28 bytes): u64 id, u64 generation, u64 size_bytes,
  * u32 flags. Kept explicit rather than memcpy'd so the format does not depend
@@ -18,9 +19,11 @@
 namespace srsp::record {
 
 /** @brief Encoded size of one BlobRef. */
+/** @brief_zh 单个 BlobRef 的编码字节数。 */
 constexpr std::size_t kBlobRefWireSize = 28;
 
 /** @brief Encodes @p ref into @p out (must hold kBlobRefWireSize bytes). */
+/** @brief_zh 将 ref 编码到 out（需容纳 kBlobRefWireSize 字节）。 */
 inline void encode_blob_ref(const srsp::core::BlobRef& ref, std::uint8_t* out) noexcept {
   const auto put = [&out](std::uint64_t value, std::size_t width) {
     for (std::size_t i = 0; i < width; ++i) {
@@ -36,6 +39,7 @@ inline void encode_blob_ref(const srsp::core::BlobRef& ref, std::uint8_t* out) n
 
 /**
  * @brief Decodes a BlobRef from @p data.
+ * @brief_zh 从 data 解码出 BlobRef。
  * @param size Must be at least kBlobRefWireSize.
  * @return False on a short buffer or an invalid (zero id/generation) reference.
  */

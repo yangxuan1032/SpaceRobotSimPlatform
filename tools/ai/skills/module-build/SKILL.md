@@ -33,6 +33,18 @@
 
 ## 4. Doxygen 规范（强制，英文 + 中文对照）
 
+### 4.0 适用范围（2026-11-01 明确）
+
+仅以下代码需要双语注释，其余目录保持英文单语：
+
+| 需要双语 | 不需要 |
+|---|---|
+| `src/core`、`src/model`、`src/dynamics`、`src/render`、`src/record`、`src/bridge` | `apps/`、`bench/`、`tests/`、`tools/` |
+| `api/include`（C ABI 表面） | `deepseek/ModuleTest/`（测试） |
+| `plugins/`、`examples/`（示例插件） | 脚本、生成物 |
+| 上述目录下的公共头文件 | 上述目录下的 `.cpp` 私有实现（英文即可） |
+
+
 自 2026-11-01 起，公共符号的文档注释采用**英文主注释 + 中文对照**：
 
 | 对象 | 要求 |
@@ -111,6 +123,7 @@ Get-ChildItem api,src,plugins,apps,tests -Recurse -Include *.h,*.hpp,*.cpp,*.c |
 |---|---|---|
 | `CMake Error: SRSP_AI_MODEL is not set` | 未注入环境 | `. .\tools\ai\Enter-AgentEnv.ps1 -Model <slug>` |
 | 中文写在纯英文行 | 习惯性写中文 | 中文只放在 `_zh` 行或 `///< ... /` 后半段 |
+| 批量替换整批未生效 | 注释含英文撇号（`Qt's`、`child's`）破坏 PowerShell 单引号哈希表 | 含撇号的行用双引号键；每批 ≤ 4 文件并立即编译 |
 | 公共头只有英文 | 漏写中文对照 | 补 `@brief_zh` / `@zh` / `@zh_param` |
 | 公共函数缺 `@param` | 只写了 `@brief` | 补齐参数与返回值（中英各一份） |
 | 新增告警 | 未加 `-Wall -Wextra` 检查 | 清理后再提交 |

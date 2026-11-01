@@ -1,6 +1,7 @@
 /**
  * @file qt_renderer.hpp
  * @brief Software renderer that draws a Scene with QPainter.
+ * @brief_zh 使用 QPainter 绘制场景的软件渲染器。
  *
  * This is the M1 visual backend: it proves the renderer contract, the
  * dual-origin projection and the scene hand-off without requiring a GPU
@@ -22,6 +23,7 @@
 namespace srsp::studio {
 
 /** @brief QPainter-based renderer for orbital scenes. */
+/** @brief_zh 基于 QPainter 的轨道场景渲染器。 */
 class QtRenderer final : public srsp::render::Renderer {
  public:
   [[nodiscard]] const char* name() const noexcept override { return "qt"; }
@@ -35,14 +37,17 @@ class QtRenderer final : public srsp::render::Renderer {
   void shutdown() override;
 
   /** @brief Replaces the scene drawn by the next frame. */
+  /** @brief_zh 替换下一帧绘制的场景。 */
   void set_scene(const srsp::render::Scene& scene) { scene_ = scene; }
   [[nodiscard]] const srsp::render::Scene& scene() const noexcept { return scene_; }
   [[nodiscard]] const srsp::render::CameraView& camera() const noexcept { return camera_; }
 
   /** @brief Paints the current scene into an existing painter. */
+  /** @brief_zh 将当前场景绘制到已有的 painter。 */
   void paint(QPainter& painter, const srsp::render::Viewport& viewport) const;
 
   /** @brief Renders the current scene into a new image (offscreen/tests). */
+  /** @brief_zh 将当前场景渲染为新图像（离屏/测试用）。 */
   [[nodiscard]] QImage render_image(int width, int height) const;
 
  private:
