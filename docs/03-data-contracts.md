@@ -579,7 +579,7 @@ message SensorFrame {
 |---|---|
 | 1.x 录制编码 | 状态通道用 `raw-f64`（`double` 数组），并在 Channel metadata 写 `schema_hash` 与 `abi` |
 | 1.x 是否用 Arrow | **否**：MCAP 内的 Arrow IPC record batch 留到 2.0；当前不需要零拷贝跨语言分析 |
-| 2.0 规划 | Schema.encoding = `arrow`，schema data 为 Arrow IPC schema；消息体为 IPC record batch；state 表定义不变（列名/类型沿用 §4） |
+| 2.0 规划 | `EncodingTag::kArrowIpc` 已作为预留档（`src/record/include/srsp/record/selection.hpp`）；Schema.encoding = `arrow`，schema data 为 Arrow IPC schema；消息体为 IPC record batch；state 表定义不变（列名/类型沿用 §4） |
 | 兼容性 | 读取端遇到未知 `message_encoding` 必须跳过并告警，不得崩溃（已由 reader 的通用 record 解析保证） |
 ## 10. 版本演进
 

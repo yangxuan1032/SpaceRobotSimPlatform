@@ -684,7 +684,7 @@ BlobRef {
 |---|---|---|
 | `integrator` | 0 = rk4、1 = semi_implicit | 0 |
 | `solver` | 0 = composite、1 = articulated（预留） | 0 |
-| `renderer` | 0 = auto、1 = qt、2 = rhi、3 = null | 0 |
+| `renderer` | 0 = auto、1 = qt、2 = rhi、3 = null（经 `render::make_renderer()` 映射） | 0 |
 
 规则：
 
@@ -692,3 +692,28 @@ BlobRef {
 - 越界取值返回 `SRSP_E_INVALID_ARGUMENT`；`solver = 1` 返回 `SRSP_E_UNSUPPORTED`（预留档）；
 - `srsp_context_get_config()` 返回生效值（含补全后的缺省）；
 - `tests/abi/layout_static_assert.cpp` 固化偏移（44/48/52）与大小（56）。
+### 17.2 录制档位标签（A2/A3，2026-11-02）
+
+每个通道的 metadata 除 `schema_hash`/`abi` 外，还写入三个键以支持可复现回放：
+
+| 键 | 取值 | 含义 |
+|---|---|---|
+| `integrator` | `rk4` / `semi_implicit` | 记录时的积分器档位 |
+| `solver` | `composite` / `articulated` | 记录时的解算器档位 |
+| `encoding` | `raw-f64` / `arrow` | 通道消息编码（`arrow` 为 2.0 预留） |
+
+构造入口：`srsp::record::selection_metadata(integrator, solver, encoding)`。
+读取端遇到未知取值时**告警并跳过**，不得崩溃或静默按默认解析。
+### 15.2 其余运行期选择（A5–A7，2026-11-02）
+
+| 选择 | 类型 | 取值 | 默认 |
+|---|---|---|---|
+| 传输 | `srsp::bridge::TransportKind` | `inproc` / `sidecar` | `inproc` |
+| 网格来源 | `srsp::render::MeshSource` | `sphere` / `box` / `gltf`(预留) | 由 `mesh_uri` 决定，空为 `sphere` |
+| 时间源 | `srsp::core::TimeSourceKind` | `fixed_step` / `realtime`(预留) / `external`(预留) | `fixed_step` |
+
+规则：
+
+- 未知传输名 → `parse_transport()` 返回 `nullptr`，CLI 报错退出（不猜测）；
+- 未知 `mesh_uri` → 归类为 `gltf`；后端尚未支持时回退为程序化球体，并在文档标注；
+- 预留时间源调用 `set_source()` 返回 `false` 且保持 `fixed_step`，不静默切换。

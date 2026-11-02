@@ -6,6 +6,7 @@
 #include <srsp/record/blob_recorder.hpp>
 #include <srsp/record/blob_ref_codec.hpp>
 #include <srsp/record/mcap.hpp>
+#include <srsp/record/selection.hpp>
 #include <srsp/record/state_hash.hpp>
 
 #include <filesystem>
@@ -225,4 +226,27 @@ TEST_CASE("blobref decoder rejects short and invalid input", "[mcap][blob]") {
 
   std::uint8_t zeros[srsp::record::kBlobRefWireSize]{};
   CHECK_FALSE(srsp::record::decode_blob_ref(zeros, sizeof(zeros), &out));
+}
+TEST_CASE("channel metadata records the selection tags", "[mcap][selection]") {
+  const std::string path = temp_path("srsp_selection.mcap");
+  {
+    srsp::record::McapWriter writer;
+    REQUIRE(writer.open(path, "srsp.test"));
+    const auto schema = writer.add_schema("srsp.state/1", "raw-f64", "{}");
+    const auto metadata = srsp::record::selection_metadata(
+        srsp::record::IntegratorTag::kSemiImplicit, srsp::record::SolverTag::kComposite,
+        srsp::record::EncodingTag::kRawF64);
+    const auto channel = writer.add_channel(schema, "sim.state", "raw-f64", metadata);
+    REQUIRE(writer.write_message(channel, 1, 1000, "abcd", 4));
+    REQUIRE(writer.close());
+  }
+
+  srsp::record::McapReader reader;
+  REQUIRE(reader.open(path));
+  REQUIRE(reader.channels().size() == 1u);
+  const auto& metadata = reader.channels()[0].metadata;
+  CHECK(metadata.at("integrator") == "semi_implicit");
+  CHECK(metadata.at("solver") == "composite");
+  CHECK(metadata.at("encoding") == "raw-f64");
+  std::filesystem::remove(path);
 }
