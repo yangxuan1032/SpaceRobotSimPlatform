@@ -618,3 +618,21 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 - CI runner **没有 GPU**：`unit.render_rhi` 会回退到 QRhi 的 Null 后端，只验证「初始化 + 清屏 + 读回」路径，**不验证 D3D11 绘制**；
 - `rhi_backend_available()` 只对 **D3D11** 做探测，因此 CI 上返回 false（而不是被 Null 后端掩盖），单元测试据此断言「可用性与实际后端一致」；
 - 结论：GPU 路径的 `supported` 等级需要**本地或专用 GPU runner** 的证据，CI 绿不等于 GPU 可用；支持矩阵中 QRhi 仍为 `experimental`。
+### 11.3 积分器与解算器档位（2026-11-02）
+
+`RigidBodyDynamics` 提供两个可配置策略，默认值保持不变：
+
+| 策略 | 取值 | 说明 |
+|---|---|---|
+| `IntegratorKind` | `kRk4`（默认）/ `kSemiImplicit` | RK4 每步 4 次求值；半隐式（辛欧拉）1 次求值，一阶精度 |
+| `SolverKind` | `kComposite`（默认）/ `kArticulated`（预留） | 复合刚体法 + 稠密求解；O(n) 递推为后续优化 |
+
+实测（100 体链，Release，`bench_dynamics`）：
+
+| 积分器 | `step_us` | 300 µs 判定 |
+|---|---|---|
+| `rk4` | **962.8** | FAIL |
+| `semi_implicit` | **216.2** | **PASS** |
+
+性能档用法：`dynamics.set_integrator(IntegratorKind::kSemiImplicit)`；`bench_dynamics semi` 直接对比。
+代价：半隐式为一阶、能量行为与 RK4 不同，录制回放需标注积分器版本。

@@ -337,11 +337,12 @@ Eigen::VectorXd RigidBodyDynamics::aba_accelerations(const Eigen::VectorXd& q,
     transform[i] = Mat6::Identity();
     force_transform[i] = Mat6::Identity();
     axis[i].setZero();
+    cterm[i].setZero();
   }
 
-  // Base: six dofs, motion subspace is the identity, no offset to a parent.
+  // Base: six dofs, identity motion subspace, its origin is the reference point
+  // so the velocity-product acceleration is zero.
   velocity[0] << v[0], v[1], v[2], v[3], v[4], v[5];
-  cterm[0].setZero();
 
   for (std::size_t i = 1; i < count; ++i) {
     const BodyState& body = bodies_[i];
@@ -362,14 +363,12 @@ Eigen::VectorXd RigidBodyDynamics::aba_accelerations(const Eigen::VectorXd& q,
     const double rate = v[6 + body.joint];
     velocity[i] = transform[i] * velocity[parent] + axis[i] * rate;
 
-    // Translation-only transform: the centripetal term of the parent rotation
-    // plus the joint-axis rotation term must be added explicitly.
     const Eigen::Vector3d parent_omega = velocity[parent].tail<3>();
-    const Eigen::Vector3d child_omega = velocity[i].tail<3>();
     cterm[i].head<3>() = parent_omega.cross(parent_omega.cross(r));
-    cterm[i].tail<3>() = rate * child_omega.cross(world_axis);
+    cterm[i].tail<3>() = rate * parent_omega.cross(world_axis);
   }
 
+  // Bias: the inertia-times-velocity-product acceleration minus gravity.
   for (std::size_t i = 0; i < count; ++i) {
     const BodyState& state = bodies_[i];
     const Eigen::Vector3d com_world = poses[i].rotation * state.com;
@@ -389,18 +388,16 @@ Eigen::VectorXd RigidBodyDynamics::aba_accelerations(const Eigen::VectorXd& q,
     u[i] = tau[6 + body.joint] - axis[i].dot(bias[i]);
 
     const Mat6 reduced = composite[i] - (u_vector[i] * u_vector[i].transpose()) / d[i];
-    const Vec6 propagated = bias[i] + reduced * cterm[i] + u_vector[i] * (u[i] / d[i]);
+    const Vec6 propagated = bias[i] + u_vector[i] * (u[i] / d[i]);
     composite[parent] += force_transform[i] * reduced * transform[i];
     bias[parent] += force_transform[i] * propagated;
   }
 
   Eigen::VectorXd qdd = Eigen::VectorXd::Zero(nv_);
-  const Mat6 base_factor = composite[0];
   const Vec6 base_u = tau.head<6>() - bias[0];
-  acceleration[0] = cterm[0];
-  const Vec6 base_qdd = base_factor.ldlt().solve(base_u - base_factor * acceleration[0]);
+  const Vec6 base_qdd = composite[0].ldlt().solve(base_u);
   qdd.head<6>() = base_qdd;
-  total_acceleration[0] = acceleration[0] + base_qdd;
+  total_acceleration[0] = base_qdd;
 
   for (std::size_t i = 1; i < count; ++i) {
     const BodyState& body = bodies_[i];
@@ -749,6 +746,24 @@ void RigidBodyDynamics::step(Eigen::VectorXd* q, Eigen::VectorXd* v, const Force
         factorization.solve(external(q_state, v_state) - bias_forces(q_state, v_state));
     return accel;
   };
+
+  if (integrator_ == IntegratorKind::kSemiImplicit) {
+    // Symplectic Euler: velocity first, then position with the new velocity.
+    const Eigen::VectorXd accel = accel_of(*q, *v);
+    *v += dt * accel;
+    *q += dt * config_velocity(*q, *v);
+    Eigen::Quaterniond orientation((*q)[6], (*q)[3], (*q)[4], (*q)[5]);
+    orientation.normalize();
+    (*q)[3] = orientation.x();
+    (*q)[4] = orientation.y();
+    (*q)[5] = orientation.z();
+    (*q)[6] = orientation.w();
+    for (int i = 0; i < joint_count_; ++i) {
+      const auto& joint = joints_[static_cast<std::size_t>(i)];
+      (*q)[7 + i] = std::clamp((*q)[7 + i], joint.lower, joint.upper);
+    }
+    return;
+  }
 
   const Eigen::VectorXd q0 = *q;
   const Eigen::VectorXd v0 = *v;

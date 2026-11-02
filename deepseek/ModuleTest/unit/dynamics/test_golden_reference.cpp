@@ -143,3 +143,29 @@ TEST_CASE("CRBA matches the reference mass matrix", "[dynamics][golden]") {
     CHECK(crba.isApprox(reference, 1e-10));
   }
 }
+TEST_CASE("semi-implicit integrator is selectable and deterministic", "[dynamics]") {
+  RigidBodyDynamics dynamics = make_chain();
+  CHECK(dynamics.integrator() == srsp::dynamics::IntegratorKind::kRk4);
+
+  auto run = [&](srsp::dynamics::IntegratorKind kind) {
+    dynamics.set_integrator(kind);
+    Eigen::VectorXd q = dynamics.neutral_configuration();
+    Eigen::VectorXd v = Eigen::VectorXd::Zero(dynamics.nv());
+    const Eigen::VectorXd tau = Eigen::VectorXd::Zero(dynamics.nv());
+    q[7] = 0.2;
+    for (int i = 0; i < 10; ++i) {
+      dynamics.step(&q, &v, tau, 1e-4);
+    }
+    return std::make_pair(q, v);
+  };
+
+  const auto first = run(srsp::dynamics::IntegratorKind::kSemiImplicit);
+  const auto second = run(srsp::dynamics::IntegratorKind::kSemiImplicit);
+  CHECK(first.first.isApprox(second.first, 0.0));  // bit-identical
+  CHECK(first.second.isApprox(second.second, 0.0));
+
+  const auto rk4 = run(srsp::dynamics::IntegratorKind::kRk4);
+  // Both integrate the same dynamics; at this step size they stay close.
+  CHECK((first.first - rk4.first).norm() < 1e-2);
+  dynamics.set_integrator(srsp::dynamics::IntegratorKind::kRk4);
+}

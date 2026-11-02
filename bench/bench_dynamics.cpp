@@ -63,7 +63,8 @@ double time_ms(Callable&& callable, int iterations) {
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  const bool semi = argc > 1 && std::string(argv[1]) == "semi";
   constexpr int kBodies = 100;
   constexpr int kIterations = 50;
   const auto model = make_chain(kBodies);
@@ -73,7 +74,10 @@ int main() {
     return 1;
   }
 
-  const srsp::dynamics::RigidBodyDynamics dynamics(model);
+  srsp::dynamics::RigidBodyDynamics dynamics(model);
+  if (semi) {
+    dynamics.set_integrator(srsp::dynamics::IntegratorKind::kSemiImplicit);
+  }
   Eigen::VectorXd q = dynamics.neutral_configuration();
   Eigen::VectorXd v = Eigen::VectorXd::Zero(dynamics.nv());
   const Eigen::VectorXd tau = Eigen::VectorXd::Zero(dynamics.nv());
@@ -92,6 +96,7 @@ int main() {
   const double bias_ms = time_ms([&] { (void)dynamics.bias_forces(q, v); }, kIterations);
   const double step_ms = time_ms([&] { dynamics.step(&q, &v, tau, 1e-3); }, kIterations);
 
+  std::printf("integrator=%s\n", semi ? "semi_implicit" : "rk4");
   std::printf("bodies=%d\n", kBodies);
   std::printf("joints=%d\n", dynamics.joint_count());
   std::printf("mass_ms=%.3f\n", mass_ms);

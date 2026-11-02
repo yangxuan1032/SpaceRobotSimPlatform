@@ -33,6 +33,18 @@
 
 namespace srsp::dynamics {
 
+/** @brief Time integration scheme used by step(). */
+enum class IntegratorKind {
+  kRk4 = 0,           ///< Classical RK4, four force evaluations (default).
+  kSemiImplicit = 1,  ///< Symplectic Euler, one evaluation, first order.
+};
+
+/** @brief Dynamics solver used for the acceleration. */
+enum class SolverKind {
+  kComposite = 0,    ///< CRBA mass matrix plus a dense solve (default).
+  kArticulated = 1,  ///< Reserved: O(n) articulated-body solver.
+};
+
 /** @brief Pose of a body in the world frame. */
 /** @brief_zh 体在世界系中的位姿。 */
 struct Pose {
@@ -156,6 +168,16 @@ class RigidBodyDynamics {
   [[nodiscard]] Eigen::Vector3d omega_body_to_world(const Eigen::VectorXd& q,
                                                     const Eigen::Vector3d& omega_body) const;
 
+  /** @brief Selects the integrator; RK4 stays the default. */
+  void set_integrator(IntegratorKind kind) noexcept { integrator_ = kind; }
+  /** @brief Currently selected integrator. */
+  [[nodiscard]] IntegratorKind integrator() const noexcept { return integrator_; }
+
+  /** @brief Selects the solver; only kComposite is implemented today. */
+  void set_solver(SolverKind kind) noexcept { solver_ = kind; }
+  /** @brief Currently selected solver. */
+  [[nodiscard]] SolverKind solver() const noexcept { return solver_; }
+
   /** @brief Replaces the uniform gravity vector (default: 9.80665 m/s^2 down). */
   /** @brief_zh 替换均匀重力向量（默认向下 9.80665 m/s²）。 */
   void set_gravity(const Eigen::Vector3d& gravity) { gravity_ = gravity; }
@@ -266,6 +288,8 @@ class RigidBodyDynamics {
   std::unordered_map<std::string, int> body_index_;
   std::unordered_map<std::string, int> joint_index_;
   Eigen::Vector3d gravity_{0.0, 0.0, -9.80665};
+  IntegratorKind integrator_ = IntegratorKind::kRk4;
+  SolverKind solver_ = SolverKind::kComposite;
   double finite_difference_step_ = 1e-6;
 };
 
