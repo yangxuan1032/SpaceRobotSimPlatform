@@ -46,7 +46,7 @@ class RigidBodyDynamics {
  public:
   /**
    * @brief Compiles the kinematic tree and inertia properties.
- * @brief_zh
+   * @brief_zh
    * 编译运动学树与惯量属性。
    * @param model Validated SRM model.
    */
@@ -71,7 +71,7 @@ class RigidBodyDynamics {
 
   /**
    * @brief 6x nv Jacobian of a body, rows [linear; angular], at the body origin.
- * @brief_zh
+   * @brief_zh
    * 单体的 6×nv 雅可比，行序 [线速度; 角速度]，取在体原点。
    */
   [[nodiscard]] Eigen::MatrixXd jacobian(const Eigen::VectorXd& q,
@@ -83,7 +83,7 @@ class RigidBodyDynamics {
 
   /**
    * @brief Reference mass matrix: sums every body contribution over all dofs.
- * @brief_zh
+   * @brief_zh
    * 参考质量矩阵：对所有自由度累加每个体的贡献（慢速对照实现）。
    *
    * Slow but direct; used to validate the optimised assembly.
@@ -96,7 +96,7 @@ class RigidBodyDynamics {
 
   /**
    * @brief Bias vector h(q, v) = C(q, v) v - Q_g.
- * @brief_zh 偏置向量 h(q,v) = C(q,v)v −
+   * @brief_zh 偏置向量 h(q,v) = C(q,v)v −
    * Q_g（含科氏力与重力）。
    * @note The Coriolis part uses central differences of M; see the file header.
    */
@@ -122,7 +122,7 @@ class RigidBodyDynamics {
 
   /**
    * @brief Converts a world-frame angular velocity to the body frame.
- * @brief_zh
+   * @brief_zh
    * 将世界系角速度转换到体系。
    *
    * The state contract stores `omega_b` (docs/03 section 4) while this solver
@@ -148,7 +148,7 @@ class RigidBodyDynamics {
 
   /**
    * @brief Maps actuator commands to generalised forces.
- * @brief_zh
+   * @brief_zh
    * 将执行器指令映射为广义力。
    * @param commands One value per actuator, in model order (N or N*m).
    *
@@ -161,7 +161,7 @@ class RigidBodyDynamics {
 
   /**
    * @brief Generalised force of a world-frame force applied at a world point.
- * @brief_zh
+   * @brief_zh
    * 世界点处世界系力对应的广义力。
    * @param q Configuration (for the Jacobian).
    * @param body_id Body that receives the force.
@@ -180,7 +180,7 @@ class RigidBodyDynamics {
 
   /**
    * @brief Integrates one step with classical RK4 and a state-dependent force.
- * @brief_zh
+   * @brief_zh
    * 使用经典 RK4 与状态相关外力积分一步。
    *
    * Use this overload whenever the external force depends on the state (orbital
@@ -192,7 +192,7 @@ class RigidBodyDynamics {
 
   /**
    * @brief Integrates one step with classical RK4.
- * @brief_zh 使用经典 RK4 积分一步。
+   * @brief_zh 使用经典 RK4 积分一步。
    * @param q Configuration, updated in place (quaternion renormalised).
    * @param v Velocity, updated in place.
    * @param tau Generalised force (nv); zero means free motion.
