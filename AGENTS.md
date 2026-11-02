@@ -120,6 +120,7 @@
 - 验证优先级：单元测试/构建 > JSON/YAML/脚本解析 > 链接与路径检查 > 人工核对。
 - 不伪造验证结果；受环境限制无法验证时如实说明（例如沙箱禁止命名管道导致 MSYS2 bash 无法启动）。
 - 中文用于文档与交流；**代码注释（含 Doxygen、行内注释、CMake/YAML/Schema 描述）与 commit message 一律英文**，文件名用英文。
+- 同一职责有多种实现（算法/后端/积分器/传输）时，按 `tools/ai/skills/module-build/SKILL.md` §8 以「枚举 + set/get + 默认档 + 保留档」引入，禁止用编译期宏分叉 ABI。
 - 新增或修改模块时，公共接口与实现的变量/函数必须写 Doxygen（`@brief/@param/@return`），验收标准见 `tools/ai/skills/module-build/SKILL.md`。
 - **提交与推送必须先征得用户同意**：未明确同意不得 `git commit` / `git push`；需要沙箱升级时逐次申请、一次一命令，规则见 `tools/ai/skills/work-log/SKILL.md`；多次未提交的修改在获准后按时间顺序编号提交。
 - 共享 PowerShell 脚本保持 **ASCII 源码**，中文文案放在 `tools/ai/labels.json`（UTF-8 数据文件）；避免 Windows PowerShell 5.1 把无 BOM 的 UTF-8 源码按 ANSI 解析。

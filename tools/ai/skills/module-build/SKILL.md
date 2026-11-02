@@ -133,3 +133,51 @@ Get-ChildItem api,src,plugins,apps,tests -Recurse -Include *.h,*.hpp,*.cpp,*.c |
 - 源码 + 构建接入；
 - 构建/检查证据（贴进日志「验证」字段）；
 - 需要时同步 `docs/`（契约变更必须更新对应章节）。
+## 8. 策略化设计（多档实现统一接口）
+
+当同一职责存在多种实现（算法、积分器、渲染后端、传输方式、录制编码）时，按本节设计，**不要**用编译期宏或复制类来分叉。
+
+### 8.1 结构
+
+```cpp
+/** @brief Selects the implementation used at run time. */
+enum class SolverKind {
+  kComposite = 0,    ///< Default: CRBA plus a dense solve.
+  kArticulated = 1,  ///< Reserved: O(n) articulated-body solver.
+};
+
+void set_solver(SolverKind kind) noexcept;   ///< switch
+[[nodiscard]] SolverKind solver() const noexcept;
+```
+
+| 要求 | 说明 |
+|---|---|
+| 统一接口 | 一种职责一个抽象（枚举 + set/get，或纯虚接口） |
+| 默认档 | 必须保持现状行为，既有测试与录制不回退 |
+| 保留档 | 未实现的取值显式命名 `kXxxReserved` / 注释写 `reserved`，不得静默退化为默认 |
+| 运行期选择 | 通过配置/API/命令行选择，**不引入 ABI 分叉** |
+| 每档测试 | 切换生效、确定性（同输入两次结果位级相同）、档间差异在容差内 |
+| 文档 | 在 `docs/05` 或 `docs/01` 记录档位、代价与取舍（精度、性能、回放兼容） |
+
+### 8.2 实例（2026-11-02）
+
+`RigidBodyDynamics` 的 `IntegratorKind{kRk4, kSemiImplicit}` 与 `SolverKind{kComposite, kArticulated}`：
+
+- 默认 `kRk4` + `kComposite`，行为与历史一致；
+- `kSemiImplicit` 为性能档（`step_us` 963 → 216），一阶精度，回放需标注；
+- `kArticulated` 仅占位，避免后续改动接口。
+
+### 8.3 反例
+
+| 反例 | 后果 |
+|---|---|
+| `#ifdef SRSP_USE_ABA` | 产生两种 ABI 行为，录制不可互认 |
+| 复制一个 `RigidBodyDynamics2` | 双份维护，测试覆盖分裂 |
+| 未实现档静默走默认 | 用户以为切换生效，实际没有 |
+
+### 8.4 检查清单
+
+- [ ] 枚举默认值等于现状
+- [ ] 每个档位有独立测试
+- [ ] 文档记录档位与取舍
+- [ ] 未实现档显式标注，且返回 `SRSP_E_UNSUPPORTED` 或注释说明

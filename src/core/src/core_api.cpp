@@ -130,13 +130,64 @@ SRSP_CORE_API srsp_status SRSP_CALL srsp_context_create(const srsp_context_confi
     set_error(err, SRSP_E_OUT_OF_MEMORY, "context allocation failed");
     return SRSP_E_OUT_OF_MEMORY;
   }
+  ctx->config.struct_size = sizeof(srsp_context_config);
+  ctx->config.log = nullptr;
+  ctx->config.log_user = nullptr;
+  ctx->config.data_dir = srsp_str{};
+  ctx->config.flags = 0;
+  ctx->config.integrator = 0;  // rk4
+  ctx->config.solver = 0;      // composite
+  ctx->config.renderer = 0;    // auto
+
   if (config != nullptr) {
-    ctx->config = *config;
-  } else {
+    const std::size_t copy = config->struct_size < sizeof(srsp_context_config)
+                                 ? config->struct_size
+                                 : sizeof(srsp_context_config);
+    std::memcpy(&ctx->config, config, copy);
     ctx->config.struct_size = sizeof(srsp_context_config);
+
+    // Appended fields are only present when the caller passed a newer struct.
+    const std::size_t base = offsetof(srsp_context_config, integrator);
+    if (config->struct_size >= base + sizeof(uint32_t)) {
+      if (ctx->config.integrator > 1u) {
+        set_error(err, SRSP_E_INVALID_ARGUMENT, "integrator must be 0 or 1");
+        delete ctx;
+        return SRSP_E_INVALID_ARGUMENT;
+      }
+    }
+    if (config->struct_size >= base + 2 * sizeof(uint32_t)) {
+      if (ctx->config.solver > 1u) {
+        set_error(err, SRSP_E_INVALID_ARGUMENT, "solver must be 0 or 1");
+        delete ctx;
+        return SRSP_E_INVALID_ARGUMENT;
+      }
+      if (ctx->config.solver == 1u) {
+        set_error(err, SRSP_E_UNSUPPORTED, "articulated solver is reserved");
+        delete ctx;
+        return SRSP_E_UNSUPPORTED;
+      }
+    }
+    if (config->struct_size >= base + 3 * sizeof(uint32_t)) {
+      if (ctx->config.renderer > 3u) {
+        set_error(err, SRSP_E_INVALID_ARGUMENT, "renderer must be 0..3");
+        delete ctx;
+        return SRSP_E_INVALID_ARGUMENT;
+      }
+    }
   }
   ctx->host = std::make_unique<srsp::core::PluginHost>(make_services());
   *out = ctx;
+  return SRSP_OK;
+}
+
+SRSP_CORE_API srsp_status SRSP_CALL srsp_context_get_config(const srsp_context* ctx,
+                                                            srsp_context_config* out,
+                                                            srsp_error* err) {
+  if (ctx == nullptr || out == nullptr) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT, "context or out is null");
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+  *out = ctx->config;
   return SRSP_OK;
 }
 

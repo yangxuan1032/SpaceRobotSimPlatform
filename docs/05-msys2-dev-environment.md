@@ -635,4 +635,5 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | `semi_implicit` | **216.2** | **PASS** |
 
 性能档用法：`dynamics.set_integrator(IntegratorKind::kSemiImplicit)`；`bench_dynamics semi` 直接对比。
+统一入口：`srsp_context_config.integrator` / `.solver` / `.renderer`（见 `docs/02` §15.1），应用层可用 `srsp_context_get_config()` 读回生效值。
 代价：半隐式为一阶、能量行为与 RK4 不同，录制回放需标注积分器版本。

@@ -676,3 +676,19 @@ BlobRef {
 - 回放/消费方校验 hash 不匹配 → 拒绝解析并给出 remedy（升级 host 或使用对应 schema 版本）。
 
 当前状态：hash 工具与清单为新增；写入 MCAP metadata 与校验逻辑列入 1.1（与 A15 的 Summary 补齐同批）。
+### 15.1 追加字段记录（2026-11-02）
+
+`srsp_context_config` 末尾追加三个 `uint32_t`（结构体 48 → **56** 字节）：
+
+| 字段 | 取值 | 缺省 |
+|---|---|---|
+| `integrator` | 0 = rk4、1 = semi_implicit | 0 |
+| `solver` | 0 = composite、1 = articulated（预留） | 0 |
+| `renderer` | 0 = auto、1 = qt、2 = rhi、3 = null | 0 |
+
+规则：
+
+- 旧调用方传较小的 `struct_size` 时，内核按缺省值补全，**不报错**；
+- 越界取值返回 `SRSP_E_INVALID_ARGUMENT`；`solver = 1` 返回 `SRSP_E_UNSUPPORTED`（预留档）；
+- `srsp_context_get_config()` 返回生效值（含补全后的缺省）；
+- `tests/abi/layout_static_assert.cpp` 固化偏移（44/48/52）与大小（56）。

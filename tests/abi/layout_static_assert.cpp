@@ -90,7 +90,11 @@ SRSP_CHECK_OFF(srsp_context_config, log, 8);
 SRSP_CHECK_OFF(srsp_context_config, log_user, 16);
 SRSP_CHECK_OFF(srsp_context_config, data_dir, 24);
 SRSP_CHECK_OFF(srsp_context_config, flags, 40);
-SRSP_CHECK_SIZE(srsp_context_config, 48);
+/* Appended 2026-11-02: selection fields; older callers pass a smaller size. */
+SRSP_CHECK_OFF(srsp_context_config, integrator, 44);
+SRSP_CHECK_OFF(srsp_context_config, solver, 48);
+SRSP_CHECK_OFF(srsp_context_config, renderer, 52);
+SRSP_CHECK_SIZE(srsp_context_config, 56);
 SRSP_CHECK_ALIGN(srsp_context_config, 8);
 
 SRSP_CHECK_SIZE(srsp_subscription, 8);

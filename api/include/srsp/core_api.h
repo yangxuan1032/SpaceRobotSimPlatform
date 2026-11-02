@@ -54,13 +54,13 @@
  * @zh 内核编译时定义 SRSP_CORE_BUILD；使用 DLL 的应用不得定义它。
  */
 #if defined(_WIN32)
-#  if defined(SRSP_CORE_BUILD)
-#    define SRSP_CORE_API __declspec(dllexport)
-#  else
-#    define SRSP_CORE_API __declspec(dllimport)
-#  endif
+#if defined(SRSP_CORE_BUILD)
+#define SRSP_CORE_API __declspec(dllexport)
 #else
-#  define SRSP_CORE_API __attribute__((visibility("default")))
+#define SRSP_CORE_API __declspec(dllimport)
+#endif
+#else
+#define SRSP_CORE_API __attribute__((visibility("default")))
 #endif
 
 #ifdef __cplusplus
@@ -81,14 +81,15 @@ typedef struct srsp_context srsp_context;
  * duration of the call.
  * @zh 在仿真线程触发；payload 视图仅在本次调用期间有效。
  */
-typedef void (SRSP_CALL* srsp_event_fn)(void* user, srsp_str topic,
-                                        srsp_bytes payload, uint64_t schema_hash);
+typedef void(SRSP_CALL* srsp_event_fn)(void* user, srsp_str topic, srsp_bytes payload,
+                                       uint64_t schema_hash);
 
 /** @brief Context creation flags. @brief_zh 上下文创建标志。 */
 enum {
   SRSP_CTX_FLAG_NONE = 0u,
-  SRSP_CTX_FLAG_ALLOW_UNSIGNED = 1u << 0, /**< load unsigned plugins (dev) / 允许加载未签名插件（开发用） */
-  SRSP_CTX_FLAG_HEADLESS = 1u << 1        /**< no renderer/UI services / 不启用渲染与 UI 服务 */
+  SRSP_CTX_FLAG_ALLOW_UNSIGNED =
+      1u << 0, /**< load unsigned plugins (dev) / 允许加载未签名插件（开发用） */
+  SRSP_CTX_FLAG_HEADLESS = 1u << 1 /**< no renderer/UI services / 不启用渲染与 UI 服务 */
 };
 
 /**
@@ -101,6 +102,11 @@ typedef struct srsp_context_config {
   void* log_user;       /**< user pointer for @c log / 日志回调的用户指针 */
   srsp_str data_dir;    /**< may be {NULL,0}: schema/data root / 可为空：数据根目录覆盖 */
   uint32_t flags;       /**< SRSP_CTX_FLAG_* bitmask / 标志位掩码 */
+  /* Appended 2026-11-02; older callers pass a smaller struct_size and get the
+   * defaults below. Values outside the documented ranges are rejected. */
+  uint32_t integrator; /**< 0 = rk4 (default), 1 = semi_implicit / 积分器档位 */
+  uint32_t solver;     /**< 0 = composite (default), 1 = articulated (reserved) */
+  uint32_t renderer;   /**< 0 = auto (default), 1 = qt, 2 = rhi, 3 = null */
 } srsp_context_config;
 
 /** @brief Subscription handle; 0 means invalid. @brief_zh 订阅句柄；0 表示无效。 */
@@ -116,23 +122,29 @@ SRSP_CORE_API uint32_t SRSP_CALL srsp_core_api_version(void);
  * @brief Creates a kernel context; @c config may be NULL for defaults.
  * @brief_zh 创建内核上下文；config 可为 NULL 表示使用默认值。
  */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_context_create(
-    const srsp_context_config* config, srsp_context** out, srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_context_create(const srsp_context_config* config,
+                                                        srsp_context** out, srsp_error* err);
 
 /** @brief Destroys a context; idempotent for NULL. @brief_zh 销毁上下文；传 NULL 时无操作。 */
 SRSP_CORE_API void SRSP_CALL srsp_context_destroy(srsp_context* ctx);
 
 /**
+ * @brief Copies the effective configuration, including appended defaults.
+ * @brief_zh 复制生效的配置（含追加字段的默认值）。
+ */
+SRSP_CORE_API srsp_status SRSP_CALL srsp_context_get_config(const srsp_context* ctx,
+                                                            srsp_context_config* out,
+                                                            srsp_error* err);
+
+/**
  * @brief Loads a project (see docs/03-data-contracts.md section 8).
  * @brief_zh 加载工程（见 docs/03-data-contracts.md 第 8 节）。
  */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_load_project(srsp_context* ctx,
-                                                    srsp_str path,
-                                                    srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_load_project(srsp_context* ctx, srsp_str path,
+                                                      srsp_error* err);
 
 /** @brief Unloads the current project. @brief_zh 卸载当前工程。 */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_unload_project(srsp_context* ctx,
-                                                      srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_unload_project(srsp_context* ctx, srsp_error* err);
 
 /**
  * @brief Loads a plugin directly by library path (M0 convenience).
@@ -141,13 +153,11 @@ SRSP_CORE_API srsp_status SRSP_CALL srsp_unload_project(srsp_context* ctx,
  * Project load resolves the plugin set from the project file in M1.
  * @zh M1 起由工程加载负责解析插件集合。
  */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_load_plugin(srsp_context* ctx,
-                                                     srsp_str library_path,
+SRSP_CORE_API srsp_status SRSP_CALL srsp_load_plugin(srsp_context* ctx, srsp_str library_path,
                                                      srsp_error* err);
 
 /** @brief Unloads the current plugin. @brief_zh 卸载当前插件。 */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_unload_plugin(srsp_context* ctx,
-                                                       srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_unload_plugin(srsp_context* ctx, srsp_error* err);
 
 /** @brief Starts the simulation clock. @brief_zh 启动仿真时钟。 */
 SRSP_CORE_API srsp_status SRSP_CALL srsp_start(srsp_context* ctx, srsp_error* err);
@@ -159,8 +169,7 @@ SRSP_CORE_API srsp_status SRSP_CALL srsp_pause(srsp_context* ctx, srsp_error* er
  * @brief Advances exactly @p steps macro steps.
  * @brief_zh 精确推进 steps 个宏步。
  */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_step(srsp_context* ctx, uint64_t steps,
-                                            srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_step(srsp_context* ctx, uint64_t steps, srsp_error* err);
 
 /** @brief Current simulation time in TAI nanoseconds. @brief_zh 当前仿真时间（TAI 纳秒）。 */
 SRSP_CORE_API int64_t SRSP_CALL srsp_time_tai_ns(const srsp_context* ctx);
@@ -172,29 +181,23 @@ SRSP_CORE_API int64_t SRSP_CALL srsp_time_tai_ns(const srsp_context* ctx);
  * Release the result with srsp_buffer_release.
  * @zh 返回值必须用 srsp_buffer_release 释放。
  */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_get_snapshot(srsp_context* ctx,
-                                                    srsp_buffer* out,
-                                                    srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_get_snapshot(srsp_context* ctx, srsp_buffer* out,
+                                                      srsp_error* err);
 
 /** @brief Releases a buffer produced by the kernel. @brief_zh 释放内核返回的缓冲区。 */
-SRSP_CORE_API void SRSP_CALL srsp_buffer_release(srsp_context* ctx,
-                                               srsp_buffer* buffer);
+SRSP_CORE_API void SRSP_CALL srsp_buffer_release(srsp_context* ctx, srsp_buffer* buffer);
 
 /**
  * @brief Subscribes to a topic (docs/03 section 5); wildcards follow topic rules.
  * @brief_zh 订阅主题（docs/03 第 5 节）；通配符遵循主题规则。
  */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_subscribe(srsp_context* ctx,
-                                                 srsp_str topic,
-                                                 srsp_event_fn callback,
-                                                 void* user,
-                                                 srsp_subscription* out,
-                                                 srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_subscribe(srsp_context* ctx, srsp_str topic,
+                                                   srsp_event_fn callback, void* user,
+                                                   srsp_subscription* out, srsp_error* err);
 
 /** @brief Removes a subscription. @brief_zh 取消订阅。 */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_unsubscribe(srsp_context* ctx,
-                                                   srsp_subscription id,
-                                                   srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_unsubscribe(srsp_context* ctx, srsp_subscription id,
+                                                     srsp_error* err);
 
 /**
  * @brief Generic capability passthrough.
@@ -204,12 +207,9 @@ SRSP_CORE_API srsp_status SRSP_CALL srsp_unsubscribe(srsp_context* ctx,
  * @c Invoke RPC.
  * @zh 与插件 ABI 的 call、边车 Invoke RPC 采用相同的 method + payload 语义。
  */
-SRSP_CORE_API srsp_status SRSP_CALL srsp_plugin_call(srsp_context* ctx,
-                                                   srsp_str plugin_id,
-                                                   srsp_str method,
-                                                   srsp_bytes request,
-                                                   srsp_buffer* response,
-                                                   srsp_error* err);
+SRSP_CORE_API srsp_status SRSP_CALL srsp_plugin_call(srsp_context* ctx, srsp_str plugin_id,
+                                                     srsp_str method, srsp_bytes request,
+                                                     srsp_buffer* response, srsp_error* err);
 
 #ifdef __cplusplus
 } /* extern "C" */
