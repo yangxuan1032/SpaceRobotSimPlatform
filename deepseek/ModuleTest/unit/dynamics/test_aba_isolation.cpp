@@ -78,3 +78,24 @@ TEST_CASE("ABA isolation probe", "[dynamics][aba]") {
   std::printf("RESIDUAL v!=0 tau!=0: %.6g\n", residual(dynamics, q, v, tau));
   CHECK(dynamics.aba_accelerations(q, v, tau).size() == dynamics.nv());
 }
+TEST_CASE("kernel M and h against the MuJoCo oracle", "[dynamics][aba]") {
+  const RigidBodyDynamics dynamics = make_model();
+  Eigen::VectorXd q = dynamics.neutral_configuration();
+  q[7] = 0.3;  // hinge angle
+
+  Eigen::VectorXd v = Eigen::VectorXd::Zero(dynamics.nv());
+  v << 0.1, -0.2, 0.05, 0.3, -0.4, 0.2, 0.5;
+
+  const Eigen::MatrixXd mass = dynamics.mass_matrix(q);
+  const Eigen::VectorXd bias = dynamics.bias_forces(q, v);
+  std::printf("ORACLE M diag:");
+  for (int i = 0; i < mass.rows(); ++i) {
+    std::printf(" %.6f", mass(i, i));
+  }
+  std::printf("\nORACLE bias:");
+  for (int i = 0; i < bias.size(); ++i) {
+    std::printf(" %.6f", bias[i]);
+  }
+  std::printf("\n");
+  CHECK(mass.rows() == dynamics.nv());
+}

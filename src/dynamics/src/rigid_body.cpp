@@ -251,6 +251,7 @@ Eigen::MatrixXd RigidBodyDynamics::mass_matrix_reference(const Eigen::VectorXd& 
 }
 
 Eigen::MatrixXd RigidBodyDynamics::mass_matrix(const Eigen::VectorXd& q) const {
+  return mass_matrix_crba(q);
   const auto poses = forward_kinematics(q);
   const auto jacobians = compute_jacobians(q);
   Eigen::MatrixXd mass = Eigen::MatrixXd::Zero(nv_, nv_);
@@ -412,6 +413,71 @@ Eigen::VectorXd RigidBodyDynamics::aba_accelerations(const Eigen::VectorXd& q,
   return qdd;
 }
 
+Eigen::MatrixXd RigidBodyDynamics::mass_matrix_crba(const Eigen::VectorXd& q) const {
+  using Mat6 = Eigen::Matrix<double, 6, 6>;
+  using Vec6 = Eigen::Matrix<double, 6, 1>;
+
+  const auto poses = forward_kinematics(q);
+  const std::size_t count = bodies_.size();
+
+  std::vector<Mat6> composite(count), transfer(count);
+  std::vector<Vec6> motion(count);
+
+  for (std::size_t i = 0; i < count; ++i) {
+    composite[i] = spatial_inertia(i, poses[i]);
+    transfer[i] = Mat6::Identity();
+    motion[i].setZero();
+    if (i == 0) {
+      motion[i] = Vec6::Zero();
+    } else {
+      const BodyState& body = bodies_[i];
+      const JointState& joint = joints_[static_cast<std::size_t>(body.joint)];
+      const std::size_t parent = static_cast<std::size_t>(body.parent);
+      const Eigen::Vector3d r = poses[i].position - poses[parent].position;
+      transfer[i].topRightCorner<3, 3>() = -skew(r);
+      const Eigen::Vector3d world_axis =
+          poses[parent].rotation * joint.origin_rotation * joint.axis;
+      if (is_revolute(joint.type)) {
+        motion[i].tail<3>() = world_axis;
+      } else {
+        motion[i].head<3>() = world_axis;
+      }
+    }
+  }
+
+  Eigen::MatrixXd mass = Eigen::MatrixXd::Zero(nv_, nv_);
+
+  for (std::size_t index = count; index-- > 1;) {
+    const std::size_t i = index;
+    Vec6 force = composite[i] * motion[i];
+    const int dof = 6 + bodies_[i].joint;
+    mass(dof, dof) = motion[i].dot(force);
+
+    std::size_t child = i;
+    std::size_t parent = static_cast<std::size_t>(bodies_[i].parent);
+    while (true) {
+      force = transfer[child].transpose() * force;
+      if (parent == 0) {
+        mass.block<6, 1>(0, dof) = force;
+        mass.block<1, 6>(dof, 0) = force.transpose();
+        break;
+      }
+      const int parent_dof = 6 + bodies_[parent].joint;
+      const double entry = motion[parent].dot(force);
+      mass(parent_dof, dof) = entry;
+      mass(dof, parent_dof) = entry;
+      child = parent;
+      parent = static_cast<std::size_t>(bodies_[parent].parent);
+    }
+
+    composite[static_cast<std::size_t>(bodies_[i].parent)] +=
+        transfer[i].transpose() * composite[i] * transfer[i];
+  }
+
+  // Base block: the six base dofs use the identity motion subspace.
+  mass.block<6, 6>(0, 0) = composite[0].topLeftCorner<6, 6>();
+  return mass;
+}
 Eigen::VectorXd RigidBodyDynamics::gravity_force(const Eigen::VectorXd& q) const {
   const auto poses = forward_kinematics(q);
   const auto jacobians = compute_jacobians(q);

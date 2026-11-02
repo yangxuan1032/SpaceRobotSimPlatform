@@ -91,6 +91,13 @@ class RigidBodyDynamics {
   [[nodiscard]] Eigen::MatrixXd mass_matrix_reference(const Eigen::VectorXd& q) const;
 
   /**
+   * @brief Composite-rigid-body mass matrix (experimental, O(n) assembly).
+   * @brief_zh
+   * 复合刚体法质量矩阵（实验，O(n) 装配）。
+   */
+  [[nodiscard]] Eigen::MatrixXd mass_matrix_crba(const Eigen::VectorXd& q) const;
+
+  /**
    * @brief Experimental O(n) accelerations (ABA); not used by step() yet.
    * @brief_zh
    * 实验性 O(n) 加速度（ABA），尚未被 step() 使用。

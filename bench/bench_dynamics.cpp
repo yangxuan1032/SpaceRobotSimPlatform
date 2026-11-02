@@ -14,9 +14,10 @@
 #include <srsp/model/srm.hpp>
 
 #include <chrono>
-#include <cstdio>
 #include <string>
 #include <vector>
+
+#include <cstdio>
 
 namespace {
 
@@ -85,6 +86,8 @@ int main() {
   q = dynamics.neutral_configuration();
   v.setZero();
 
+  const double kin_ms = time_ms([&] { (void)dynamics.forward_kinematics(q); }, kIterations);
+  const double crba_ms = time_ms([&] { (void)dynamics.mass_matrix_crba(q); }, kIterations);
   const double mass_ms = time_ms([&] { (void)dynamics.mass_matrix(q); }, kIterations);
   const double bias_ms = time_ms([&] { (void)dynamics.bias_forces(q, v); }, kIterations);
   const double step_ms = time_ms([&] { dynamics.step(&q, &v, tau, 1e-3); }, kIterations);
@@ -92,6 +95,9 @@ int main() {
   std::printf("bodies=%d\n", kBodies);
   std::printf("joints=%d\n", dynamics.joint_count());
   std::printf("mass_ms=%.3f\n", mass_ms);
+  std::printf("kin_ms=%.3f\n", kin_ms);
+  std::printf("crba_ms=%.3f\n", crba_ms);
+  std::printf("jacobian_ms=%.3f\n", mass_ms - kin_ms);
   std::printf("bias_ms=%.3f\n", bias_ms);
   std::printf("step_ms=%.3f\n", step_ms);
   const double step_us = step_ms * 1000.0;

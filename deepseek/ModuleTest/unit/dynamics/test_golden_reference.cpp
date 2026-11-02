@@ -127,3 +127,19 @@ TEST_CASE("optimised assembly matches the reference mass matrix", "[dynamics][go
     CHECK(fast.isApprox(reference, 1e-10));
   }
 }
+TEST_CASE("CRBA matches the reference mass matrix", "[dynamics][golden]") {
+  const RigidBodyDynamics dynamics = make_chain();
+  std::mt19937 rng(20261102);
+  std::uniform_real_distribution<double> angle(-0.6, 0.6);
+  for (int trial = 0; trial < 5; ++trial) {
+    Eigen::VectorXd q = dynamics.neutral_configuration();
+    for (int i = 0; i < q.size(); ++i) {
+      q[i] += angle(rng);
+    }
+    const Eigen::MatrixXd crba = dynamics.mass_matrix_crba(q);
+    const Eigen::MatrixXd reference = dynamics.mass_matrix_reference(q);
+    const double diff = (crba - reference).cwiseAbs().maxCoeff();
+    std::printf("CRBA trial=%d max_diff=%.6g\n", trial, diff);
+    CHECK(crba.isApprox(reference, 1e-10));
+  }
+}
