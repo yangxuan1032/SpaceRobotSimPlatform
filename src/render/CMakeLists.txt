@@ -17,3 +17,5 @@ endif()
 add_subdirectory(backends/qt)
 
 add_subdirectory(backends/rhi)
+
+add_subdirectory(backends/factory)

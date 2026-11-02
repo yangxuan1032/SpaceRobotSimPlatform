@@ -59,10 +59,12 @@ tests/          契约与 ABI 测试：布局、错误码、不支持能力
 | 文件 | 职责 |
 |---|---|
 | `include/srsp/render/renderer.hpp` | 渲染器接口：`initialize/resize/set_camera/render_frame/shutdown` + `RendererCapabilities` |
+| `include/srsp/render/mesh_source.hpp` | `mesh_uri` → `MeshSource{sphere,box,gltf}`，Qt/RHI 共用 |
 | `include/srsp/render/scene.hpp` | 场景描述：`Sphere{position, radius, color, label, mesh_uri, material_id, orientation}`、地球、星空、日照 |
 | `include/srsp/render/projection.hpp` + `projection.cpp` | 双原点投影（`project(camera, viewport, world, origin)`） |
 | `src/null_renderer.cpp` | 无操作后端，供无显示环境与测试 |
 | `backends/qt/` | QPainter 软件后端：地球昼夜、星表、球体、程序化 box、文字 |
+| `backends/factory/` | `make_renderer(RendererKind)`：auto/qt/rhi/null 的唯一映射点 |
 | `backends/rhi/` | QRhi 后端：D3D11 设备、MVP uniform、球体/box/地球/星空、离屏读回；`--renderer rhi` |
 
 ### 2.5 `src/record`

@@ -9,6 +9,7 @@
  * The sidecar transport is reserved for M0 stage 3 and currently reports
  * SRSP_E_UNSUPPORTED without pretending to work.
  */
+#include <srsp/bridge/transport.hpp>
 #include <srsp/core_api.h>
 
 #if defined(SRSP_HAVE_RECORD)

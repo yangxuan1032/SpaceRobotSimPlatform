@@ -15,6 +15,13 @@ namespace srsp::core {
 
 /** @brief Monotonic clock driven by fixed macro steps. */
 /** @brief_zh 由固定宏步驱动的单调时钟。 */
+/** @brief Where the simulation time comes from. */
+enum class TimeSourceKind {
+  kFixedStep = 0,  ///< Advance by explicit macro steps (default).
+  kRealtime = 1,   ///< Reserved: follow the wall clock.
+  kExternal = 2,   ///< Reserved: driven by an external source.
+};
+
 class TimeService {
  public:
   /**
@@ -42,11 +49,27 @@ class TimeService {
   [[nodiscard]] uint64_t step_index() const noexcept { return step_index_; }
   [[nodiscard]] bool running() const noexcept { return running_; }
 
+  /**
+   * @brief Selects the time source; only kFixedStep is implemented.
+   * @return False for a reserved kind, leaving the source unchanged.
+   */
+  bool set_source(TimeSourceKind kind) noexcept {
+    if (kind != TimeSourceKind::kFixedStep) {
+      return false;
+    }
+    source_ = kind;
+    return true;
+  }
+
+  /** @brief Currently selected time source. */
+  [[nodiscard]] TimeSourceKind source() const noexcept { return source_; }
+
  private:
   int64_t step_ns_;
   int64_t now_ns_;
   uint64_t step_index_ = 0;
   bool running_ = true;
+  TimeSourceKind source_ = TimeSourceKind::kFixedStep;
 };
 
 }  // namespace srsp::core

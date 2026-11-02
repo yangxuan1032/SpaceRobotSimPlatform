@@ -1,5 +1,6 @@
 add_subdirectory(diagnostics)
 add_subdirectory(dynamics)
+add_subdirectory(bridge)
 add_subdirectory(blob)
 add_subdirectory(event)
 add_subdirectory(plugin_host)

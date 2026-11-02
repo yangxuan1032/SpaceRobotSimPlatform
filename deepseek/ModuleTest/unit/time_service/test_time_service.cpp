@@ -4,9 +4,9 @@
  */
 #include <srsp/core/time_service.hpp>
 
-#include <catch2/catch_test_macros.hpp>
-
 #include <cstdint>
+
+#include <catch2/catch_test_macros.hpp>
 
 using srsp::core::TimeService;
 
@@ -66,4 +66,12 @@ TEST_CASE("time service advances several steps at once", "[time]") {
   REQUIRE(clock.advance(3));
   CHECK(clock.now_ns() == 100 + 3 * kOneMs);
   CHECK(clock.step_index() == 3u);
+}
+TEST_CASE("time source defaults to fixed step", "[time_service]") {
+  srsp::core::TimeService clock(1'000'000, 0);
+  CHECK(clock.source() == srsp::core::TimeSourceKind::kFixedStep);
+  CHECK_FALSE(clock.set_source(srsp::core::TimeSourceKind::kRealtime));
+  CHECK_FALSE(clock.set_source(srsp::core::TimeSourceKind::kExternal));
+  CHECK(clock.source() == srsp::core::TimeSourceKind::kFixedStep);
+  CHECK(clock.set_source(srsp::core::TimeSourceKind::kFixedStep));
 }
