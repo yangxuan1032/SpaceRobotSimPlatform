@@ -90,6 +90,18 @@ class RigidBodyDynamics {
    */
   [[nodiscard]] Eigen::MatrixXd mass_matrix_reference(const Eigen::VectorXd& q) const;
 
+  /**
+   * @brief Experimental O(n) accelerations (ABA); not used by step() yet.
+   * @brief_zh
+   * 实验性 O(n) 加速度（ABA），尚未被 step() 使用。
+   */
+  [[nodiscard]] Eigen::Matrix<double, 6, 6> spatial_inertia(std::size_t body,
+                                                            const Pose& pose) const;
+
+  [[nodiscard]] Eigen::VectorXd aba_accelerations(const Eigen::VectorXd& q,
+                                                  const Eigen::VectorXd& v,
+                                                  const Eigen::VectorXd& tau) const;
+
   /** @brief Generalised force of gravity, Q_g (nv). */
   /** @brief_zh 重力广义力 Q_g（nv 维）。 */
   [[nodiscard]] Eigen::VectorXd gravity_force(const Eigen::VectorXd& q) const;
