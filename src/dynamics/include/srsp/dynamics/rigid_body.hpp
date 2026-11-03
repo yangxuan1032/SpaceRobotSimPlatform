@@ -109,18 +109,6 @@ class RigidBodyDynamics {
    */
   [[nodiscard]] Eigen::MatrixXd mass_matrix_crba(const Eigen::VectorXd& q) const;
 
-  /**
-   * @brief Experimental O(n) accelerations (ABA); not used by step() yet.
-   * @brief_zh
-   * 实验性 O(n) 加速度（ABA），尚未被 step() 使用。
-   */
-  [[nodiscard]] Eigen::Matrix<double, 6, 6> spatial_inertia(std::size_t body,
-                                                            const Pose& pose) const;
-
-  [[nodiscard]] Eigen::VectorXd aba_accelerations(const Eigen::VectorXd& q,
-                                                  const Eigen::VectorXd& v,
-                                                  const Eigen::VectorXd& tau) const;
-
   /** @brief Generalised force of gravity, Q_g (nv). */
   /** @brief_zh 重力广义力 Q_g（nv 维）。 */
   [[nodiscard]] Eigen::VectorXd gravity_force(const Eigen::VectorXd& q) const;
@@ -174,7 +162,18 @@ class RigidBodyDynamics {
   [[nodiscard]] IntegratorKind integrator() const noexcept { return integrator_; }
 
   /** @brief Selects the solver; only kComposite is implemented today. */
-  void set_solver(SolverKind kind) noexcept { solver_ = kind; }
+  /**
+   * @brief Selects the solver; only kComposite is implemented.
+   * @return False for a
+   * reserved kind, leaving the selection unchanged.
+   */
+  bool set_solver(SolverKind kind) noexcept {
+    if (kind != SolverKind::kComposite) {
+      return false;
+    }
+    solver_ = kind;
+    return true;
+  }
   /** @brief Currently selected solver. */
   [[nodiscard]] SolverKind solver() const noexcept { return solver_; }
 
@@ -272,6 +271,10 @@ class RigidBodyDynamics {
   };
 
   Eigen::Matrix3d gravity_rotation() const;
+
+  /// Spatial inertia of @p body about its origin in the world frame.
+  [[nodiscard]] Eigen::Matrix<double, 6, 6> spatial_inertia(std::size_t body,
+                                                            const Pose& pose) const;
 
   /** @brief 6 x nv Jacobians of every body, computed in one pass. */
   /** @brief_zh 一次遍历计算所有体的 6×nv 雅可比。 */
