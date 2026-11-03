@@ -634,6 +634,23 @@ cmake --install deepseek/Temp/build/win-ucrt64-release --prefix dist/srsp-1.0.0-
 | `rk4` | **962.8** | FAIL |
 | `semi_implicit` | **216.2** | **PASS** |
 
-性能档用法：`dynamics.set_integrator(IntegratorKind::kSemiImplicit)`；`bench_dynamics semi` 直接对比。
+性能档用法：`dynamics.set_integrator(IntegratorKind::kSemiImplicit)`；`bench_dynamics semi` 直接对比；CLI 等价入口 `srsp-cli soak --integrator semi`（同时写入 `srsp_context_config.integrator` 与录制档位标签）。
 统一入口：`srsp_context_config.integrator` / `.solver` / `.renderer`（见 `docs/02` §15.1），应用层可用 `srsp_context_get_config()` 读回生效值。
 代价：半隐式为一阶、能量行为与 RK4 不同，录制回放需标注积分器版本。
+### 11.4 实测补充（2026-11-03）
+
+| 指标 | 数值 | 说明 |
+|---|---|---|
+| `plugin_call_p95_us` | **0.70**（p50 0.60、mean 0.61） | `bench_plugin_call`，20000 次 `core.ping`；预算 20 µs |
+| 单步插件调用占比 | ~10 µs / 300 µs ≈ 3% | 按一步 14 次调用估算 |
+| 积分器分歧（200 步、dt=1 ms、6 关节） | 位置漂移 < 5e-3 m | `unit.dynamics` 的 divergence 用例上界 |
+
+结论：Kimi 提出的「插件调用开销挤占单步预算」在当前实现下**不成立**（0.7 µs × 14 ≈ 10 µs）。
+
+**oracle 对照（S2）**：6 关节链（`chain6_oracle_reference.hpp`，由 `tools/interop/mujoco_chain6.py` 生成）在 `g = 9.81` 下，`M` 144 个元素与 `h` 12 个分量与 MuJoCo **逐位一致**（`mass_mismatches=0`、`bias_mismatches=0`、worst 0）。
+### 12.7 测试树归并（S3，2026-11-03）
+
+- 单元测试与集成测试统一放在仓库 `tests/`：`tests/unit/<module>/`、`tests/integration/<flow>/`；
+- `deepseek/ModuleTest` 已删除，CI 不再传 `-DSRSP_MODULE_TEST_DIR`；
+- 顶层 `CMakeLists.txt` 仍保留 `SRSP_MODULE_TEST_DIR` 变量以兼容外部测试目录，但默认不叠加；
+- 迁移后 `format_check` 覆盖全部测试源码（此前模型目录不在检查范围）。

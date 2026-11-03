@@ -278,7 +278,7 @@ orbital_servicer.srm/
 | 关节轴 | 关节 frame 中的**单位向量**；实现必须归一化后使用；正方向按右手定则 |
 | 力矩符号 | 正力矩驱动正向 `q̇`；`tau` 与 `q` 同号约定 |
 | COM | `com` 在**子体 frame** 中给出；空间惯量由 `I_c` 与 `com` 组合 |
-| 对照容差 | 同一模型下 M(q)、h(q,v) 绝对误差 ≤ 1e-9；J 绝对误差 ≤ 1e-9 |
+| 对照容差 | **同编译器、同 flags** 下 M(q)、h(q,v)、J 绝对误差 ≤ 1e-9；跨编译器/跨平台按 §2.5 的 L2（位置 1e-6 相对、四元数 1e-9、能量 1e-8） |
 
 Pinocchio 对照步骤：① 用 `pin.Model` 按上表逐关节 `addJoint(parent, jointModel, SE3(R_origin, p_origin))`；② `appendBodyToJoint` 用 `Inertia(mass, com, I_c)`；③ 随机 q、v 下比较 `crba` 的 M 与 `computeGeneralizedGravity`+`rnea` 的 h。
 **`state.joints`**：`id, q, qd, tau, motor_tau, limit_flag`
@@ -407,12 +407,14 @@ message EntityDelta {
   bool   visible = 4;
   uint32 highlight = 5;           // 0=无 1=选中 2=悬停 3=告警
   string material_override = 6;
+  Vec3f  vel_rel = 7;             // 相对 origin_eci 的速度，供插值/外推
+  Vec3f  omega_rel = 8;           // 相对角速度（可选，缺省为 0）
 }
 ```
 
 - **双原点渲染**：近端（机器人、目标、轨迹）以机器人为原点；远端（地球、月球、太阳、星空）以天体中心为原点单独一遍渲染，再用深度合成。理由：float32 在 7000 km 处的最小分辨率约 1 m，地球表面会抖动。
 - **深度**：反转 Z + 无限远平面（数值上以 1e12 m 作为远平面）；近裁面 1 cm。
-- **插值**：渲染帧与宏步不同步时，用 `pos_rel`/`vel_w` 线性外推（可配置关闭，默认开）；外推上限 1 帧。
+- **插值**：渲染帧与宏步不同步时，用 `pos_rel`/`vel_rel` 线性外推（`omega_rel` 供姿态外推）（可配置关闭，默认开）；外推上限 1 帧。
 - **覆盖层**：轨迹折线（抽稀后 ≤ 20k 点）、坐标系三轴、传感器视锥、标签、力/力矩箭头、捕获包络。
 
 ### 6.3 离屏成像

@@ -46,6 +46,8 @@ tests/          契约与 ABI 测试：布局、错误码、不支持能力
 
 ### 2.3 `src/dynamics`
 
+> 2026-11-03（S1）：实验性 `aba_accelerations` 已移除，`spatial.hpp` 降为 `src/` 内部头；`set_solver(kArticulated)` 返回 false。
+
 | 文件 | 职责 |
 |---|---|
 | `rigid_body.*` | 浮动基刚体树：`forward_kinematics`、`jacobian`、`mass_matrix`（祖先列裁剪）、`mass_matrix_reference`（对照）、`gravity_force`、`bias_forces`（RNEA）、`step`（RK4 / 半隐式）、执行器限幅、`generalized_force` |
@@ -75,6 +77,8 @@ tests/          契约与 ABI 测试：布局、错误码、不支持能力
 | `blob_recorder.hpp` | `BlobStore` → Attachment + Metadata，写后释放，超限拒绝 |
 | `blob_ref_codec.hpp` | `sim.blobref` 28 字节小端编解码 |
 | `state_hash.*` | `state_hash` = XXH3-128，用于回放确定性比对 |
+| `selection.hpp` | 档位标签：`IntegratorTag`/`SolverTag`/`EncodingTag` 与 `selection_metadata()` |
+| `run_metadata.hpp` | 插件锁规范化 + 运行元数据（compiler/build_flags/锁哈希）+ `check_selection()` 回放校验 |
 
 ### 2.6 `src/bridge`
 
@@ -133,3 +137,16 @@ core ← bridge ← apps
 | record | `unit.mcap`（含 Attachment/Summary）、`unit.state_hash` |
 | apps | `integration.studio_selftest`、`integration.studio_ui`、`integration.studio_ui_rhi` |
 | 契约 | `abi.*`、`docs_check` |
+## 6. 渲染能力矩阵（P3，2026-11-03）
+
+| 能力 | Qt（软件） | RHI（D3D11） | 说明 |
+|---|---|---|---|
+| 地球 + 星空 | ✅ | ✅ | 两者均有 |
+| 程序化 box（`mesh_uri="box"`） | ✅ | ✅ | 按 `MeshSource` 分发 |
+| 程序化球体（空 URI） | ✅ | ✅ | RHI 逐体球体 + 日照着色 |
+| 双原点投影 | ✅ | ✅ | 相机原点扣除 |
+| 离屏捕获 | ✅ | ✅ | `bench_rhi` 1080p ≈ 5.97 ms |
+| glTF 网格 | ⚠️ 告警后回退球体 | ⚠️ 同 | B5 后置 |
+| 文字/标签叠加 | ✅（studio 窗口层） | ❌ unsupported | P3.2 待实现，未实现前不得宣称一致 |
+
+规则：表中标记 ❌/⚠️ 的能力不得在验收中按「已支持」计分；新增能力先补本表再加测试。

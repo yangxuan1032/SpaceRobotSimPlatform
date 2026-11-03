@@ -122,7 +122,13 @@
 - 中文用于文档与交流；**代码注释（含 Doxygen、行内注释、CMake/YAML/Schema 描述）与 commit message 一律英文**，文件名用英文。
 - 同一职责有多种实现（算法/后端/积分器/传输）时，按 `tools/ai/skills/module-build/SKILL.md` §8 以「枚举 + set/get + 默认档 + 保留档」引入，禁止用编译期宏分叉 ABI。
 - 新增或修改模块时，公共接口与实现的变量/函数必须写 Doxygen（`@brief/@param/@return`），验收标准见 `tools/ai/skills/module-build/SKILL.md`。
-- **提交与推送必须先征得用户同意**：未明确同意不得 `git commit` / `git push`；需要沙箱升级时逐次申请、一次一命令，规则见 `tools/ai/skills/work-log/SKILL.md`；多次未提交的修改在获准后按时间顺序编号提交。
+- **提交与推送一律先执行、后征询（适用于所有项目与所有模型）**：
+  - 完成任务后**不要**自动 `git commit` / `git push`，先把改动留在工作区；
+  - 在回复末尾**一次性**给出待提交清单（新增/修改/删除）与建议的提交拆分，并明确请求用户许可；
+  - 未获得明确许可前，不得提交、不得推送、不得用 `git stash`/`git checkout` 等方式隐藏改动；如需回退必须先说明并再次征询；
+  - 获得许可后，只提交许可范围内列出的文件；多次积累的修改按时间顺序编号提交；推送同样需要单独许可，网络失败不得自动改用其他通道重试超过一次；
+  - 紧急例外仅限用户当轮明确要求「立即提交/推送」，且以用户原文为界。
+- 需要沙箱升级时逐次申请、一次一命令，规则见 `tools/ai/skills/work-log/SKILL.md`。
 - 共享 PowerShell 脚本保持 **ASCII 源码**，中文文案放在 `tools/ai/labels.json`（UTF-8 数据文件）；避免 Windows PowerShell 5.1 把无 BOM 的 UTF-8 源码按 ANSI 解析。
 - 执行策略拦截脚本时，仅对当前进程放开（不修改系统设置）：
 
@@ -183,7 +189,7 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 | 规划工作流 | [`tools/ai/workflows/planner.md`](tools/ai/workflows/planner.md) | 需求 → 差距分析 → 计划落盘 → 决策清单 |
 | 执行工作流 | [`tools/ai/workflows/executor.md`](tools/ai/workflows/executor.md) | 按计划实施 → 构建/测试 → 日志 → 征询提交 |
 | 模块构建技能 | [`tools/ai/skills/module-build/SKILL.md`](tools/ai/skills/module-build/SKILL.md) | 建/改模块；Doxygen 强制；注释英文 |
-| 模块测试技能 | [`tools/ai/skills/module-test/SKILL.md`](tools/ai/skills/module-test/SKILL.md) | 单元测试 `<model>/ModuleTest/unit/`、集成测试 `<model>/ModuleTest/integration/` |
+| 模块测试技能 | [`tools/ai/skills/module-test/SKILL.md`](tools/ai/skills/module-test/SKILL.md) | 单元测试 `tests/unit/`、集成测试 `tests/integration/`（S3 已从 `<model>/ModuleTest` 迁入） |
 | 工作日志技能 | [`tools/ai/skills/work-log/SKILL.md`](tools/ai/skills/work-log/SKILL.md) | 日志格式；提交/推送征询；多次修改的编号批量提交 |
 
 约定：

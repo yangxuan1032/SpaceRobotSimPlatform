@@ -389,6 +389,32 @@ v1 支持**单进程内 N 个机器人**（起步 N ≤ 8）协同，跨进程/�
 | CLANG64（libc++） | **experimental** | 预设已移除（P28） |
 | Linux 构建 | **planned** | 作业已移除，1.2 恢复 |
 | 性能 300 µs | **planned** | 已豁免到 1.1（docs/07 §12.1） |当前对应：UCRT64 GCC=supported，UCRT64 Clang=supported（构建+测试），MSVC=unverified，CLANG64=experimental（已移除预设）。
+### 7.2 扩展点与保留接口（2026-11-03）
+
+原则：**现在能用简单实现，但接口必须先留好**。任何新增能力按「枚举 + set/get + 默认档 + 保留档」接入（见 `tools/ai/skills/module-build/SKILL.md` §8），禁止编译期宏分叉 ABI。
+
+| 扩展点 | 当前实现 | 保留形式 | 落地时所需动作 |
+|---|---|---|---|
+| 时间积分 | `IntegratorKind{kRk4, kSemiImplicit}` | 枚举已就位 | 新档位加值 + 测试 |
+| 动力学求解 | `SolverKind{kComposite, kArticulated}` | `set_solver(kArticulated)` 返回 false，公共 API 无 ABA 入口（S1 已清理） | 实现 ABA 后加回（B6） |
+| 渲染后端 | `RendererKind{auto,qt,rhi,null}` + `make_renderer()` | 工厂已就位 | 新后端加枚举值 |
+| 网格来源 | `MeshSource{sphere,box,gltf}` | `kGltf` 告警后回退球体 | 接 glTF 加载器 |
+| 插件传输 | `TransportKind{inproc,sidecar}` | 枚举已就位 | T2 强制策略 |
+| 时间源 | `TimeSourceKind{fixed_step,realtime,external}` | 预留档 `set_source()` 返回 false | 实时/外部时钟 |
+| 能力解析 | `registry` 优先级解析 | 预留「pin/override」策略钩子 | 插件锁 + 用户 pin |
+| 数据订阅 | 内核按调度回调 | 预留 host 表追加 `subscribe`（`struct_size` 版本化） | 需求确认后追加字段 |
+| 检查点 | 无 | 约定载荷 = Arrow 状态快照 IPC bytes | 实现时按此约定 |
+| 故障策略 | 单插件、失败即报错 | 预留 `FaultPolicy{stop,disable,retry}` | 1.1 多插件后启用 |
+| 质量预算 | 均值 + 插件调用 p50/p95 | 指标字段预留 | 动力学 p50/p95 上报 |
+
+### 7.3 通用化判定
+
+一个能力只有同时满足下列三条，才允许进入 1.x 主线；否则登记到 `docs/07` §18 的完成后优化清单：
+
+1. 当前流程可执行（单开发者 + 现有 CI 能跑通）；
+2. 有可判定的验收（测试或基准数字）；
+3. 接口形态已定，未来实现不需要破坏 ABI/schema。
+
 ## 8. 架构决策摘要（ADR Index）
 
 | ADR | 决策 | 主要理由 | 详见 | 状态 |

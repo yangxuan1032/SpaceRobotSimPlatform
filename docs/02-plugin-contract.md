@@ -94,7 +94,7 @@
 | `capabilities[].version` | 是 | 能力契约版本 |
 | `capabilities[].alias` | 是 | 方法前缀，见 §5.1 |
 | `requires` / `optional_requires` | 否 | 能力或平台服务依赖，支持 semver 区间 |
-| `permissions` | 否 | 声明式权限，安装时展示，运行时强制 |
+| `permissions` | 否 | 声明式权限，安装时展示；**仅对边车运行时强制**，进程内插件靠签名 + 评审（T0/T1） |
 | `entry.thread_safe` | 否 | 允许非 Sim 线程并发调用的方法列表 |
 
 > 平台服务（非插件提供）也以能力形式声明，例如 `srsp.frames@1`、`srsp.time@1`、`srsp.bus@1`，便于插件表达对内核功能的依赖。
@@ -641,6 +641,28 @@ if __name__ == "__main__":
 
 **关键澄清**：manifest 的权限声明是**授权输入**，不代表操作系统已实施沙箱；强隔离能力必须由 OS 后端报告（Windows Job/AppContainer、Linux cgroup/seccomp）。权限拒绝不得静默降级。
 
+## 16.1 错误信息生命周期（2026-11-02 明确）
+
+`srsp_error.message` 的归属规则（此前只写「owned by callee」，并发下无法判定）：
+
+- 必须是**静态字符串**，或由 `host->alloc` 分配、调用方用 `host->free` 释放；
+- 不得指向调用栈上的临时缓冲；
+- 插件不得在返回后回收该内存（除非由调用方 free）。
+
+## 16.2 扩展点预留（2026-11-03）
+
+以下扩展**不在 1.x 实现**，但接口位置与兼容规则先固定，避免将来破坏 ABI/schema：
+
+| 扩展点 | 预留方式 | 兼容规则 |
+|---|---|---|
+| 插件侧订阅（`host->subscribe`） | host 表末尾追加函数指针 | `struct_size` 版本化；旧插件不读新字段 |
+| 检查点载荷 | 约定为 Arrow 状态快照的 IPC bytes | 与 `dynamics.get_state/set_state` 互逆 |
+| 能力 pin / 锁强制 | `run_metadata` 的 `plugin_lock_hash` + `check_selection()` | 不匹配不得静默回放 |
+| 故障策略 | 枚举 `FaultPolicy{stop,disable,retry}`（未实现） | 未实现值返回 `SRSP_E_UNSUPPORTED` |
+| 传输扩展 | `TransportKind` 追加值 | 未知值 `parse_transport()` 返回 `nullptr` |
+
+规则：任何扩展上线前，必须在 `docs/01` §7.2 有对应行，并补充「正例 + 拒绝路径」测试。
+
 ## 17. BlobRef：大块数据的生命周期
 
 大块数据（状态块、图像、点云）不复制进控制消息，统一用 `BlobRef`：
@@ -667,6 +689,17 @@ BlobRef {
 - 元数据写入独立 **Metadata** 记录（键：`blob_generation`、`schema_hash`），不塞进 Attachment；
 - 回放：按 `t_tai_ns` 找引用与附件；附件缺失或 `generation` 不符时**告警并跳过**，不中断回放；
 - 生命周期：写入侧持有引用，附件落盘后 `release()`；单文件上限默认 256 MiB。
+
+## 17.3 回放准入规则（P1，2026-11-03）
+
+回放前必须通过两道检查（实现：`srsp::record::verify_recording()` / `verify_against()`）：
+
+| 检查 | 失败结果 |
+|---|---|
+| 录制自洽：通道含 `integrator`/`solver`/`encoding`，且 `encoding` 属于 `raw-f64`/`arrow` | `allowed=false`，拒绝打开 |
+| 与当前运行一致：`check_selection()` 逐键比对（含 `compiler`/`build_flags`/`plugin_lock_hash`） | `kStrict` 拒绝；`kAllowReadOnly` 降级只读 |
+
+只读会话**不得参与回归比对**，其 `state_hash` 只用于人工排查。CLI：`srsp-cli inspect <recording.mcap>` 打印通道元数据与准入结论。
 
 ## 18. Schema Registry 与 schema hash
 
@@ -701,8 +734,13 @@ BlobRef {
 | `integrator` | `rk4` / `semi_implicit` | 记录时的积分器档位 |
 | `solver` | `composite` / `articulated` | 记录时的解算器档位 |
 | `encoding` | `raw-f64` / `arrow` | 通道消息编码（`arrow` 为 2.0 预留） |
+| `compiler` | 如 `GCC 16.1.0` | 构建产物标识 |
+| `build_flags` | 如 `-O2 -ffp-contract=off` | 影响数值结果的编译选项 |
+| `plugin_lock_hash` | 32 位十六进制 | 插件锁（`canonical_plugin_lock()` 的 XXH3-128） |
 
-构造入口：`srsp::record::selection_metadata(integrator, solver, encoding)`。
+构造入口：`srsp::record::selection_metadata()`（三档）与 `srsp::record::run_metadata_map()`（含工具链与锁）。
+
+**回放校验**：`check_selection()` 逐键比对，返回 `kOk` / `kMissing` / `kMismatch` 并给出首个不符的键；`kMismatch` 时回放器必须拒绝或显式进入「只读、不参与回归」模式。插件锁由 `canonical_plugin_lock()` 生成（按 id 排序，`id@version#schema#api`），两台机器锁不同即视为不可复现。
 读取端遇到未知取值时**告警并跳过**，不得崩溃或静默按默认解析。
 ### 15.2 其余运行期选择（A5–A7，2026-11-02）
 

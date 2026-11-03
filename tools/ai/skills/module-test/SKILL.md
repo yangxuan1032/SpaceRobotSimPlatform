@@ -1,7 +1,7 @@
 # Skill：模块测试（module-test）
 
 > 职责：为模块补单元测试与集成测试，并接入 ctest。
-> 目录规则：单元测试放 `<model>/ModuleTest/unit/`，集成测试放 `<model>/ModuleTest/integration/`。
+> 目录规则：单元测试放 `tests/unit/`，集成测试放 `tests/integration/`。
 
 ## 1. 触发
 
@@ -46,7 +46,7 @@
 ## 4. CMake 接入示例
 
 ```cmake
-# <model>/ModuleTest/unit/plugin_host/CMakeLists.txt
+# tests/unit/plugin_host/CMakeLists.txt
 add_executable(test_plugin_host test_plugin_host.cpp)
 target_link_libraries(test_plugin_host PRIVATE srsp_core Catch2::Catch2WithMain)
 add_test(NAME unit.plugin_host COMMAND test_plugin_host)

@@ -51,8 +51,6 @@ jobs:
             -DCMAKE_CXX_COMPILER=g++ \
             -DCMAKE_MAKE_PROGRAM=ninja \
             -DPython3_EXECUTABLE="$(cygpath -w "$(which python)")" \
-            -DSRSP_MODULE_TEST_DIR=deepseek/ModuleTest
-
       - name: build
         run: cmake --build --preset win-ucrt64-debug
 

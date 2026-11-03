@@ -92,7 +92,9 @@ typedef enum srsp_status {
 typedef struct srsp_error {
   uint32_t struct_size;
   srsp_status code;
-  const char* message;     /* short, user-facing; owned by callee */
+  /* Static string, or host->alloc memory that the caller frees with host->free;
+   * never a pointer into a callee stack buffer. */
+  const char* message;
   const char* detail_json; /* optional structured context; owned by callee */
 } srsp_error;
 
