@@ -39,3 +39,17 @@ if(TARGET srsp_render_rhi)
     target_compile_options(bench_rhi PRIVATE -Wall -Wextra -Wpedantic)
   endif()
 endif()
+# Plugin call overhead, referenced against the 20 us per-call budget.
+add_executable(bench_plugin_call bench_plugin_call.cpp)
+target_link_libraries(bench_plugin_call PRIVATE srsp_core)
+add_test(NAME bench.plugin_call COMMAND bench_plugin_call)
+set_tests_properties(bench.plugin_call PROPERTIES
+  TIMEOUT 300
+  LABELS "bench"
+  ENVIRONMENT "SRSP_HELLO_PLUGIN=$<TARGET_FILE:srsp_hello_plugin>"
+  PASS_REGULAR_EXPRESSION "plugin_budget_us=20 verdict=")
+if(MSVC)
+  target_compile_options(bench_plugin_call PRIVATE /W4)
+else()
+  target_compile_options(bench_plugin_call PRIVATE -Wall -Wextra -Wpedantic)
+endif()

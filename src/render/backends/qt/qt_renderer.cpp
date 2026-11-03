@@ -4,6 +4,7 @@
  */
 #include "qt_renderer.hpp"
 
+#include <srsp/render/mesh_source.hpp>
 #include <srsp/render/projection.hpp>
 
 #include <algorithm>
@@ -238,6 +239,21 @@ void QtRenderer::paint(QPainter& painter, const srsp::render::Viewport& viewport
 
   // Robots: projected relative to the camera position (dual origin again).
   for (const auto& body : scene_.bodies) {
+    const srsp::render::MeshSource source = srsp::render::mesh_source_from_uri(body.mesh_uri);
+    if (source == srsp::render::MeshSource::kBox) {
+      draw_box(painter, camera_, viewport, body);
+      continue;
+    }
+    if (source == srsp::render::MeshSource::kGltf) {
+      // Reserved: glTF loading is not implemented; warn once and draw a sphere
+      // so the scene stays visible instead of silently pretending success.
+      static bool warned = false;
+      if (!warned) {
+        std::fprintf(stderr, "warn: glTF mesh '%s' is not supported yet, drawing a sphere\n",
+                     body.mesh_uri.c_str());
+        warned = true;
+      }
+    }
     const srsp::render::ScreenPoint projected =
         srsp::render::project(camera_, viewport, body.position_m, camera_.eye);
     if (!projected.visible) {

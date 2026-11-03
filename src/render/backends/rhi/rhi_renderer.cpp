@@ -4,6 +4,7 @@
  */
 #include "rhi_renderer.hpp"
 
+#include <srsp/render/mesh_source.hpp>
 #include <srsp/render/scene.hpp>
 
 #include <cmath>
@@ -483,7 +484,25 @@ bool RhiRenderer::render_frame(bool capture) {
   if (!scene_.bodies.empty()) {
     box_vertices.reserve(box_vertices.size() + scene_.bodies.size() * 36u * 6u);
     for (const auto& body : scene_.bodies) {
-      append_box(body, box_vertices);
+      switch (srsp::render::mesh_source_from_uri(body.mesh_uri)) {
+        case srsp::render::MeshSource::kBox:
+          append_box(body, box_vertices);
+          break;
+        case srsp::render::MeshSource::kSphere:
+          append_sphere_world(body, scene_.sun_direction, scene_.eclipse ? 0.08 : 0.18,
+                              box_vertices);
+          break;
+        case srsp::render::MeshSource::kGltf: {
+          static bool warned = false;
+          if (!warned) {
+            std::fprintf(stderr, "warn: glTF mesh is not supported yet, drawing a sphere\n");
+            warned = true;
+          }
+          append_sphere_world(body, scene_.sun_direction, scene_.eclipse ? 0.08 : 0.18,
+                              box_vertices);
+          break;
+        }
+      }
     }
   }
   // Upload whatever the frame built (earth alone is a valid scene).

@@ -11,6 +11,9 @@
  */
 #include <srsp/bridge/transport.hpp>
 #include <srsp/core_api.h>
+#include <srsp/record/mcap.hpp>
+#include <srsp/record/replay.hpp>
+#include <srsp/record/run_metadata.hpp>
 
 #if defined(SRSP_HAVE_RECORD)
 #include <srsp/record/mcap.hpp>
@@ -60,6 +63,7 @@ void print_usage() {
       "usage:\n"
       "  srsp-cli version\n"
       "  srsp-cli soak --plugin <path> [--minutes N] [--sleep-ms N] [--workload ping|step|record] "
+      "[--integrator rk4|semi] "
       "[--model <srm>]\n"
       "  srsp-cli demo --transport inproc --plugin <path> [--method <name>]\n",
       stderr);
@@ -186,6 +190,15 @@ int run_soak(const std::vector<std::string>& args) {
   const std::string sleep_text = option_value(args, "--sleep-ms");
   const std::string workload =
       option_value(args, "--workload").empty() ? "ping" : option_value(args, "--workload");
+  const std::string integrator_name =
+      option_value(args, "--integrator").empty() ? "rk4" : option_value(args, "--integrator");
+  if (integrator_name != "rk4" && integrator_name != "semi") {
+    std::fprintf(stderr, "error: unknown integrator '%s' (rk4|semi)\n", integrator_name.c_str());
+    return kExitFailure;
+  }
+  const srsp::dynamics::IntegratorKind integrator_kind =
+      integrator_name == "semi" ? srsp::dynamics::IntegratorKind::kSemiImplicit
+                                : srsp::dynamics::IntegratorKind::kRk4;
   const std::string model_path = option_value(args, "--model");
   const double minutes = minutes_text.empty() ? 1.0 : std::stod(minutes_text);
   const int sleep_ms = sleep_text.empty() ? 5 : std::stoi(sleep_text);
@@ -203,6 +216,8 @@ int run_soak(const std::vector<std::string>& args) {
   srsp_context_config config{};
   config.struct_size = sizeof(srsp_context_config);
   config.flags = SRSP_CTX_FLAG_HEADLESS;
+  // The selection lives in the one runtime configuration entry (docs/02 15.1).
+  config.integrator = integrator_name == "semi" ? 1u : 0u;
 
   srsp_context* ctx = nullptr;
   if (srsp_context_create(&config, &ctx, &err) != SRSP_OK) {
@@ -233,7 +248,8 @@ int run_soak(const std::vector<std::string>& args) {
       srsp_context_destroy(ctx);
       return kExitFailure;
     }
-    const srsp::dynamics::RigidBodyDynamics dynamics(loaded.model);
+    srsp::dynamics::RigidBodyDynamics dynamics(loaded.model);
+    dynamics.set_integrator(integrator_kind);
     Eigen::VectorXd q = dynamics.neutral_configuration();
     Eigen::VectorXd v = Eigen::VectorXd::Zero(dynamics.nv());
     const Eigen::VectorXd tau = Eigen::VectorXd::Zero(dynamics.nv());
@@ -284,7 +300,16 @@ int run_soak(const std::vector<std::string>& args) {
       srsp::record::McapWriter writer;
       if (writer.open(path.string(), "srsp.soak")) {
         const auto schema = writer.add_schema("srsp.state/1", "raw-f64", "{}");
-        const std::map<std::string, std::string> metadata{{"schema_hash", "soak"}, {"abi", "1"}};
+        srsp::record::RunMetadata run;
+        run.integrator = integrator_kind == srsp::dynamics::IntegratorKind::kSemiImplicit
+                             ? srsp::record::IntegratorTag::kSemiImplicit
+                             : srsp::record::IntegratorTag::kRk4;
+        run.compiler = SRSP_BUILD_COMPILER;
+        run.build_flags = SRSP_BUILD_FLAGS;
+        std::map<std::string, std::string> metadata{{"schema_hash", "soak"}, {"abi", "1"}};
+        for (const auto& [key, value] : srsp::record::run_metadata_map(run)) {
+          metadata[key] = value;
+        }
         const auto channel = writer.add_channel(schema, "sim.state", "raw-f64", metadata);
         for (int i = 0; i < 32; ++i) {
           writer.write_message(channel, static_cast<std::uint64_t>(i),
@@ -444,6 +469,31 @@ int main(int argc, char** argv) {
   }
 
   const std::string& command = args[1];
+  if (command == "inspect") {
+    if (args.size() < 2) {
+      std::fprintf(stderr, "error: inspect needs a recording path\n");
+      return kExitFailure;
+    }
+    srsp::record::McapReader reader;
+    if (!reader.open(args[1])) {
+      std::fprintf(stderr, "error: cannot open '%s'\n", args[1].c_str());
+      return kExitFailure;
+    }
+    const auto decision = srsp::record::verify_recording(reader.channels());
+    std::printf("channels=%zu\n", reader.channels().size());
+    for (const auto& channel : reader.channels()) {
+      std::printf("channel topic=%s encoding=%s\n", channel.topic.c_str(),
+                  channel.message_encoding.c_str());
+      for (const auto& [key, value] : channel.metadata) {
+        std::printf("  metadata %s=%s\n", key.c_str(), value.c_str());
+      }
+    }
+    std::printf("replay allowed=%s read_only=%s reason=%s\n", decision.allowed ? "yes" : "no",
+                decision.read_only ? "yes" : "no",
+                decision.reason.empty() ? "<none>" : decision.reason.c_str());
+    return decision.allowed ? 0 : kExitFailure;
+  }
+
   if (command == "version") {
     return run_version();
   }

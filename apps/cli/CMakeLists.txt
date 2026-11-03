@@ -26,3 +26,8 @@ if(TARGET srsp_record)
   target_link_libraries(srsp_cli PRIVATE srsp_record)
   target_compile_definitions(srsp_cli PRIVATE SRSP_HAVE_RECORD=1)
 endif()
+# Recorded run metadata needs the toolchain identity; keep it next to the target
+# so a recording can be reproduced from the same compiler and flags.
+target_compile_definitions(srsp_cli PRIVATE
+  "SRSP_BUILD_COMPILER=\"${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\""
+  "SRSP_BUILD_FLAGS=\"${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}\"")
