@@ -10,12 +10,13 @@
 #include <srsp/bridge/sidecar_server.hpp>
 #include <srsp/core/plugin_host.hpp>
 
-#include <cstdio>
-#include <cstdlib>
 #include <string>
 
+#include <cstdio>
+#include <cstdlib>
+
 #if defined(_WIN32)
-#  include <malloc.h>
+#include <malloc.h>
 #endif
 
 namespace {
@@ -27,12 +28,15 @@ int fail(const char* what) {
 
 void SRSP_CALL t_log(void*, int32_t, srsp_str) {}
 
-double SRSP_CALL t_time(void*) { return 0.0; }
+double SRSP_CALL t_time(void*) {
+  return 0.0;
+}
 
-int64_t SRSP_CALL t_time_ns(void*) { return 0; }
+int64_t SRSP_CALL t_time_ns(void*) {
+  return 0;
+}
 
-srsp_status SRSP_CALL t_alloc(void*, uint64_t size, uint64_t alignment,
-                              void** out) {
+srsp_status SRSP_CALL t_alloc(void*, uint64_t size, uint64_t alignment, void** out) {
   if (out == nullptr || size == 0) {
     return SRSP_E_INVALID_ARGUMENT;
   }
@@ -42,8 +46,7 @@ srsp_status SRSP_CALL t_alloc(void*, uint64_t size, uint64_t alignment,
 #if defined(_WIN32)
   *out = _aligned_malloc(static_cast<size_t>(size), static_cast<size_t>(alignment));
 #else
-  if (posix_memalign(out, static_cast<size_t>(alignment),
-                     static_cast<size_t>(size)) != 0) {
+  if (posix_memalign(out, static_cast<size_t>(alignment), static_cast<size_t>(size)) != 0) {
     *out = nullptr;
   }
 #endif
@@ -100,12 +103,11 @@ int main(int argc, char** argv) {
     return fail("inproc init failed");
   }
   srsp_buffer local_response{};
-  if (local.call(srsp_str{"core.ping", 9}, srsp_bytes{}, &local_response,
-                 nullptr) != SRSP_OK) {
+  if (local.call(srsp_str{"core.ping", 9}, srsp_bytes{}, &local_response, nullptr) != SRSP_OK) {
     return fail("inproc call failed");
   }
-  const std::string expected(
-      reinterpret_cast<const char*>(local_response.data), local_response.size);
+  const std::string expected(reinterpret_cast<const char*>(local_response.data),
+                             local_response.size);
   local.unload();
 
   // Sidecar: serve the same plugin over gRPC and call it through the bridge.
@@ -132,8 +134,8 @@ int main(int argc, char** argv) {
     return fail("invoke failed");
   }
   if (actual != expected) {
-    std::fprintf(stderr, "FAIL: payload mismatch\n  inproc : %s\n  sidecar: %s\n",
-                 expected.c_str(), actual.c_str());
+    std::fprintf(stderr, "FAIL: payload mismatch\n  inproc : %s\n  sidecar: %s\n", expected.c_str(),
+                 actual.c_str());
     server.stop();
     return 1;
   }

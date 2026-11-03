@@ -7,7 +7,19 @@
 #   bench/       performance baselines      (added in M0, phase 2+)
 
 add_subdirectory(abi)
-add_subdirectory(unit)
+# Unit tests need Catch2 built with the same C++ runtime as the active
+# toolchain (UCRT64 today). The module test tree was merged here in S3.
+if(MSVC OR (WIN32 AND NOT CMAKE_CXX_COMPILER MATCHES "ucrt64"))
+  message(STATUS "Unit tests are enabled only for the UCRT64 toolchain; skipped")
+else()
+  find_package(Catch2 3 CONFIG QUIET)
+  if(Catch2_FOUND)
+    add_subdirectory(unit)
+  else()
+    message(STATUS "Catch2 not found; unit tests are disabled")
+  endif()
+endif()
+add_subdirectory(integration)
 
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)

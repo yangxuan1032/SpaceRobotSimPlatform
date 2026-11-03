@@ -6,10 +6,10 @@
 #include <srsp/core/scheduler.hpp>
 #include <srsp/core/time_service.hpp>
 
-#include <catch2/catch_test_macros.hpp>
-
 #include <cstdint>
 #include <vector>
+
+#include <catch2/catch_test_macros.hpp>
 
 using srsp::core::Diagnostics;
 using srsp::core::Scheduler;
@@ -25,8 +25,8 @@ TEST_CASE("scheduler runs the requested number of steps", "[scheduler]") {
   Scheduler scheduler(clock);
 
   std::vector<int64_t> times;
-  const uint64_t executed = scheduler.run(
-      5, [&times](uint64_t, int64_t t_ns) { times.push_back(t_ns); });
+  const uint64_t executed =
+      scheduler.run(5, [&times](uint64_t, int64_t t_ns) { times.push_back(t_ns); });
 
   CHECK(executed == 5);
   CHECK(scheduler.total_steps() == 5);

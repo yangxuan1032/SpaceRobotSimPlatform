@@ -16,6 +16,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <random>
 
+#include "chain6_oracle_reference.hpp"
+
 using srsp::dynamics::RigidBodyDynamics;
 
 namespace {
@@ -168,4 +170,86 @@ TEST_CASE("semi-implicit integrator is selectable and deterministic", "[dynamics
   // Both integrate the same dynamics; at this step size they stay close.
   CHECK((first.first - rk4.first).norm() < 1e-2);
   dynamics.set_integrator(srsp::dynamics::IntegratorKind::kRk4);
+}
+TEST_CASE("integrator divergence stays bounded", "[dynamics][integrator]") {
+  // The semi-implicit mode is documented as a first-order performance profile;
+  // this test pins how far it may drift from RK4 on the benchmark chain so a
+  // future change cannot silently make the fast profile inaccurate.
+  RigidBodyDynamics dynamics = make_chain();
+  Eigen::VectorXd q0 = dynamics.neutral_configuration();
+  Eigen::VectorXd v0 = Eigen::VectorXd::Zero(dynamics.nv());
+  const Eigen::VectorXd tau = Eigen::VectorXd::Zero(dynamics.nv());
+  for (int i = 0; i < dynamics.joint_count(); ++i) {
+    q0[7 + i] = 0.05;
+  }
+
+  auto integrate = [&](srsp::dynamics::IntegratorKind kind) {
+    dynamics.set_integrator(kind);
+    Eigen::VectorXd q = q0;
+    Eigen::VectorXd v = v0;
+    for (int step = 0; step < 200; ++step) {
+      dynamics.step(&q, &v, tau, 1e-3);
+    }
+    return std::make_pair(q, v);
+  };
+
+  const auto rk4 = integrate(srsp::dynamics::IntegratorKind::kRk4);
+  const auto semi = integrate(srsp::dynamics::IntegratorKind::kSemiImplicit);
+  const double position_drift = (semi.first.head(3) - rk4.first.head(3)).norm();
+  const double joint_drift = (semi.first.tail(7) - rk4.first.tail(7)).norm();
+  std::printf("integrator divergence position=%.6g joints=%.6g\n", position_drift, joint_drift);
+  CHECK(position_drift < 5e-3);
+  CHECK(joint_drift < 5e-3);
+  dynamics.set_integrator(srsp::dynamics::IntegratorKind::kRk4);
+}
+TEST_CASE("mass matrix and bias match the MuJoCo oracle (six joints)", "[dynamics][oracle]") {
+  RigidBodyDynamics dynamics = make_chain();
+  dynamics.set_gravity(Eigen::Vector3d(0.0, 0.0, -9.81));
+
+  Eigen::VectorXd q(dynamics.nq());
+  for (int i = 0; i < q.size(); ++i) {
+    q[i] = srsp::test::chain6::kQ[i];
+  }
+  Eigen::VectorXd v(dynamics.nv());
+  for (int i = 0; i < v.size(); ++i) {
+    v[i] = srsp::test::chain6::kV[i];
+  }
+
+  const Eigen::MatrixXd mass = dynamics.mass_matrix(q);
+  const Eigen::VectorXd bias = dynamics.bias_forces(q, v);
+
+  REQUIRE(mass.rows() == srsp::test::chain6::kNv);
+  REQUIRE(bias.size() == srsp::test::chain6::kNv);
+
+  auto close = [](double actual, double expected) {
+    const double scale = std::max(1.0, std::abs(expected));
+    return std::abs(actual - expected) <= 1e-9 * scale;
+  };
+
+  int mass_mismatches = 0;
+  double worst_mass = 0.0;
+  for (int row = 0; row < mass.rows(); ++row) {
+    for (int col = 0; col < mass.cols(); ++col) {
+      const double expected = srsp::test::chain6::kMass[row][col];
+      if (!close(mass(row, col), expected)) {
+        ++mass_mismatches;
+        worst_mass = std::max(worst_mass, std::abs(mass(row, col) - expected));
+      }
+    }
+  }
+
+  int bias_mismatches = 0;
+  double worst_bias = 0.0;
+  for (int i = 0; i < bias.size(); ++i) {
+    const double expected = srsp::test::chain6::kBias[i];
+    if (!close(bias[i], expected)) {
+      ++bias_mismatches;
+      worst_bias = std::max(worst_bias, std::abs(bias[i] - expected));
+    }
+  }
+
+  std::printf("oracle chain6 mass_mismatches=%d worst=%.6g bias_mismatches=%d worst=%.6g\n",
+              mass_mismatches, worst_mass, bias_mismatches, worst_bias);
+  CHECK(mass_mismatches == 0);
+  CHECK(bias_mismatches == 0);
 }

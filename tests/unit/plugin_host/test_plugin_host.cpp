@@ -7,13 +7,13 @@
  */
 #include <srsp/core/plugin_host.hpp>
 
-#include <catch2/catch_test_macros.hpp>
-
-#include <cstdlib>
 #include <cstring>
 
+#include <catch2/catch_test_macros.hpp>
+#include <cstdlib>
+
 #if defined(_WIN32)
-#  include <malloc.h>
+#include <malloc.h>
 #endif
 
 namespace {
@@ -26,12 +26,15 @@ void SRSP_CALL test_log(void*, int32_t level, srsp_str message) {
   ++g_log_count;
 }
 
-double SRSP_CALL test_time(void*) { return 0.0; }
+double SRSP_CALL test_time(void*) {
+  return 0.0;
+}
 
-int64_t SRSP_CALL test_time_ns(void*) { return 0; }
+int64_t SRSP_CALL test_time_ns(void*) {
+  return 0;
+}
 
-srsp_status SRSP_CALL test_alloc(void*, uint64_t size, uint64_t alignment,
-                                 void** out) {
+srsp_status SRSP_CALL test_alloc(void*, uint64_t size, uint64_t alignment, void** out) {
   if (out == nullptr || size == 0) {
     return SRSP_E_INVALID_ARGUMENT;
   }
@@ -41,8 +44,7 @@ srsp_status SRSP_CALL test_alloc(void*, uint64_t size, uint64_t alignment,
 #if defined(_WIN32)
   *out = _aligned_malloc(static_cast<size_t>(size), static_cast<size_t>(alignment));
 #else
-  if (posix_memalign(out, static_cast<size_t>(alignment),
-                     static_cast<size_t>(size)) != 0) {
+  if (posix_memalign(out, static_cast<size_t>(alignment), static_cast<size_t>(size)) != 0) {
     *out = nullptr;
   }
 #endif
@@ -101,8 +103,7 @@ TEST_CASE("plugin host rejects calls before load", "[plugin_host]") {
   srsp_error err{};
 
   REQUIRE(host.loaded() == false);
-  CHECK(host.call(make_str("core.ping"), srsp_bytes{}, nullptr, &err) ==
-        SRSP_E_NOT_READY);
+  CHECK(host.call(make_str("core.ping"), srsp_bytes{}, nullptr, &err) == SRSP_E_NOT_READY);
   CHECK(err.code == SRSP_E_NOT_READY);
 }
 
@@ -110,14 +111,12 @@ TEST_CASE("plugin host reports a missing library", "[plugin_host]") {
   srsp::core::PluginHost host(make_services());
   srsp_error err{};
 
-  CHECK(host.load("this/library/does/not/exist.dll", &err) ==
-        SRSP_E_NOT_FOUND);
+  CHECK(host.load("this/library/does/not/exist.dll", &err) == SRSP_E_NOT_FOUND);
   CHECK(err.code == SRSP_E_NOT_FOUND);
   CHECK(host.loaded() == false);
 }
 
-TEST_CASE("plugin host loads, initialises and invokes the fixture",
-          "[plugin_host]") {
+TEST_CASE("plugin host loads, initialises and invokes the fixture", "[plugin_host]") {
   const std::string path = plugin_path();
   if (path.empty()) {
     SKIP("SRSP_TEST_PLUGIN is not set");
@@ -134,8 +133,7 @@ TEST_CASE("plugin host loads, initialises and invokes the fixture",
   CHECK(host.initialized());
 
   srsp_buffer response{};
-  REQUIRE(host.call(make_str("core.ping"), srsp_bytes{}, &response, &err) ==
-          SRSP_OK);
+  REQUIRE(host.call(make_str("core.ping"), srsp_bytes{}, &response, &err) == SRSP_OK);
   CHECK(response.data != nullptr);
   CHECK(response.size > 0);
   srsp_host_v1 services = make_services();
@@ -191,6 +189,5 @@ TEST_CASE("plugin host stops accepting calls after unload", "[plugin_host]") {
   CHECK(host.initialized() == false);
 
   srsp_error err{};
-  CHECK(host.call(make_str("core.ping"), srsp_bytes{}, nullptr, &err) ==
-        SRSP_E_NOT_READY);
+  CHECK(host.call(make_str("core.ping"), srsp_bytes{}, nullptr, &err) == SRSP_E_NOT_READY);
 }

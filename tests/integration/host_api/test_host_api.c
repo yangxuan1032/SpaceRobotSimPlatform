@@ -5,11 +5,11 @@
  * Usage: test_host_api <plugin-path>
  * Exit code 0 on success; non-zero with a message on the first failure.
  */
+#include <srsp/core_api.h>
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <srsp/core_api.h>
 
 static int fail(const char* what) {
   fprintf(stderr, "FAIL: %s\n", what);
@@ -49,8 +49,8 @@ int main(int argc, char** argv) {
   {
     srsp_buffer none;
     memset(&none, 0, sizeof(none));
-    if (srsp_plugin_call(ctx, make_str(""), make_str("core.ping"), (srsp_bytes){0},
-                         &none, &err) != SRSP_E_NOT_READY) {
+    if (srsp_plugin_call(ctx, make_str(""), make_str("core.ping"), (srsp_bytes){0}, &none, &err) !=
+        SRSP_E_NOT_READY) {
       srsp_context_destroy(ctx);
       return fail("call before load was not rejected");
     }
@@ -63,8 +63,8 @@ int main(int argc, char** argv) {
 
   srsp_buffer response;
   memset(&response, 0, sizeof(response));
-  if (srsp_plugin_call(ctx, make_str(""), make_str("core.ping"), (srsp_bytes){0},
-                       &response, &err) != SRSP_OK) {
+  if (srsp_plugin_call(ctx, make_str(""), make_str("core.ping"), (srsp_bytes){0}, &response,
+                       &err) != SRSP_OK) {
     srsp_context_destroy(ctx);
     return fail("plugin call failed");
   }

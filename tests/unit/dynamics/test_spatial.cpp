@@ -2,14 +2,14 @@
  * @file test_spatial.cpp
  * @brief Unit tests for the spatial algebra primitives used by ABA.
  */
-#include <srsp/dynamics/spatial.hpp>
-
 #include <cmath>
 
 #include <Eigen/Core>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdlib>
 #include <random>
+
+#include "spatial.hpp"
 
 using srsp::dynamics::bias_acceleration;
 using srsp::dynamics::bias_force;
