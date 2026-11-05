@@ -50,6 +50,11 @@
 
 ## 1. 缓存与临时文件（强制）
 
+- **agent 目录一律不入库（强制）**：`<model>/` 下的一切内容——`Temp/`、`Logs/`、`README.md`、架构重设计、缓存与临时导出——都**只存在本地，不提交到 git**。所有模型目录已由 `.gitignore` 整体忽略。
+  - 需要版本化的共享资产放仓库级目录：`tools/ai/`、`docs/`、`api/`、`tests/`、`apps/` 等；
+  - 需要版本化的设计文档放入 `docs/`，不要放在模型目录里；
+  - 新模型必须在 `ai-models.json` 注册，并把其目录名加入 `.gitignore` 的命名空间清单；
+  - 例外（`git add -f`）必须由用户当轮明确同意，并在变更日志中记录原因。
 - **唯一缓存根**：`<model>/Temp/`。
 - 适用：构建目录、ccache、pip/npm 缓存、下载、截图、探测脚本、临时导出、测试输出、日志草稿、一次性生成物。
 - 构建目录：`<model>/Temp/build/<preset>`；`compile_commands.json`：`<model>/Temp/compile_commands.json`。
@@ -85,7 +90,7 @@
   ```
 
 - 计划进入实施或完成后，同步更新状态与“执行记录”，保持计划与代码一致。
-- **计划文件的 git 策略**：只提交**未执行完**的规划；状态为「已完成 / 已废弃」的规划在提交时用 `git rm` 移出版本库（历史仍可在 `git log` 中追溯），分析/调研/摘要类文档除外，详见 `tools/ai/skills/work-log/SKILL.md` §3。
+- **计划文件的 git 策略**：计划与日志一律本地保存（`<model>/Logs/` 已被 `.gitignore` 忽略），不进入版本库；需要长期留存的决策请整理进 `docs/` 或 `docs/adr/`。
 - 旧目录 `deepseek/Log/Plan/` 已废弃，不得再写入；历史计划已迁移到 `deepseek/Logs/Plan/`。
 
 ---

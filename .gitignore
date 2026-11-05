@@ -1,16 +1,24 @@
-# Model-specific logs, plans and caches stay local. Add only an unfinished
-# plan explicitly with git add -f; never stage an entire agent namespace.
-# Shared AI tooling (tools/ai, AGENTS.md, ai-models.json) and module tests
-# (<model>/ModuleTest) remain versioned by repository policy.
-/*/Logs/
-!/*/Logs/.gitkeep
-# Per-model cache roots (one namespace per AI model)
-/*/Temp/*
-!/*/Temp/.gitkeep
-!/*/Temp/README.md
-
-# GPT namespace is local-only, including plans and architecture design files.
+# Every agent namespace is local-only: nothing under <model>/ is versioned
+# (see AGENTS.md section 1). Shared assets live in tools/ai, docs, api and tests.
+/deepseek/
+/claude/
 /gpt/
+/gemini/
+/qwen/
+/glm/
+/llama/
+/mistral/
+/grok/
+/kimi/
+/doubao/
+/ernie/
+/agent/
+/ci/
+/local/
+
+# Safety net for a namespace that has not been registered in ai-models.json yet.
+/*/Logs/
+/*/Temp/*
 
 # Safety net when a build runs without SRSP_AI_MODEL
 /Temp/
