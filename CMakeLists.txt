@@ -39,7 +39,11 @@ option(SRSP_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 enable_testing()
 
 if(SRSP_BUILD_CORE)
-  add_subdirectory(src/core)
+  # nlohmann is used by the model layer and by the GLB mesh reader; finding it at
+# top level makes the imported target visible to every subdirectory.
+find_package(nlohmann_json CONFIG QUIET)
+
+add_subdirectory(src/core)
 endif()
 
 # SRM needs nlohmann-json, the same dependency the manifest parser uses; the

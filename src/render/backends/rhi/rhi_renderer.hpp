@@ -11,10 +11,12 @@
 #ifndef SRSP_RENDER_BACKEND_RHI_HPP
 #define SRSP_RENDER_BACKEND_RHI_HPP
 
+#include <srsp/render/mesh_loader.hpp>
 #include <srsp/render/renderer.hpp>
 #include <srsp/render/scene.hpp>
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -104,6 +106,8 @@ class RhiRenderer final : public Renderer {
   bool initialized_ = false;
   bool gpu_ = false;
   QImage image_;
+  /// Parsed GLB meshes, keyed by path.
+  std::map<std::string, srsp::render::MeshData> mesh_cache_;
   std::uint64_t frames_ = 0;
 };
 

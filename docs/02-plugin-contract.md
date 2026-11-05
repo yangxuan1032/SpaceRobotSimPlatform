@@ -724,6 +724,7 @@ BlobRef {
 - 旧调用方传较小的 `struct_size` 时，内核按缺省值补全，**不报错**；
 - 越界取值返回 `SRSP_E_INVALID_ARGUMENT`；`solver = 1` 返回 `SRSP_E_UNSUPPORTED`（预留档）；
 - `srsp_context_get_config()` 返回生效值（含补全后的缺省）；
+- 消费方：`srsp-cli`（`--integrator`）与 `srsp-studio`（`--renderer auto|qt|rhi|null`）均写入并回读校验该字段（A4，2026-11-05）；
 - `tests/abi/layout_static_assert.cpp` 固化偏移（44/48/52）与大小（56）。
 ### 17.2 录制档位标签（A2/A3，2026-11-02）
 
@@ -755,3 +756,13 @@ BlobRef {
 - 未知传输名 → `parse_transport()` 返回 `nullptr`，CLI 报错退出（不猜测）；
 - 未知 `mesh_uri` → 归类为 `gltf`；后端尚未支持时回退为程序化球体，并在文档标注；
 - 预留时间源调用 `set_source()` 返回 `false` 且保持 `fixed_step`，不静默切换。
+### 17.4 锁文件与强制校验（B3，2026-11-05）
+
+| 命令 | 作用 |
+|---|---|
+| `srsp-cli lock <recording> [--out f.lock]` | 从录制通道元数据导出锁文件（6 个键：integrator/solver/encoding/plugin_lock_hash/compiler/build_flags） |
+| `srsp-cli replay-check <recording> [--lock f.lock]` | 先做自洽检查；给了 `--lock` 时逐键比对，不匹配即退出码 2 并打印首个不符键 |
+
+**锁来源**：`srsp_plugin_identity()` 返回 `id\|version\|api_major`，录制时转成 `canonical_plugin_lock()` 并对空串做 XXH3-128；空锁与真实锁的哈希必然不同（有测试）。
+
+规则：锁文件是录制随附的可复现凭据；**不匹配不得静默回放**。`SRSP_KEEP_MCAP=1` 可让 `soak --workload record` 保留最后一个文件，便于生成锁。

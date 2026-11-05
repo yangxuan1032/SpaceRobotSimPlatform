@@ -324,6 +324,37 @@ SRSP_CORE_API srsp_status SRSP_CALL srsp_unsubscribe(srsp_context* ctx, srsp_sub
   return SRSP_E_UNSUPPORTED;
 }
 
+SRSP_CORE_API srsp_status SRSP_CALL srsp_plugin_identity(srsp_context* ctx, srsp_buffer* out,
+                                                         srsp_error* err) {
+  if (ctx == nullptr || out == nullptr) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT, "context or out is null");
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+  out->data = nullptr;
+  out->size = 0;
+  if (!ctx->plugin_loaded || ctx->host == nullptr) {
+    set_error(err, SRSP_E_INVALID_STATE, "no plugin is loaded");
+    return SRSP_E_INVALID_STATE;
+  }
+
+  const srsp_plugin_v1* plugin = ctx->host->plugin();
+  const std::string id = ctx->host->plugin_id();
+  const std::string version =
+      plugin != nullptr && plugin->version != nullptr ? plugin->version : "";
+  const std::string identity =
+      id + "|" + version + "|" + std::to_string(static_cast<unsigned>(SRSP_ABI_MAJOR));
+
+  void* memory = nullptr;
+  const srsp_status status = ctx_alloc(nullptr, identity.size(), alignof(std::uint8_t), &memory);
+  if (status != SRSP_OK || memory == nullptr) {
+    set_error(err, status == SRSP_OK ? SRSP_E_OUT_OF_MEMORY : status, "identity allocation failed");
+    return status == SRSP_OK ? SRSP_E_OUT_OF_MEMORY : status;
+  }
+  std::memcpy(memory, identity.data(), identity.size());
+  out->data = static_cast<std::uint8_t*>(memory);
+  out->size = identity.size();
+  return SRSP_OK;
+}
 SRSP_CORE_API srsp_status SRSP_CALL srsp_plugin_call(srsp_context* ctx, srsp_str plugin_id,
                                                      srsp_str method, srsp_bytes request,
                                                      srsp_buffer* response, srsp_error* err) {

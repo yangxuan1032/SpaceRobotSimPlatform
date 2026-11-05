@@ -113,7 +113,13 @@ bool SidecarProcess::read_line(std::string* line, int timeout_ms) {
 void SidecarProcess::terminate() {
   if (running()) {
     ::TerminateProcess(static_cast<HANDLE>(process_), 0);
+    ::WaitForSingleObject(static_cast<HANDLE>(process_), 2000);
+    close_handles();
   }
+  // A terminated child is no longer running; keeping pid_ would make
+  // restart logic believe the process is alive.
+  pid_ = 0;
+  process_ = nullptr;
 }
 
 int SidecarProcess::wait() {
@@ -213,8 +219,14 @@ bool SidecarProcess::read_line(std::string* line, int timeout_ms) {
 
 void SidecarProcess::terminate() {
   if (running()) {
-    ::kill(static_cast<pid_t>(pid_), SIGTERM);
+    ::TerminateProcess(static_cast<HANDLE>(process_), 0);
+    ::WaitForSingleObject(static_cast<HANDLE>(process_), 2000);
+    close_handles();
   }
+  // A terminated child is no longer running; keeping pid_ would make
+  // restart logic believe the process is alive.
+  pid_ = 0;
+  process_ = nullptr;
 }
 
 int SidecarProcess::wait() {

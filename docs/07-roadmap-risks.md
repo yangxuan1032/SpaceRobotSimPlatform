@@ -441,11 +441,15 @@ gpt 设计包把“分布式集群”列为 v1 非目标；本项目的 M4 计�
 | B2 | 插件侧订阅 ABI（`host->subscribe`） | 当前事件走内核调度足够 | host 表追加字段 + `struct_size` | 插件需自行监听事件 | 1 轮 |
 | B3 | 能力 pin/lockfile 强制校验 | 锁文件已能生成，强制需 UI/CLI 流程 | `run_metadata` + `check_selection()` | 多机部署 | 1 轮 |
 | B4 | 故障策略 `FaultPolicy{stop,disable,retry}` | 单插件时无意义 | 枚举预留 | 多插件编排 | 1.5 轮 |
-| B5 | glTF 网格加载 | 先对齐现有后端 | `MeshSource::kGltf` | 场景需要外部模型 | 2 轮 |
+| B5 | glTF 网格加载 | **已完成 2026-11-05**：GLB 解析 + Qt/RHI 两后端三角面片绘制（含缓存与失败回退） | `MeshSource::kGltf` + `load_glb()` | 场景需要外部模型 | ✅ |
 | B6 | ABA O(n) 求解 | 300 µs 已由半隐式达成 | `SolverKind::kArticulated` | 需要 RK4 精度 + 300 µs | 3 轮 |
 | B7 | Typed Data Bus / 完整 Runtime Facade | 单人+AI 现状过重 | 现有 snapshot/event 边界 | 团队 ≥3 人 | 4 轮 |
 | B8 | 签名、SBOM、离线安装包 | 属 M3 发布 | 打包清单 | 对外发布 | 3 轮 |
-| B9 | Linux CI + MSVC 验证 | 需要 CI 资源 | CMake 预设已就位 | 跨平台承诺前 | 2 轮 |
-| B10 | 导入器 fuzz、MCAP 截断、边车崩溃注入 | 需要失败注入框架 | 无（纯测试） | 稳定性要求提升 | 2 轮 |
+| B9 | Linux CI + MSVC 验证 | **2026-11-05 决定推迟**：当前聚焦 Windows 平台开发与验证，跨平台留到软件完成后 | CMake 预设已就位（`linux-gcc-*` / `win-msvc-*` 未被作业使用） | 软件功能完成、准备跨平台承诺时 | 2 轮 |
+| B10 | 导入器 fuzz、MCAP 截断、边车崩溃注入 | **已完成 2026-11-05**：导入器畸形输入、MCAP 截断、边车崩溃路径（并修复 P1/P2 两个缺陷） | 无（纯测试） | ✅ | 无 |
+| B11 | ~~RHI 2D 叠加~~ | **已完成 2026-11-05**：采用混合渲染（RHI 3D + QPainter 文字叠加） | — | — | — |
+| B12 | 纯 RHI 文字（字形图集 + 管线内渲染） | 混合方案已满足 Windows 需求；纯 GPU 方案收益有限 | 无（替换 Viewport 叠加层） | 需要「录制画面即最终画面」或去掉 QPainter 依赖时 | 1.5 轮 |
 
 **执行规则**：进入 B 清单的事项，必须先在 `docs/01` §7.2 有对应行，且不改变现有默认档行为。
+
+**平台范围（2026-11-05）**：当前阶段只承诺 **Windows / UCRT64**；Linux 与 MSVC 验证整体推迟（B9），Windows 内部优先顺序见执行计划 v7 §3.1。

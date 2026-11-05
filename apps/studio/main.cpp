@@ -7,6 +7,7 @@
  *   srsp-studio --selftest-ui <srm>   four panels + timeline, offscreen Qt
  *   srsp-studio <srm>                 interactive shell
  */
+#include <srsp/core_api.h>
 #include <srsp/model/srm.hpp>
 #include <srsp/render/renderer.hpp>
 #include <srsp/render/scene.hpp>
@@ -32,6 +33,56 @@ using srsp::render::Viewport;
 using srsp::studio::QtRenderer;
 using srsp::studio::StudioWindow;
 
+/// Maps --renderer to srsp_context_config.renderer (0 auto, 1 qt, 2 rhi, 3 null).
+int parse_renderer(int argc, char** argv) {
+  for (int i = 1; i + 1 < argc; ++i) {
+    if (std::strcmp(argv[i], "--renderer") != 0) {
+      continue;
+    }
+    const std::string value = argv[i + 1];
+    if (value == "auto") {
+      return 0;
+    }
+    if (value == "qt") {
+      return 1;
+    }
+    if (value == "rhi") {
+      return 2;
+    }
+    if (value == "null") {
+      return 3;
+    }
+    std::fprintf(stderr, "error: unknown renderer '%s' (auto|qt|rhi|null)\n", value.c_str());
+    return -1;
+  }
+  return 0;
+}
+
+/// Creates a context with the selection and checks it round-trips through the
+/// ABI, so studio and CLI agree on the one configuration entry (docs/02 15.1).
+bool verify_selection(int renderer) {
+  srsp_context_config config{};
+  config.struct_size = sizeof(srsp_context_config);
+  config.renderer = static_cast<uint32_t>(renderer);
+
+  srsp_error err{};
+  srsp_context* ctx = nullptr;
+  if (srsp_context_create(&config, &ctx, &err) != SRSP_OK) {
+    std::fprintf(stderr, "error: context create failed: %s\n",
+                 err.message != nullptr ? err.message : "?");
+    return false;
+  }
+  srsp_context_config effective{};
+  effective.struct_size = sizeof(srsp_context_config);
+  const bool ok = srsp_context_get_config(ctx, &effective, &err) == SRSP_OK &&
+                  effective.renderer == static_cast<uint32_t>(renderer);
+  srsp_context_destroy(ctx);
+  if (!ok) {
+    std::fprintf(stderr, "error: renderer selection did not round-trip\n");
+    return false;
+  }
+  return true;
+}
 int run_render_selftest() {
   QtRenderer renderer;
   std::string error;
@@ -106,11 +157,9 @@ int run_ui_selftest(int argc, char** argv) {
   QApplication app(argc, argv);
 
   const std::string path = model_path(argc, argv);
-  bool use_rhi = false;
+  const int renderer_code = parse_renderer(argc, argv);
+  bool use_rhi = renderer_code == 2;
   for (int i = 1; i + 1 < argc; ++i) {
-    if (std::string(argv[i]) == "--renderer" && std::string(argv[i + 1]) == "rhi") {
-      use_rhi = true;
-    }
   }
   const auto loaded = srsp::model::load_from_file(path);
   if (!loaded.ok()) {
@@ -183,6 +232,13 @@ int run_ui_selftest(int argc, char** argv) {
 }  // namespace
 
 int main(int argc, char** argv) {
+  const int renderer_code = parse_renderer(argc, argv);
+  if (renderer_code < 0) {
+    return 1;
+  }
+  if (!verify_selection(renderer_code)) {
+    return 1;
+  }
   if (argc > 1 && std::strcmp(argv[1], "--selftest") == 0) {
     return run_render_selftest();
   }

@@ -118,7 +118,9 @@ const char* sensor_type_name(SensorType type) {
 
 }  // namespace
 
-LoadResult load_from_json(const std::string& text) {
+namespace {
+
+LoadResult load_from_json_impl(const std::string& text) {
   LoadResult result;
   json document;
   try {
@@ -215,6 +217,20 @@ LoadResult load_from_json(const std::string& text) {
   return result;
 }
 
+}  // namespace
+
+LoadResult load_from_json(const std::string& text) {
+  // Field extraction can throw (a string where a number is expected). Turn any
+  // such exception into a validation issue so a malformed model is reported
+  // instead of unwinding through the caller.
+  try {
+    return load_from_json_impl(text);
+  } catch (const std::exception& error) {
+    LoadResult result;
+    result.issues.push_back({"<document>", std::string("invalid value: ") + error.what()});
+    return result;
+  }
+}
 LoadResult load_from_file(const std::string& path) {
   LoadResult result;
   std::ifstream input(path, std::ios::binary);

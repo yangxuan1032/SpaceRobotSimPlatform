@@ -11,3 +11,12 @@ if(TARGET srsp_hello_plugin)
 else()
   message(STATUS "srsp_hello_plugin not built; sidecar roundtrip is not registered")
 endif()
+if(TARGET srsp_sidecar)
+  add_executable(test_sidecar_crash test_sidecar_crash.cpp)
+  target_link_libraries(test_sidecar_crash PRIVATE srsp_bridge)
+  add_test(NAME integration.sidecar_crash
+    COMMAND test_sidecar_crash $<TARGET_FILE:srsp_sidecar>)
+  set_tests_properties(integration.sidecar_crash PROPERTIES
+    TIMEOUT 60
+    PASS_REGULAR_EXPRESSION "PASS: dead sidecar fails fast")
+endif()

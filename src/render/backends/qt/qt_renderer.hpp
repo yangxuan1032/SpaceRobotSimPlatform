@@ -11,10 +11,12 @@
 #ifndef SRSP_STUDIO_QT_RENDERER_HPP
 #define SRSP_STUDIO_QT_RENDERER_HPP
 
+#include <srsp/render/mesh_loader.hpp>
 #include <srsp/render/renderer.hpp>
 #include <srsp/render/scene.hpp>
 
 #include <cstdint>
+#include <map>
 #include <string>
 
 #include <QImage>
@@ -57,6 +59,8 @@ class QtRenderer final : public srsp::render::Renderer {
   std::uint64_t frames_ = 0;
   bool initialized_ = false;
   void* native_window_ = nullptr;
+  /// Parsed GLB meshes, keyed by path; loaded once and reused.
+  mutable std::map<std::string, srsp::render::MeshData> mesh_cache_;
 };
 
 }  // namespace srsp::studio

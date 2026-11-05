@@ -19,7 +19,7 @@ target_link_libraries(srsp_studio_render PUBLIC srsp_render srsp_render_qt srsp_
 
 qt_add_executable(srsp_studio main.cpp)
 set_target_properties(srsp_studio PROPERTIES OUTPUT_NAME srsp-studio)
-target_link_libraries(srsp_studio PRIVATE srsp_studio_render Qt6::Widgets)
+target_link_libraries(srsp_studio PRIVATE srsp_studio_render srsp_core Qt6::Widgets)
 
 if(MSVC)
   target_compile_options(srsp_studio_render PRIVATE /W4)

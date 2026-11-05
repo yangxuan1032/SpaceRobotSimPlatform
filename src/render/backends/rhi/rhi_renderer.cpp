@@ -4,6 +4,7 @@
  */
 #include "rhi_renderer.hpp"
 
+#include <srsp/render/mesh_loader.hpp>
 #include <srsp/render/mesh_source.hpp>
 #include <srsp/render/scene.hpp>
 
@@ -184,6 +185,57 @@ void append_box(const Sphere& body, std::vector<float>& out) {
       out.push_back(static_cast<float>(body.position_m[0] + r[0] * px + r[1] * py + r[2] * pz));
       out.push_back(static_cast<float>(body.position_m[1] + r[3] * px + r[4] * py + r[5] * pz));
       out.push_back(static_cast<float>(body.position_m[2] + r[6] * px + r[7] * py + r[8] * pz));
+      out.push_back(static_cast<float>(body.color[0] * shade));
+      out.push_back(static_cast<float>(body.color[1] * shade));
+      out.push_back(static_cast<float>(body.color[2] * shade));
+    }
+  }
+}
+/// Emits the triangles of a loaded mesh with flat per-face shading.
+void append_mesh(const Sphere& body, const srsp::render::MeshData& mesh, std::vector<float>& out) {
+  const double* q = body.orientation;
+  const double norm = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+  const double s = norm > 0.0 ? 1.0 / norm : 1.0;
+  const double x = q[0] * s;
+  const double y = q[1] * s;
+  const double z = q[2] * s;
+  const double w = q[3] * s;
+  const double r[9] = {
+      1.0 - 2.0 * (y * y + z * z), 2.0 * (x * y - w * z),       2.0 * (x * z + w * y),
+      2.0 * (x * y + w * z),       1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z - w * x),
+      2.0 * (x * z - w * y),       2.0 * (y * z + w * x),       1.0 - 2.0 * (x * x + y * y)};
+  const double light[3] = {0.4, 0.6, 0.7};
+
+  for (std::size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+    double world[3][3];
+    for (int corner = 0; corner < 3; ++corner) {
+      const std::size_t index = mesh.indices[i + static_cast<std::size_t>(corner)];
+      const double local[3] = {mesh.positions[index * 3u], mesh.positions[index * 3u + 1u],
+                               mesh.positions[index * 3u + 2u]};
+      for (int axis = 0; axis < 3; ++axis) {
+        world[corner][axis] = body.position_m[axis] + r[axis * 3] * local[0] +
+                              r[axis * 3 + 1] * local[1] + r[axis * 3 + 2] * local[2];
+      }
+    }
+    const double e1[3] = {world[1][0] - world[0][0], world[1][1] - world[0][1],
+                          world[1][2] - world[0][2]};
+    const double e2[3] = {world[2][0] - world[0][0], world[2][1] - world[0][1],
+                          world[2][2] - world[0][2]};
+    double normal[3] = {e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2],
+                        e1[0] * e2[1] - e1[1] * e2[0]};
+    const double length =
+        std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+    if (length > 1e-12) {
+      normal[0] /= length;
+      normal[1] /= length;
+      normal[2] /= length;
+    }
+    const double shade = 0.35 + 0.65 * std::max(0.0, normal[0] * light[0] + normal[1] * light[1] +
+                                                         normal[2] * light[2]);
+    for (int corner = 0; corner < 3; ++corner) {
+      out.push_back(static_cast<float>(world[corner][0]));
+      out.push_back(static_cast<float>(world[corner][1]));
+      out.push_back(static_cast<float>(world[corner][2]));
       out.push_back(static_cast<float>(body.color[0] * shade));
       out.push_back(static_cast<float>(body.color[1] * shade));
       out.push_back(static_cast<float>(body.color[2] * shade));
@@ -493,13 +545,25 @@ bool RhiRenderer::render_frame(bool capture) {
                               box_vertices);
           break;
         case srsp::render::MeshSource::kGltf: {
-          static bool warned = false;
-          if (!warned) {
-            std::fprintf(stderr, "warn: glTF mesh is not supported yet, drawing a sphere\n");
-            warned = true;
+          auto& cached = mesh_cache_[body.mesh_uri];
+          if (cached.empty()) {
+            const srsp::render::MeshLoadResult loaded = srsp::render::load_glb(body.mesh_uri);
+            if (loaded.ok()) {
+              cached = loaded.mesh;
+            } else {
+              static bool warned = false;
+              if (!warned) {
+                std::fprintf(stderr, "warn: %s; drawing a sphere instead\n", loaded.error.c_str());
+                warned = true;
+              }
+            }
           }
-          append_sphere_world(body, scene_.sun_direction, scene_.eclipse ? 0.08 : 0.18,
-                              box_vertices);
+          if (!cached.empty()) {
+            append_mesh(body, cached, box_vertices);
+          } else {
+            append_sphere_world(body, scene_.sun_direction, scene_.eclipse ? 0.08 : 0.18,
+                                box_vertices);
+          }
           break;
         }
       }

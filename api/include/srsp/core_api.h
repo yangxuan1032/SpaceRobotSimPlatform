@@ -207,6 +207,21 @@ SRSP_CORE_API srsp_status SRSP_CALL srsp_unsubscribe(srsp_context* ctx, srsp_sub
  * @c Invoke RPC.
  * @zh 与插件 ABI 的 call、边车 Invoke RPC 采用相同的 method + payload 语义。
  */
+/**
+ * @brief Reports the loaded plugin identity as "id|version|api_major".
+ * @brief_zh 以 "id|version|api_major" 形式返回已加载插件身份。
+ *
+ * Used to build the replay lock so a recording can be tied to the plugin set
+ * that produced it. The buffer is host-allocated and released with
+ * srsp_buffer_release().
+ * @param ctx Context with a loaded plugin.
+ * @param out Receives the UTF-8 identity string.
+ * @param err Optional error detail.
+ * @return SRSP_E_INVALID_STATE when no plugin is loaded.
+ */
+SRSP_CORE_API srsp_status SRSP_CALL srsp_plugin_identity(srsp_context* ctx, srsp_buffer* out,
+                                                         srsp_error* err);
+
 SRSP_CORE_API srsp_status SRSP_CALL srsp_plugin_call(srsp_context* ctx, srsp_str plugin_id,
                                                      srsp_str method, srsp_bytes request,
                                                      srsp_buffer* response, srsp_error* err);

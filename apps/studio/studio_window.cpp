@@ -80,18 +80,34 @@ class Viewport final : public QWidget {
     update();
   }
 
+  /// Hands the last RHI readback to the widget; an empty image falls back to
+  /// the QPainter path, so the text overlay works for both backends.
+  void set_rhi_image(const QImage& image) {
+    rhi_image_ = image;
+    update();
+  }
+
  protected:
   void paintEvent(QPaintEvent*) override {
     QPainter painter(this);
-    renderer_->paint(painter, srsp::render::Viewport{width(), height()});
+    if (!rhi_image_.isNull()) {
+      // Hybrid path: the GPU frame is blitted as an image and the 2D overlay is
+      // drawn by QPainter, which keeps text rendering off the RHI pipeline.
+      painter.drawImage(rect(), rhi_image_);
+    } else {
+      renderer_->paint(painter, srsp::render::Viewport{width(), height()});
+    }
     painter.setPen(QColor(220, 220, 220));
     painter.drawText(
         12, 20, QStringLiteral("scene bodies: %1").arg(static_cast<int>(scene_.bodies.size())));
+    painter.drawText(12, 38,
+                     QStringLiteral("backend: %1").arg(rhi_image_.isNull() ? "qt" : "rhi+overlay"));
   }
 
  private:
   QtRenderer* renderer_ = nullptr;
   srsp::render::Scene scene_{};
+  QImage rhi_image_{};
 };
 
 }  // namespace
@@ -270,7 +286,12 @@ void StudioWindow::render_rhi_once() {
   rhi_->set_scene(scene_);
   const srsp::render::Viewport viewport{std::max(1, width()), std::max(1, height())};
   if (rhi_->resize(viewport)) {
-    rhi_->render_frame();
+    if (rhi_->render_frame(true)) {
+      rhi_image_ = rhi_->readback();
+      if (auto* view = dynamic_cast<Viewport*>(viewport_)) {
+        view->set_rhi_image(rhi_image_);
+      }
+    }
   }
 }
 

@@ -4,6 +4,7 @@
  */
 #include "qt_renderer.hpp"
 
+#include <srsp/render/mesh_loader.hpp>
 #include <srsp/render/mesh_source.hpp>
 #include <srsp/render/projection.hpp>
 
@@ -78,6 +79,80 @@ double dot3(const double a[3], const double b[3]) {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
+/// Draws a loaded triangle mesh with flat shading, far triangles first.
+void draw_mesh(QPainter& painter, const srsp::render::CameraView& camera,
+               const srsp::render::Viewport& viewport, const srsp::render::Sphere& body,
+               const srsp::render::MeshData& mesh) {
+  const std::array<double, 9> rotation = quat_to_matrix(body.orientation);
+  const double light[3] = {0.35, 0.45, 0.82};
+
+  struct Triangle {
+    srsp::render::ScreenPoint points[3];
+    double depth = 0.0;
+    double shade = 1.0;
+  };
+  std::vector<Triangle> triangles;
+  triangles.reserve(mesh.indices.size() / 3u);
+
+  for (std::size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+    Triangle triangle;
+    double world[3][3];
+    bool visible = true;
+    for (int corner = 0; corner < 3; ++corner) {
+      const std::size_t index = mesh.indices[i + static_cast<std::size_t>(corner)];
+      const double local[3] = {mesh.positions[index * 3u], mesh.positions[index * 3u + 1u],
+                               mesh.positions[index * 3u + 2u]};
+      double rotated[3];
+      rotate(rotation, local, rotated);
+      for (int axis = 0; axis < 3; ++axis) {
+        world[corner][axis] = body.position_m[axis] + rotated[axis];
+      }
+      triangle.points[corner] = srsp::render::project(camera, viewport, world[corner], camera.eye);
+      visible = visible && triangle.points[corner].visible;
+    }
+    if (!visible) {
+      continue;
+    }
+
+    const double e1[3] = {world[1][0] - world[0][0], world[1][1] - world[0][1],
+                          world[1][2] - world[0][2]};
+    const double e2[3] = {world[2][0] - world[0][0], world[2][1] - world[0][1],
+                          world[2][2] - world[0][2]};
+    const double normal[3] = {e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2],
+                              e1[0] * e2[1] - e1[1] * e2[0]};
+    const double length =
+        std::sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+    const double dot =
+        length > 1e-12
+            ? (normal[0] * light[0] + normal[1] * light[1] + normal[2] * light[2]) / length
+            : 0.0;
+    triangle.shade = 0.35 + 0.65 * std::max(0.0, dot);
+
+    const double cx = (world[0][0] + world[1][0] + world[2][0]) / 3.0;
+    const double cy = (world[0][1] + world[1][1] + world[2][1]) / 3.0;
+    const double cz = (world[0][2] + world[1][2] + world[2][2]) / 3.0;
+    triangle.depth = std::sqrt((cx - camera.eye[0]) * (cx - camera.eye[0]) +
+                               (cy - camera.eye[1]) * (cy - camera.eye[1]) +
+                               (cz - camera.eye[2]) * (cz - camera.eye[2]));
+    triangles.push_back(triangle);
+  }
+
+  std::sort(triangles.begin(), triangles.end(),
+            [](const Triangle& a, const Triangle& b) { return a.depth > b.depth; });
+
+  painter.setPen(Qt::NoPen);
+  for (const Triangle& triangle : triangles) {
+    const QColor base = to_color(body.color);
+    const QColor shaded(static_cast<int>(base.red() * triangle.shade),
+                        static_cast<int>(base.green() * triangle.shade),
+                        static_cast<int>(base.blue() * triangle.shade));
+    painter.setBrush(QBrush(shaded));
+    const QPolygonF polygon({QPointF(triangle.points[0].x, triangle.points[0].y),
+                             QPointF(triangle.points[1].x, triangle.points[1].y),
+                             QPointF(triangle.points[2].x, triangle.points[2].y)});
+    painter.drawPolygon(polygon);
+  }
+}
 /// Draws an oriented box mesh as six depth-sorted, shaded quads.
 void draw_box(QPainter& painter, const srsp::render::CameraView& camera,
               const srsp::render::Viewport& viewport, const srsp::render::Sphere& body) {
@@ -245,13 +320,22 @@ void QtRenderer::paint(QPainter& painter, const srsp::render::Viewport& viewport
       continue;
     }
     if (source == srsp::render::MeshSource::kGltf) {
-      // Reserved: glTF loading is not implemented; warn once and draw a sphere
-      // so the scene stays visible instead of silently pretending success.
-      static bool warned = false;
-      if (!warned) {
-        std::fprintf(stderr, "warn: glTF mesh '%s' is not supported yet, drawing a sphere\n",
-                     body.mesh_uri.c_str());
-        warned = true;
+      auto& cached = mesh_cache_[body.mesh_uri];
+      if (cached.empty()) {
+        const srsp::render::MeshLoadResult loaded = srsp::render::load_glb(body.mesh_uri);
+        if (loaded.ok()) {
+          cached = loaded.mesh;
+        } else {
+          static bool warned = false;
+          if (!warned) {
+            std::fprintf(stderr, "warn: %s; drawing a sphere instead\n", loaded.error.c_str());
+            warned = true;
+          }
+        }
+      }
+      if (!cached.empty()) {
+        draw_mesh(painter, camera_, viewport, body, cached);
+        continue;
       }
     }
     const srsp::render::ScreenPoint projected =

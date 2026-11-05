@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 
+#include <QImage>
 #include <QMainWindow>
 #include <rhi_renderer.hpp>
 
@@ -56,6 +57,9 @@ class StudioWindow final : public QMainWindow {
   /** @brief Renders one RHI frame into the offscreen target (tests/bench). */
   void render_rhi_once();
 
+  /** @brief True when the hybrid overlay has an RHI frame to blit. */
+  [[nodiscard]] bool rhi_overlay_ready() const noexcept { return !rhi_image_.isNull(); }
+
   /** @brief Frames rendered by the RHI backend (0 when not in use). */
   [[nodiscard]] std::uint64_t rhi_frames() const;
 
@@ -84,6 +88,7 @@ class StudioWindow final : public QMainWindow {
   Eigen::VectorXd tau_;
 
   QWidget* viewport_ = nullptr;
+  QImage rhi_image_;  ///< Last RHI readback, painted under the 2D overlay.
   QTreeWidget* tree_ = nullptr;
   QListWidget* properties_ = nullptr;
   QSlider* timeline_ = nullptr;

@@ -11,6 +11,7 @@
  */
 #include <srsp/bridge/transport.hpp>
 #include <srsp/core_api.h>
+#include <srsp/record/lockfile.hpp>
 #include <srsp/record/mcap.hpp>
 #include <srsp/record/replay.hpp>
 #include <srsp/record/run_metadata.hpp>
@@ -38,6 +39,7 @@
 #include <vector>
 
 #include <cstdio>
+#include <fstream>
 #include <random>
 
 #if defined(_WIN32)
@@ -232,6 +234,29 @@ int run_soak(const std::vector<std::string>& args) {
     return kExitFailure;
   }
 
+  // Identity of the loaded plugin, used to build the replay lock (B3).
+  std::string plugin_identity;
+  {
+    srsp_buffer identity{};
+    if (srsp_plugin_identity(ctx, &identity, &err) == SRSP_OK) {
+      plugin_identity.assign(reinterpret_cast<const char*>(identity.data), identity.size);
+      srsp_buffer_release(ctx, &identity);
+    }
+  }
+  std::string plugin_lock_text;
+  {
+    const std::size_t first = plugin_identity.find('|');
+    const std::size_t second =
+        first == std::string::npos ? std::string::npos : plugin_identity.find('|', first + 1);
+    if (first != std::string::npos && second != std::string::npos) {
+      srsp::record::PluginLockEntry entry;
+      entry.id = plugin_identity.substr(0, first);
+      entry.version = plugin_identity.substr(first + 1, second - first - 1);
+      entry.api_major = static_cast<std::uint32_t>(std::stoul(plugin_identity.substr(second + 1)));
+      plugin_lock_text = srsp::record::canonical_plugin_lock({entry});
+    }
+  }
+
   if (workload == "step") {
 #if defined(SRSP_HAVE_RECORD)
 #include <srsp/record/mcap.hpp>
@@ -306,6 +331,7 @@ int run_soak(const std::vector<std::string>& args) {
                              : srsp::record::IntegratorTag::kRk4;
         run.compiler = SRSP_BUILD_COMPILER;
         run.build_flags = SRSP_BUILD_FLAGS;
+        run.plugin_lock = plugin_lock_text;
         std::map<std::string, std::string> metadata{{"schema_hash", "soak"}, {"abi", "1"}};
         for (const auto& [key, value] : srsp::record::run_metadata_map(run)) {
           metadata[key] = value;
@@ -319,8 +345,10 @@ int run_soak(const std::vector<std::string>& args) {
         writer.close();
         ++files;
       }
-      std::error_code ignored;
-      std::filesystem::remove(path, ignored);
+      if (std::getenv("SRSP_KEEP_MCAP") == nullptr) {
+        std::error_code ignored;
+        std::filesystem::remove(path, ignored);
+      }
       if (sleep_ms > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
       }
@@ -469,13 +497,76 @@ int main(int argc, char** argv) {
   }
 
   const std::string& command = args[1];
+  if (command == "lock") {
+    if (args.size() < 3) {
+      std::fprintf(stderr, "error: lock needs a recording path\n");
+      return kExitFailure;
+    }
+    srsp::record::McapReader reader;
+    if (!reader.open(args[2]) || reader.channels().empty()) {
+      std::fprintf(stderr, "error: cannot read recording '%s'\n", args[1].c_str());
+      return kExitFailure;
+    }
+    const auto lock = srsp::record::lock_from_metadata(reader.channels().front().metadata);
+    const std::string out =
+        option_value(args, "--out").empty() ? args[1] + ".lock" : option_value(args, "--out");
+    std::ofstream file(out, std::ios::trunc);
+    if (!file) {
+      std::fprintf(stderr, "error: cannot write '%s'\n", out.c_str());
+      return kExitFailure;
+    }
+    file << srsp::record::serialize_lock(lock);
+    std::printf("lock written=%s keys=%zu\n", out.c_str(), lock.size());
+    return 0;
+  }
+
+  if (command == "replay-check") {
+    if (args.size() < 3) {
+      std::fprintf(stderr, "error: replay-check needs a recording path\n");
+      return kExitFailure;
+    }
+    srsp::record::McapReader reader;
+    if (!reader.open(args[2])) {
+      std::fprintf(stderr, "error: cannot open '%s'\n", args[1].c_str());
+      return kExitFailure;
+    }
+    const auto decision = srsp::record::verify_recording(reader.channels());
+    if (!decision.allowed) {
+      std::printf("replay allowed=no reason=%s\n", decision.reason.c_str());
+      return kExitFailure;
+    }
+    const std::string lock_path = option_value(args, "--lock");
+    if (lock_path.empty()) {
+      std::printf("replay allowed=yes lock=unchecked\n");
+      return 0;
+    }
+    std::ifstream file(lock_path);
+    if (!file) {
+      std::fprintf(stderr, "error: cannot read lock '%s'\n", lock_path.c_str());
+      return kExitFailure;
+    }
+    const std::string text((std::istreambuf_iterator<char>(file)),
+                           std::istreambuf_iterator<char>());
+    const auto expected = srsp::record::parse_lock(text);
+    const auto recorded = srsp::record::lock_from_metadata(reader.channels().front().metadata);
+    std::string key;
+    if (!srsp::record::lock_matches(recorded, expected, &key)) {
+      std::printf("replay allowed=no key=%s recorded=%s expected=%s\n", key.c_str(),
+                  recorded.count(key) != 0u ? recorded.at(key).c_str() : "<none>",
+                  expected.at(key).c_str());
+      return kExitFailure;
+    }
+    std::printf("replay allowed=yes lock=matched keys=%zu\n", expected.size());
+    return 0;
+  }
+
   if (command == "inspect") {
-    if (args.size() < 2) {
+    if (args.size() < 3) {
       std::fprintf(stderr, "error: inspect needs a recording path\n");
       return kExitFailure;
     }
     srsp::record::McapReader reader;
-    if (!reader.open(args[1])) {
+    if (!reader.open(args[2])) {
       std::fprintf(stderr, "error: cannot open '%s'\n", args[1].c_str());
       return kExitFailure;
     }
