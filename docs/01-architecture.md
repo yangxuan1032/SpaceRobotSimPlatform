@@ -415,6 +415,20 @@ v1 支持**单进程内 N 个机器人**（起步 N ≤ 8）协同，跨进程/�
 2. 有可判定的验收（测试或基准数字）；
 3. 接口形态已定，未来实现不需要破坏 ABI/schema。
 
+### 7.4 跨 AI 评审采纳记录（2026-11-05）
+
+四份独立评审（GPT 目标架构、Kimi 契约审查、GLM 执行排序、本项目实测）收敛为五条原则，作为后续所有设计的判据：
+
+| # | 原则 | 落地证据 |
+|---|---|---|
+| 1 | 契约是唯一耦合面 | 能力寻址、`struct_size` 追加、纯 C ABI；schema 为语义真源 |
+| 2 | 策略化扩展 | `IntegratorKind`/`SolverKind`/`RendererKind`/`MeshSource`/`TransportKind`/`TimeSourceKind`/`FaultPolicy` 全部「枚举 + 默认档 + 保留档」 |
+| 3 | 证据链 | 61/61 测试、`bench_dynamics`（rk4 963 µs / semi 216 µs）、MuJoCo oracle 逐位一致 |
+| 4 | 诚实标注 | B2 订阅桩返回 `UNSUPPORTED`、kGltf 告警回退、permissions 仅边车、RHI 文字未绑定前不宣称支持 |
+| 5 | 命名空间隔离 | 各模型仅写自身 `<model>/`，跨模型只读引用 |
+
+采纳明细与未采纳理由见执行计划 v8 §1；原则 2 的写法见 `tools/ai/skills/module-build/SKILL.md` §8。
+
 ## 8. 架构决策摘要（ADR Index）
 
 | ADR | 决策 | 主要理由 | 详见 | 状态 |
