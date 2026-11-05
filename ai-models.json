@@ -30,7 +30,7 @@
     {
       "slug": "glm",
       "display": "GLM / Zhipu",
-      "aliases": ["glm", "chatglm", "zhipu", "glm-4", "智谱"]
+      "aliases": ["glm", "chatglm", "zhipu", "glm-4", "glm-5", "glm-5.3-flash", "zai", "zai-glm-5-3-flash", "智谱"]
     },
     {
       "slug": "llama",
