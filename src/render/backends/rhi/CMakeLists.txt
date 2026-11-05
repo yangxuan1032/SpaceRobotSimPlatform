@@ -42,3 +42,26 @@ if(QSB_EXECUTABLE)
 else()
   message(STATUS "qsb not found; renderer.rhi draws only the clear pass")
 endif()
+# Text pipeline assets (B12 step 2b): compiled but not yet bound by the renderer.
+set(SRSP_TEXT_SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
+set(SRSP_TEXT_VS "${CMAKE_CURRENT_BINARY_DIR}/text.vert.qsb")
+set(SRSP_TEXT_FS "${CMAKE_CURRENT_BINARY_DIR}/text.frag.qsb")
+find_program(QSB_EXECUTABLE NAMES qsb HINTS "${CMAKE_PREFIX_PATH}/bin")
+if(QSB_EXECUTABLE)
+  add_custom_command(
+    OUTPUT "${SRSP_TEXT_VS}"
+    COMMAND "${QSB_EXECUTABLE}" --glsl "440" -o "${SRSP_TEXT_VS}" "${SRSP_TEXT_SHADER_DIR}/text.vert"
+    DEPENDS "${SRSP_TEXT_SHADER_DIR}/text.vert" VERBATIM)
+  add_custom_command(
+    OUTPUT "${SRSP_TEXT_FS}"
+    COMMAND "${QSB_EXECUTABLE}" --glsl "440" -o "${SRSP_TEXT_FS}" "${SRSP_TEXT_SHADER_DIR}/text.frag"
+    DEPENDS "${SRSP_TEXT_SHADER_DIR}/text.frag" VERBATIM)
+  add_custom_target(srsp_text_shaders DEPENDS "${SRSP_TEXT_VS}" "${SRSP_TEXT_FS}")
+  add_dependencies(srsp_render_rhi srsp_text_shaders)
+  target_compile_definitions(srsp_render_rhi PRIVATE
+    SRSP_TEXT_VS_PATH="${SRSP_TEXT_VS}"
+    SRSP_TEXT_FS_PATH="${SRSP_TEXT_FS}")
+  message(STATUS "text shaders: qsb found, compiling text.vert/frag")
+else()
+  message(STATUS "text shaders: qsb not found, text pipeline assets skipped")
+endif()

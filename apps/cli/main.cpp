@@ -10,6 +10,7 @@
  * SRSP_E_UNSUPPORTED without pretending to work.
  */
 #include <srsp/bridge/transport.hpp>
+#include <srsp/core/trust.hpp>
 #include <srsp/core_api.h>
 #include <srsp/record/lockfile.hpp>
 #include <srsp/record/mcap.hpp>
@@ -192,6 +193,27 @@ int run_soak(const std::vector<std::string>& args) {
   const std::string sleep_text = option_value(args, "--sleep-ms");
   const std::string workload =
       option_value(args, "--workload").empty() ? "ping" : option_value(args, "--workload");
+  const std::string trust_name =
+      option_value(args, "--trust").empty() ? "managed" : option_value(args, "--trust");
+  srsp::core::TrustLevel trust_level = srsp::core::TrustLevel::kManaged;
+  if (trust_name == "builtin") {
+    trust_level = srsp::core::TrustLevel::kBuiltin;
+  } else if (trust_name == "managed") {
+    trust_level = srsp::core::TrustLevel::kManaged;
+  } else if (trust_name == "isolated") {
+    trust_level = srsp::core::TrustLevel::kIsolated;
+  } else if (trust_name != "development") {
+    std::fprintf(stderr, "error: unknown trust level '%s'\n", trust_name.c_str());
+    return kExitFailure;
+  } else {
+    trust_level = srsp::core::TrustLevel::kDevelopment;
+  }
+  if (!srsp::core::allows_in_process(trust_level)) {
+    std::fprintf(stderr, "error: trust level '%s' is sidecar-only; use --transport sidecar\n",
+                 trust_name.c_str());
+    return kExitUnsupported;
+  }
+
   const std::string integrator_name =
       option_value(args, "--integrator").empty() ? "rk4" : option_value(args, "--integrator");
   if (integrator_name != "rk4" && integrator_name != "semi") {
@@ -497,6 +519,21 @@ int main(int argc, char** argv) {
   }
 
   const std::string& command = args[1];
+
+  // Trust is a global selection: a sidecar-only plugin must not reach an
+  // in-process path, whatever command was given (central trust check).
+  {
+    const std::string trust_arg = option_value(args, "--trust");
+    if (trust_arg == "isolated" || trust_arg == "development") {
+      std::fprintf(stderr, "error: trust level '%s' is sidecar-only; use --transport sidecar\n",
+                   trust_arg.c_str());
+      return kExitUnsupported;
+    }
+    if (!trust_arg.empty() && trust_arg != "builtin" && trust_arg != "managed") {
+      std::fprintf(stderr, "error: unknown trust level '%s'\n", trust_arg.c_str());
+      return kExitFailure;
+    }
+  }
   if (command == "lock") {
     if (args.size() < 3) {
       std::fprintf(stderr, "error: lock needs a recording path\n");

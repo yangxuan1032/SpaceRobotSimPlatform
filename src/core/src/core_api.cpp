@@ -60,6 +60,16 @@ int64_t SRSP_CALL ctx_time_ns(void* user) {
   return ctx != nullptr ? ctx->clock.now_ns() : 0;
 }
 
+srsp_status SRSP_CALL ctx_subscribe(void*, srsp_str, void (*)(void*, srsp_str, srsp_bytes), void*,
+                                    uint64_t*) {
+  // Reserved (B2): topic routing from plugins is not implemented yet; returning
+  // UNSUPPORTED keeps the field honest instead of silently succeeding.
+  return SRSP_E_UNSUPPORTED;
+}
+
+srsp_status SRSP_CALL ctx_unsubscribe(void*, uint64_t) {
+  return SRSP_E_UNSUPPORTED;
+}
 srsp_status SRSP_CALL ctx_alloc(void*, uint64_t size, uint64_t alignment, void** out) {
   if (out == nullptr || size == 0) {
     return SRSP_E_INVALID_ARGUMENT;
@@ -106,6 +116,8 @@ srsp_host_v1 make_services() {
   services.publish = ctx_publish;
   services.shm_map = ctx_shm_map;
   services.shm_unmap = ctx_shm_unmap;
+  services.subscribe = ctx_subscribe;
+  services.unsubscribe = ctx_unsubscribe;
   return services;
 }
 

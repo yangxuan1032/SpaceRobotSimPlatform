@@ -655,7 +655,7 @@ if __name__ == "__main__":
 
 | 扩展点 | 预留方式 | 兼容规则 |
 |---|---|---|
-| 插件侧订阅（`host->subscribe`） | host 表末尾追加函数指针 | `struct_size` 版本化；旧插件不读新字段 |
+| 插件侧订阅（`host->subscribe`） | **字段已追加 2026-11-05（B2）**：`subscribe`/`unsubscribe` 位于 `time_tai_ns` 之后（偏移 80/88，结构体 96 字节），当前为**桩**：返回 `SRSP_E_UNSUPPORTED` | `struct_size` 版本化；旧插件不读新字段；插件须判空并检查返回码 |
 | 检查点载荷 | 约定为 Arrow 状态快照的 IPC bytes | 与 `dynamics.get_state/set_state` 互逆 |
 | 能力 pin / 锁强制 | `run_metadata` 的 `plugin_lock_hash` + `check_selection()` | 不匹配不得静默回放 |
 | 故障策略 | 枚举 `FaultPolicy{stop,disable,retry}`（未实现） | 未实现值返回 `SRSP_E_UNSUPPORTED` |

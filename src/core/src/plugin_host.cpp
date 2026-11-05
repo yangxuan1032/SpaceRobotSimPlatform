@@ -172,6 +172,10 @@ srsp_status PluginHost::init(srsp_str config_json, srsp_error* err) noexcept {
 
 srsp_status PluginHost::call(srsp_str method, srsp_bytes request, srsp_buffer* response,
                              srsp_error* err) noexcept {
+  if (disabled_) {
+    set_error(err, SRSP_E_INVALID_STATE, "plugin was disabled by the fault policy");
+    return SRSP_E_INVALID_STATE;
+  }
   if (plugin_ == nullptr) {
     set_error(err, SRSP_E_NOT_READY, "no plugin is loaded");
     return SRSP_E_NOT_READY;
@@ -180,7 +184,25 @@ srsp_status PluginHost::call(srsp_str method, srsp_bytes request, srsp_buffer* r
     set_error(err, SRSP_E_NOT_READY, "plugin is not initialised");
     return SRSP_E_NOT_READY;
   }
-  return plugin_->call(plugin_->self, method, request, response, err);
+  const srsp_status status = plugin_->call(plugin_->self, method, request, response, err);
+  if (status == SRSP_OK) {
+    failures_ = 0;
+    return status;
+  }
+
+  // Fault policy (B4): count consecutive failures and act on the decision.
+  ++failures_;
+  switch (decide_fault(policy_, failures_, max_retries_)) {
+    case FaultAction::kDisable:
+      disabled_ = true;
+      break;
+    case FaultAction::kStop:
+      failures_ = 0;
+      break;
+    case FaultAction::kRetry:
+      break;
+  }
+  return status;
 }
 
 srsp_status PluginHost::checkpoint(srsp_buffer* out, srsp_error* err) noexcept {
@@ -207,6 +229,18 @@ srsp_status PluginHost::restore(srsp_bytes in, srsp_error* err) noexcept {
   return plugin_->restore(plugin_->self, in, err);
 }
 
+srsp_status PluginHost::load(std::string_view library_path, TrustLevel trust,
+                             srsp_error* err) noexcept {
+  // Trust is enforced here, at the only in-process entry point: an isolated
+  // plugin must go through the sidecar, and a development plugin needs an
+  // explicit opt-in build.
+  if (!allows_in_process(trust)) {
+    set_error(err, SRSP_E_UNSUPPORTED,
+              "this trust level is sidecar-only; load it through the bridge instead");
+    return SRSP_E_UNSUPPORTED;
+  }
+  return load(library_path, err);
+}
 srsp_status PluginHost::load_with_manifest(std::string_view manifest_path,
                                            srsp_error* err) noexcept {
 #if !defined(SRSP_HAVE_MANIFEST)

@@ -34,11 +34,11 @@
 #define SRSP_PLUGIN_ENTRY "srsp_plugin_query"
 
 #if defined(_WIN32)
-#  define SRSP_EXPORT __declspec(dllexport)
-#  define SRSP_CALL __cdecl
+#define SRSP_EXPORT __declspec(dllexport)
+#define SRSP_CALL __cdecl
 #else
-#  define SRSP_EXPORT __attribute__((visibility("default")))
-#  define SRSP_CALL
+#define SRSP_EXPORT __attribute__((visibility("default")))
+#define SRSP_CALL
 #endif
 
 #ifdef __cplusplus
@@ -102,22 +102,25 @@ typedef struct srsp_error {
 /* Services provided by the kernel to plugins                                */
 /* ------------------------------------------------------------------------- */
 
-typedef void (SRSP_CALL* srsp_log_fn)(void* user, int32_t level, srsp_str message);
-typedef double (SRSP_CALL* srsp_time_fn)(void* user);
+typedef void(SRSP_CALL* srsp_log_fn)(void* user, int32_t level, srsp_str message);
+typedef double(SRSP_CALL* srsp_time_fn)(void* user);
 /* TAI nanoseconds relative to the J2000.0 epoch (see docs/03-data-contracts.md
  * section 2.3). Preferred over the double-seconds form, which loses resolution
  * (~0.1 us by 2026) as the epoch distance grows. */
-typedef int64_t (SRSP_CALL* srsp_time_ns_fn)(void* user);
-typedef srsp_status (SRSP_CALL* srsp_alloc_fn)(void* user, uint64_t size,
-                                               uint64_t alignment, void** out);
-typedef void (SRSP_CALL* srsp_free_fn)(void* user, void* ptr);
-typedef srsp_status (SRSP_CALL* srsp_publish_fn)(void* user, srsp_str topic,
-                                                 srsp_bytes payload,
-                                                 uint64_t schema_hash);
-typedef srsp_status (SRSP_CALL* srsp_shm_map_fn)(void* user, srsp_str name,
-                                                 uint64_t size, int32_t writable,
-                                                 void** out);
-typedef void (SRSP_CALL* srsp_shm_unmap_fn)(void* user, void* ptr, uint64_t size);
+typedef int64_t(SRSP_CALL* srsp_time_ns_fn)(void* user);
+typedef srsp_status(SRSP_CALL* srsp_alloc_fn)(void* user, uint64_t size, uint64_t alignment,
+                                              void** out);
+typedef void(SRSP_CALL* srsp_free_fn)(void* user, void* ptr);
+typedef srsp_status(SRSP_CALL* srsp_subscribe_fn)(void* user, srsp_str topic,
+                                                  void (*callback)(void*, srsp_str, srsp_bytes),
+                                                  void* callback_user, uint64_t* out_token);
+typedef srsp_status(SRSP_CALL* srsp_unsubscribe_fn)(void* user, uint64_t token);
+
+typedef srsp_status(SRSP_CALL* srsp_publish_fn)(void* user, srsp_str topic, srsp_bytes payload,
+                                                uint64_t schema_hash);
+typedef srsp_status(SRSP_CALL* srsp_shm_map_fn)(void* user, srsp_str name, uint64_t size,
+                                                int32_t writable, void** out);
+typedef void(SRSP_CALL* srsp_shm_unmap_fn)(void* user, void* ptr, uint64_t size);
 
 typedef struct srsp_host_v1 {
   uint32_t struct_size;
@@ -137,22 +140,25 @@ typedef struct srsp_host_v1 {
   /* Appended in ABI 1.0 (2026-10-22). Before use, check
    * struct_size >= offsetof(srsp_host_v1, time_tai_ns) + sizeof(time_tai_ns). */
   srsp_time_ns_fn time_tai_ns;
+
+  /* Appended 2026-11-05 (B2). Reserved: a plugin may subscribe to bus topics.
+   * Null when the host does not implement it; plugins must check the field and
+   * the returned status. Appending keeps older plugins compatible. */
+  srsp_subscribe_fn subscribe;
+  srsp_unsubscribe_fn unsubscribe;
 } srsp_host_v1;
 
 /* ------------------------------------------------------------------------- */
 /* Plugin vtable                                                             */
 /* ------------------------------------------------------------------------- */
 
-typedef srsp_status (SRSP_CALL* srsp_init_fn)(void* self, const srsp_host_v1* host,
-                                              srsp_str config_json, srsp_error* err);
-typedef srsp_status (SRSP_CALL* srsp_call_fn)(void* self, srsp_str method,
-                                              srsp_bytes request,
-                                              srsp_buffer* response, srsp_error* err);
-typedef srsp_status (SRSP_CALL* srsp_checkpoint_fn)(void* self, srsp_buffer* out,
-                                                    srsp_error* err);
-typedef srsp_status (SRSP_CALL* srsp_restore_fn)(void* self, srsp_bytes in,
-                                                 srsp_error* err);
-typedef void (SRSP_CALL* srsp_shutdown_fn)(void* self);
+typedef srsp_status(SRSP_CALL* srsp_init_fn)(void* self, const srsp_host_v1* host,
+                                             srsp_str config_json, srsp_error* err);
+typedef srsp_status(SRSP_CALL* srsp_call_fn)(void* self, srsp_str method, srsp_bytes request,
+                                             srsp_buffer* response, srsp_error* err);
+typedef srsp_status(SRSP_CALL* srsp_checkpoint_fn)(void* self, srsp_buffer* out, srsp_error* err);
+typedef srsp_status(SRSP_CALL* srsp_restore_fn)(void* self, srsp_bytes in, srsp_error* err);
+typedef void(SRSP_CALL* srsp_shutdown_fn)(void* self);
 
 typedef struct srsp_plugin_v1 {
   uint32_t struct_size;
@@ -172,20 +178,19 @@ typedef struct srsp_plugin_v1 {
  * services table. Return NULL when the plugin cannot serve that ABI major.
  * The returned table must remain valid for the lifetime of the process.
  */
-typedef const srsp_plugin_v1* (SRSP_CALL* srsp_plugin_query_fn)(
-    uint32_t host_abi_major, const srsp_host_v1* host);
+typedef const srsp_plugin_v1*(SRSP_CALL* srsp_plugin_query_fn)(uint32_t host_abi_major,
+                                                               const srsp_host_v1* host);
 
-SRSP_EXPORT const srsp_plugin_v1* SRSP_CALL srsp_plugin_query(
-    uint32_t host_abi_major, const srsp_host_v1* host);
+SRSP_EXPORT const srsp_plugin_v1* SRSP_CALL srsp_plugin_query(uint32_t host_abi_major,
+                                                              const srsp_host_v1* host);
 
 /* ------------------------------------------------------------------------- */
 /* Helpers (C/C++ inline, no runtime dependency)                             */
 /* ------------------------------------------------------------------------- */
 
-#define SRSP_STR_LITERAL(lit) \
-  { (lit), (uint64_t)(sizeof(lit) - 1u) }
+#define SRSP_STR_LITERAL(lit) {(lit), (uint64_t)(sizeof(lit) - 1u)}
 
-#define SRSP_BYTES_NONE { NULL, 0u }
+#define SRSP_BYTES_NONE {NULL, 0u}
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -437,10 +437,10 @@ gpt 设计包把“分布式集群”列为 v1 非目标；本项目的 M4 计�
 
 | 编号 | 事项 | 为什么后置 | 预留接口 | 触发条件 | 预估 |
 |---|---|---|---|---|---|
-| B1 | T2 边车隔离 + supervisor（心跳/重启/3 s 恢复） | 需要多插件与运维流程 | `TransportKind` + 信任级别 | 有第三方插件 | 2 轮 |
+| B1 | T2 边车隔离 + supervisor | **部分完成 2026-11-05**：`PluginHost::load(path, TrustLevel)` 在唯一进程内入口强制 `allows_in_process()`（隔离/开发级返回 `UNSUPPORTED`，已有测试）；CLI 已有一次性重启。剩余：心跳与退避、CLI 按 manifest 信任级别路由到边车 | `TransportKind` + 信任级别 | 有第三方插件 | 1 轮 |
 | B2 | 插件侧订阅 ABI（`host->subscribe`） | 当前事件走内核调度足够 | host 表追加字段 + `struct_size` | 插件需自行监听事件 | 1 轮 |
 | B3 | 能力 pin/lockfile 强制校验 | 锁文件已能生成，强制需 UI/CLI 流程 | `run_metadata` + `check_selection()` | 多机部署 | 1 轮 |
-| B4 | 故障策略 `FaultPolicy{stop,disable,retry}` | 单插件时无意义 | 枚举预留 | 多插件编排 | 1.5 轮 |
+| B4 | 故障策略 `FaultPolicy{stop,disable,retry}` | **已完成 2026-11-05**：决策表 + `PluginHost` 接线（失败计数、`kDisable` 后拒绝后续调用），有插件级测试 | ✅ | 多插件编排 | 无 |
 | B5 | glTF 网格加载 | **已完成 2026-11-05**：GLB 解析 + Qt/RHI 两后端三角面片绘制（含缓存与失败回退） | `MeshSource::kGltf` + `load_glb()` | 场景需要外部模型 | ✅ |
 | B6 | ABA O(n) 求解 | 300 µs 已由半隐式达成 | `SolverKind::kArticulated` | 需要 RK4 精度 + 300 µs | 3 轮 |
 | B7 | Typed Data Bus / 完整 Runtime Facade | 单人+AI 现状过重 | 现有 snapshot/event 边界 | 团队 ≥3 人 | 4 轮 |
@@ -448,7 +448,7 @@ gpt 设计包把“分布式集群”列为 v1 非目标；本项目的 M4 计�
 | B9 | Linux CI + MSVC 验证 | **2026-11-05 决定推迟**：当前聚焦 Windows 平台开发与验证，跨平台留到软件完成后 | CMake 预设已就位（`linux-gcc-*` / `win-msvc-*` 未被作业使用） | 软件功能完成、准备跨平台承诺时 | 2 轮 |
 | B10 | 导入器 fuzz、MCAP 截断、边车崩溃注入 | **已完成 2026-11-05**：导入器畸形输入、MCAP 截断、边车崩溃路径（并修复 P1/P2 两个缺陷） | 无（纯测试） | ✅ | 无 |
 | B11 | ~~RHI 2D 叠加~~ | **已完成 2026-11-05**：采用混合渲染（RHI 3D + QPainter 文字叠加） | — | — | — |
-| B12 | 纯 RHI 文字（字形图集 + 管线内渲染） | 混合方案已满足 Windows 需求；纯 GPU 方案收益有限 | 无（替换 Viewport 叠加层） | 需要「录制画面即最终画面」或去掉 QPainter 依赖时 | 1.5 轮 |
+| B12 | 纯 RHI 文字（字形图集 + 管线内渲染） | **第一步完成 2026-11-05**：5×7 位图字形图集（ASCII 32–90，`build_text_atlas()`）、`build_text_quads()` 屏幕四边形生成与测试；RHI 上传与管线绑定未做；着色器已随 `qsb` 预编译（`text.vert.qsb`/`text.frag.qsb`） | 图集接口已就位 | 需要「录制画面即最终画面」或去掉 QPainter 依赖时 | 1 轮（上传+着色） |
 
 **执行规则**：进入 B 清单的事项，必须先在 `docs/01` §7.2 有对应行，且不改变现有默认档行为。
 

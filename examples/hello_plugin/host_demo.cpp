@@ -161,9 +161,9 @@ int main(int argc, char** argv) {
   const char* path = argc > 1 ? argv[1] : "srsp_hello.dll";
 
   DemoHost host;
-  srsp_host_v1 host_api{sizeof(srsp_host_v1), &host,           host_log,     host_time_tai,
-                        host_alloc,           host_free,       host_publish, host_shm_map,
-                        host_shm_unmap,       host_time_tai_ns};
+  srsp_host_v1 host_api{
+      sizeof(srsp_host_v1), &host,        host_log,       host_time_tai,    host_alloc, host_free,
+      host_publish,         host_shm_map, host_shm_unmap, host_time_tai_ns, nullptr,    nullptr};
 
   LibraryHandle library = open_library(path);
   if (library == nullptr) {

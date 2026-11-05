@@ -5,7 +5,9 @@
  * The plugin path is provided by ctest through the SRSP_TEST_PLUGIN
  * environment variable.
  */
+#include <srsp/core/fault_policy.hpp>
 #include <srsp/core/plugin_host.hpp>
+#include <srsp/core/trust.hpp>
 
 #include <cstring>
 
@@ -190,4 +192,35 @@ TEST_CASE("plugin host stops accepting calls after unload", "[plugin_host]") {
 
   srsp_error err{};
   CHECK(host.call(make_str("core.ping"), srsp_bytes{}, nullptr, &err) == SRSP_E_NOT_READY);
+}
+TEST_CASE("isolated plugins cannot be loaded in process", "[plugin_host][trust]") {
+  srsp::core::PluginHost host(make_services());
+  srsp_error err{};
+  const auto rejected = host.load("does-not-matter.dll", srsp::core::TrustLevel::kIsolated, &err);
+  CHECK(rejected == SRSP_E_UNSUPPORTED);
+  CHECK_FALSE(host.loaded());
+
+  const auto development =
+      host.load("does-not-matter.dll", srsp::core::TrustLevel::kDevelopment, &err);
+  CHECK(development == SRSP_E_UNSUPPORTED);
+  CHECK_FALSE(host.loaded());
+}
+TEST_CASE("fault policy disables a failing plugin", "[plugin_host][fault]") {
+  const std::string path = plugin_path();
+  if (path.empty()) {
+    SKIP("SRSP_TEST_PLUGIN is not set");
+  }
+  srsp::core::PluginHost host(make_services());
+  srsp_error err{};
+  REQUIRE(host.load(path, &err) == SRSP_OK);
+  REQUIRE(host.init(srsp_str{}, &err) == SRSP_OK);
+
+  host.set_fault_policy(srsp::core::FaultPolicy::kDisable);
+  srsp_buffer response{};
+  const auto failing = host.call(make_str("no.such.method"), srsp_bytes{}, &response, &err);
+  CHECK(failing != SRSP_OK);
+  CHECK(host.disabled());
+
+  const auto after = host.call(make_str("core.ping"), srsp_bytes{}, &response, &err);
+  CHECK(after == SRSP_E_INVALID_STATE);
 }

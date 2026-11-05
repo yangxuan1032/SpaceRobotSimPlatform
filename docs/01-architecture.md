@@ -404,7 +404,7 @@ v1 支持**单进程内 N 个机器人**（起步 N ≤ 8）协同，跨进程/�
 | 能力解析 | `registry` 优先级解析 | 预留「pin/override」策略钩子 | 插件锁 + 用户 pin |
 | 数据订阅 | 内核按调度回调 | 预留 host 表追加 `subscribe`（`struct_size` 版本化） | 需求确认后追加字段 |
 | 检查点 | 无 | 约定载荷 = Arrow 状态快照 IPC bytes | 实现时按此约定 |
-| 故障策略 | 单插件、失败即报错 | 预留 `FaultPolicy{stop,disable,retry}` | 1.1 多插件后启用 |
+| 故障策略 | 可配置 `stop/disable/retry`，`PluginHost` 已接线，默认仍为 `stop` | 枚举 + 决策表 | 新策略加枚举值 |
 | 质量预算 | 均值 + 插件调用 p50/p95 | 指标字段预留 | 动力学 p50/p95 上报 |
 
 ### 7.3 通用化判定

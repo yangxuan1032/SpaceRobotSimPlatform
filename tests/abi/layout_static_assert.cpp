@@ -66,7 +66,9 @@ SRSP_CHECK_OFF(srsp_host_v1, publish, 48);
 SRSP_CHECK_OFF(srsp_host_v1, shm_map, 56);
 SRSP_CHECK_OFF(srsp_host_v1, shm_unmap, 64);
 SRSP_CHECK_OFF(srsp_host_v1, time_tai_ns, 72);
-SRSP_CHECK_SIZE(srsp_host_v1, 80);
+SRSP_CHECK_OFF(srsp_host_v1, subscribe, 80);
+SRSP_CHECK_OFF(srsp_host_v1, unsubscribe, 88);
+SRSP_CHECK_SIZE(srsp_host_v1, 96);
 SRSP_CHECK_ALIGN(srsp_host_v1, 8);
 
 /* ---- plugin vtable --------------------------------------------------------- */

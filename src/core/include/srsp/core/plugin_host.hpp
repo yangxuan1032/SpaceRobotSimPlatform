@@ -11,6 +11,8 @@
 #ifndef SRSP_CORE_PLUGIN_HOST_HPP
 #define SRSP_CORE_PLUGIN_HOST_HPP
 
+#include <srsp/core/fault_policy.hpp>
+#include <srsp/core/trust.hpp>
 #include <srsp/plugin_api.h>
 
 #include <string>
@@ -55,6 +57,15 @@ class PluginHost {
    *         SRSP_E_INVALID_STATE if a plugin is already loaded.
    */
   srsp_status load(std::string_view library_path, srsp_error* err) noexcept;
+
+  /**
+   * @brief Loads a plugin only when its trust level allows in-process use.
+   * @param library_path Shared library to load.
+   * @param trust Declared trust level of the plugin.
+   * @param err Optional error detail.
+   * @return SRSP_E_UNSUPPORTED for isolated/development plugins.
+   */
+  srsp_status load(std::string_view library_path, TrustLevel trust, srsp_error* err) noexcept;
 
   /**
    * @brief Loads the plugin described by an SRSP manifest (`plugin.json`).
@@ -109,6 +120,19 @@ class PluginHost {
    * @param response Receives a buffer allocated by the plugin.
    * @param err Optional error details.
    */
+  /**
+   * @brief Selects how call failures are handled (B4).
+   * @param policy stop/disable/retry.
+   * @param max_retries Retry budget for kRetry.
+   */
+  void set_fault_policy(FaultPolicy policy, uint32_t max_retries = 3) noexcept {
+    policy_ = policy;
+    max_retries_ = max_retries;
+  }
+
+  /** @brief True once the policy disabled the plugin. */
+  [[nodiscard]] bool disabled() const noexcept { return disabled_; }
+
   srsp_status call(srsp_str method, srsp_bytes request, srsp_buffer* response,
                    srsp_error* err) noexcept;
 
@@ -126,6 +150,10 @@ class PluginHost {
   const srsp_plugin_v1* plugin_ = nullptr;
   std::string plugin_id_;
   bool initialized_ = false;
+  FaultPolicy policy_ = FaultPolicy::kStop;
+  uint32_t max_retries_ = 3;
+  uint32_t failures_ = 0;
+  bool disabled_ = false;
 };
 
 }  // namespace srsp::core

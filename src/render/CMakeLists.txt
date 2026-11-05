@@ -4,7 +4,9 @@
 #
 add_library(srsp_render STATIC
   src/null_renderer.cpp
-  src/projection.cpp)
+  src/projection.cpp
+  src/text_atlas.cpp
+  src/text_mesh.cpp)
 
 # GLB mesh reading needs nlohmann (the same JSON library the model layer uses).
 if(TARGET nlohmann_json::nlohmann_json)
