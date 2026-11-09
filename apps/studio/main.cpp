@@ -22,6 +22,11 @@
 #include <cstdlib>
 
 #include "qt_renderer.hpp"
+
+#if __has_include("rhi_renderer.hpp")
+#include "rhi_renderer.hpp"
+#define SRSP_STUDIO_HAVE_RHI 1
+#endif
 #include "studio_window.hpp"
 
 namespace {
@@ -103,6 +108,10 @@ int run_render_selftest() {
   scene.earth.color[0] = 0.15f;
   scene.earth.color[1] = 0.35f;
   scene.earth.color[2] = 0.75f;
+  // The RHI pass shades from this vector; without it the earth is ambient-only.
+  scene.sun_direction[0] = 0.55;
+  scene.sun_direction[1] = -0.72;
+  scene.sun_direction[2] = 0.42;
   Sphere satellite;
   satellite.radius_m = 1.5;
   satellite.color[0] = 0.9f;
@@ -140,6 +149,142 @@ int run_render_selftest() {
   return 0;
 }
 
+/// Scene used by the visual check: earth, a satellite and a box body.
+Scene make_visual_scene() {
+  Scene scene;
+  scene.has_earth = true;
+  scene.earth.position_m[1] = 1.0e7;
+  scene.earth.radius_m = 6.371e6;
+  scene.earth.color[0] = 0.15f;
+  scene.earth.color[1] = 0.35f;
+  scene.earth.color[2] = 0.75f;
+  // The RHI pass shades from this vector; without it the earth is ambient-only.
+  scene.sun_direction[0] = 0.55;
+  scene.sun_direction[1] = -0.72;
+  scene.sun_direction[2] = 0.42;
+
+  Sphere satellite;
+  satellite.position_m[0] = -2.5;
+  satellite.position_m[2] = 0.0;
+  satellite.radius_m = 1.5;
+  satellite.color[0] = 0.9f;
+  satellite.color[1] = 0.7f;
+  satellite.color[2] = 0.2f;
+  scene.bodies.push_back(satellite);
+
+  Sphere box;
+  box.position_m[0] = 4.0;
+  box.position_m[2] = 1.2;
+  box.radius_m = 1.2;
+  box.color[0] = 0.3f;
+  box.color[1] = 0.85f;
+  box.color[2] = 0.55f;
+  box.mesh_uri = "box";
+  box.orientation[2] = 0.3826834;
+  box.orientation[3] = 0.9238795;
+  scene.bodies.push_back(box);
+
+  // Axis markers give the human inspector an orientation and scale reference in
+  // both backends: red +X, green +Y, blue +Z, plus a white origin sphere.
+  const struct {
+    double position[3];
+    float color[3];
+  } kAxisMarkers[3] = {
+      {{6.0, 0.0, 0.0}, {0.92f, 0.22f, 0.22f}},
+      {{0.0, 6.0, 0.0}, {0.30f, 0.90f, 0.35f}},
+      {{0.0, 0.0, 6.0}, {0.30f, 0.45f, 0.95f}},
+  };
+  for (const auto& marker : kAxisMarkers) {
+    Sphere axis;
+    axis.position_m[0] = marker.position[0];
+    axis.position_m[1] = marker.position[1];
+    axis.position_m[2] = marker.position[2];
+    axis.radius_m = 0.35;
+    axis.color[0] = marker.color[0];
+    axis.color[1] = marker.color[1];
+    axis.color[2] = marker.color[2];
+    axis.mesh_uri = "box";
+    axis.orientation[3] = 1.0;
+    scene.bodies.push_back(axis);
+  }
+
+  Sphere origin;
+  origin.radius_m = 0.45;
+  origin.color[0] = 0.95f;
+  origin.color[1] = 0.95f;
+  origin.color[2] = 0.95f;
+  origin.orientation[3] = 1.0;
+  scene.bodies.push_back(origin);
+  return scene;
+}
+
+/// Renders the visual-check scene once and writes it as a PNG.
+int run_visual_snapshot(int renderer_code, const std::string& out_path) {
+  const Viewport viewport{1280, 720};
+  CameraView camera;
+  camera.eye[1] = -20.0;
+  camera.eye[2] = 4.0;
+  camera.up[2] = 1.0;
+  camera.fov_deg = 45.0;
+  camera.near_m = 0.01;
+  camera.far_m = 1.0e9;
+  const Scene scene = make_visual_scene();
+
+  QImage image;
+  if (renderer_code == 2) {
+#if defined(SRSP_STUDIO_HAVE_RHI)
+    srsp::render::RhiRenderer rhi;
+    std::string error;
+    if (!rhi.initialize(nullptr, viewport, &error)) {
+      std::fprintf(stderr, "error: rhi init failed: %s\n", error.c_str());
+      return 1;
+    }
+    if (rhi.backend_name() != "d3d11") {
+      std::printf("visual snapshot skipped: no GPU backend (%s)\n", rhi.backend_name().c_str());
+      rhi.shutdown();
+      return 77;
+    }
+    rhi.set_camera(camera);
+    rhi.set_scene(scene);
+    rhi.set_overlay_text("SRSP VISUAL CHECK");
+    if (!rhi.resize(viewport) || !rhi.render_frame(true)) {
+      std::fputs("error: rhi frame failed\n", stderr);
+      rhi.shutdown();
+      return 1;
+    }
+    image = rhi.readback();
+    rhi.shutdown();
+#else
+    std::fputs("error: this build has no RHI backend; use --renderer qt\n", stderr);
+    return 1;
+#endif
+  } else {
+    QtRenderer qt;
+    std::string error;
+    if (!qt.initialize(nullptr, viewport, &error)) {
+      std::fprintf(stderr, "error: qt init failed: %s\n", error.c_str());
+      return 1;
+    }
+    qt.set_camera(camera);
+    qt.set_scene(scene);
+    for (int frame = 0; frame < 3; ++frame) {
+      (void)qt.render_frame();
+    }
+    image = qt.render_image(viewport.width, viewport.height);
+    qt.shutdown();
+  }
+
+  if (image.isNull()) {
+    std::fputs("error: snapshot image is empty\n", stderr);
+    return 1;
+  }
+  if (!image.save(QString::fromStdString(out_path), "PNG")) {
+    std::fprintf(stderr, "error: cannot write %s\n", out_path.c_str());
+    return 1;
+  }
+  std::printf("visual snapshot: %s (%dx%d)\n", out_path.c_str(), image.width(), image.height());
+  return 0;
+}
 /// Loads the model path from argv or SRSP_TEST_MODELS.
 std::string model_path(int argc, char** argv) {
   if (argc > 2) {
@@ -241,6 +386,9 @@ int main(int argc, char** argv) {
   }
   if (argc > 1 && std::strcmp(argv[1], "--selftest") == 0) {
     return run_render_selftest();
+  }
+  if (argc > 2 && std::strcmp(argv[1], "--snapshot") == 0) {
+    return run_visual_snapshot(renderer_code, argv[2]);
   }
   if (argc > 1 && std::strcmp(argv[1], "--selftest-ui") == 0) {
     return run_ui_selftest(argc, argv);

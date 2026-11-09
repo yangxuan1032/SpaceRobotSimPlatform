@@ -1,0 +1,7 @@
+[
+  {
+    "key": "ctrl+alt+v",
+    "command": "workbench.action.tasks.runTask",
+    "args": "SRSP: visual check (user inspection)"
+  }
+]

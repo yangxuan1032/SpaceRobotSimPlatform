@@ -36,3 +36,22 @@ if(TARGET srsp_render_rhi)
   target_include_directories(srsp_studio_render PUBLIC
     "${PROJECT_SOURCE_DIR}/src/render/backends/rhi")
 endif()
+# Visual smoke: the reference scene must render headlessly and write a PNG.
+# It runs on every toolchain (the Qt backend is software) and is grouped under
+# the "visual" label so a GPU-only variant can be added next to it.
+add_test(NAME visual.snapshot_qt
+  COMMAND $<TARGET_FILE:srsp_studio> --snapshot "${CMAKE_CURRENT_BINARY_DIR}/visual-qt.png" --renderer qt)
+set_tests_properties(visual.snapshot_qt PROPERTIES
+  TIMEOUT 120
+  LABELS "visual"
+  PASS_REGULAR_EXPRESSION "visual snapshot: .*visual-qt\\.png")
+# GPU variant of the visual smoke: skipped (exit 77) when no D3D11 device exists.
+if(TARGET srsp_render_rhi)
+  add_test(NAME visual.snapshot_rhi
+    COMMAND $<TARGET_FILE:srsp_studio> --snapshot "${CMAKE_CURRENT_BINARY_DIR}/visual-rhi.png" --renderer rhi)
+  set_tests_properties(visual.snapshot_rhi PROPERTIES
+    TIMEOUT 120
+    LABELS "visual"
+    SKIP_RETURN_CODE 77
+    PASS_REGULAR_EXPRESSION "visual snapshot:")
+endif()

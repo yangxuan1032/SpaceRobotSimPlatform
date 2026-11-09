@@ -162,6 +162,19 @@
       "windows": { "command": "pwsh" },
       "problemMatcher": [],
       "detail": "One-minute record soak; raise -Minutes for a long run"
+    },
+    {
+      "label": "SRSP: visual check (user inspection)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/tools/visual/VisualCheck.ps1"
+      ],
+      "problemMatcher": [],
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "detail": "Renders the Qt and RHI reference scene, opens the PNGs for a human look"
     }
   ],
   "inputs": [

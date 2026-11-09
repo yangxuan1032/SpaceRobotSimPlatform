@@ -73,3 +73,28 @@
 | 失败用例名 | 定位到模块（如 `unit.dynamics_golden`） |
 | `bench_dynamics` 输出 | 性能进度（目标 `step_us ≤ 300`） |
 | `bench_rhi` 输出 | GPU 帧率进度 |
+## 可视化检查（2026-11-09）
+
+三种启动方式，效果相同：
+
+| 方式 | 操作 |
+|---|---|
+| 鼠标双击 | 仓库根 `VisualCheck.cmd` |
+| VSCode 任务 | `Ctrl+Shift+P` → `Tasks: Run Task` → **SRSP: visual check (user inspection)** |
+| 快捷键 | `Ctrl+Alt+V` |
+
+脚本 `tools/visual/VisualCheck.ps1` 构建 `srsp-studio`，用 Qt 与 RHI 各渲染一次参考场景，把 PNG 写到 `<model>/Temp/visual/<时间戳>/`，并（默认）用系统看图器打开。
+
+**人工检查要点**
+
+| 后端 | 应看到 |
+|---|---|
+| Qt | 地球与明暗分界、黄色卫星（左）、旋转的青绿色立方体（右）、原点白色小球，以及三色坐标标记 |
+| RHI | 同上；左上角另有管线内文字 `SRSP VISUAL CHECK`（B12），且该文字在 readback 中可见 |
+
+**坐标轴标记**：红 = +X（右）、绿 = +Y（上）、蓝 = +Z（画面顶部），白色小球 = 世界原点；它们用于判断旋转方向与尺度，两个后端都应出现。
+
+退出码：`0` 全部成功；`2` Qt 成功但 RHI 失败（机器无 D3D11 时属预期）；抛错表示构建或 Qt 快照失败。
+### CI 中的可视化冒烟
+
+`ctest -R visual` 会运行 `visual.snapshot_qt`：用 Qt 后端渲染参考场景并写出 PNG（`apps/studio/visual-qt.png`），断言标准输出包含 `visual snapshot:`。它不依赖 GPU，因此每个平台都能跑。GPU 变体为 `visual.snapshot_rhi`：具备 D3D11 时渲染并写出 `visual-rhi.png`，无 GPU 时以退出码 77 标记 SKIP（`SKIP_RETURN_CODE`），不会让 CI 变红。

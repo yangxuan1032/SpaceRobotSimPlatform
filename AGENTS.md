@@ -127,6 +127,7 @@
 - 中文用于文档与交流；**代码注释（含 Doxygen、行内注释、CMake/YAML/Schema 描述）与 commit message 一律英文**，文件名用英文。
 - 同一职责有多种实现（算法/后端/积分器/传输）时，按 `tools/ai/skills/module-build/SKILL.md` §8 以「枚举 + set/get + 默认档 + 保留档」引入，禁止用编译期宏分叉 ABI。
 - 新增或修改模块时，公共接口与实现的变量/函数必须写 Doxygen（`@brief/@param/@return`），验收标准见 `tools/ai/skills/module-build/SKILL.md`。
+- **可视化测试确认（强制）**：每完成一个执行项（代码、文档或配置变更），回复末尾必须询问用户是否**补充或优化可视化测试**；获得批准后运行 `tools/visual/VisualCheck.ps1`（或双击仓库根 `VisualCheck.cmd`，或 VSCode 任务 `SRSP: visual check (user inspection)` / `Ctrl+Alt+V`），并把生成的 PNG 路径与人工检查要点报告给用户。未获批准时不得在日志或回复中写「可视化已验证」。
 - **提交与推送一律先执行、后征询（适用于所有项目与所有模型）**：
   - 完成任务后**不要**自动 `git commit` / `git push`，先把改动留在工作区；
   - 在回复末尾**一次性**给出待提交清单（新增/修改/删除）与建议的提交拆分，并明确请求用户许可；
