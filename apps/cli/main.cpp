@@ -17,6 +17,8 @@
 #include <srsp/record/replay.hpp>
 #include <srsp/record/run_metadata.hpp>
 
+#include "command_line.hpp"
+
 #if defined(SRSP_HAVE_RECORD)
 #include <srsp/record/mcap.hpp>
 
@@ -249,6 +251,22 @@ int run_soak(const std::vector<std::string>& args) {
                  err.message != nullptr ? err.message : "unknown");
     return kExitFailure;
   }
+  // A1: the effective selection is what the runtime reports, not the parsed
+  // argument; record tags and the dynamics object both derive from it.
+  srsp_context_config effective{};
+  effective.struct_size = sizeof(srsp_context_config);
+  if (srsp_context_get_config(ctx, &effective, &err) != SRSP_OK) {
+    std::fprintf(stderr, "error: cannot read back runtime configuration\n");
+    srsp_context_destroy(ctx);
+    return kExitFailure;
+  }
+  const bool effective_semi = effective.integrator == 1u;
+  if (effective_semi != (integrator_name == "semi")) {
+    std::fprintf(stderr, "error: integrator selection did not round-trip\n");
+    srsp_context_destroy(ctx);
+    return kExitFailure;
+  }
+
   if (srsp_load_plugin(ctx, to_str(plugin_path), &err) != SRSP_OK) {
     std::fprintf(stderr, "error: load failed: %s\n",
                  err.message != nullptr ? err.message : "unknown");
@@ -296,7 +314,14 @@ int run_soak(const std::vector<std::string>& args) {
       return kExitFailure;
     }
     srsp::dynamics::RigidBodyDynamics dynamics(loaded.model);
-    dynamics.set_integrator(integrator_kind);
+    dynamics.set_integrator(effective_semi ? srsp::dynamics::IntegratorKind::kSemiImplicit
+                                           : srsp::dynamics::IntegratorKind::kRk4);
+    if ((dynamics.integrator() == srsp::dynamics::IntegratorKind::kSemiImplicit) !=
+        effective_semi) {
+      std::fprintf(stderr, "error: dynamics is not using the configured integrator\n");
+      srsp_context_destroy(ctx);
+      return kExitFailure;
+    }
     Eigen::VectorXd q = dynamics.neutral_configuration();
     Eigen::VectorXd v = Eigen::VectorXd::Zero(dynamics.nv());
     const Eigen::VectorXd tau = Eigen::VectorXd::Zero(dynamics.nv());
@@ -348,9 +373,8 @@ int run_soak(const std::vector<std::string>& args) {
       if (writer.open(path.string(), "srsp.soak")) {
         const auto schema = writer.add_schema("srsp.state/1", "raw-f64", "{}");
         srsp::record::RunMetadata run;
-        run.integrator = integrator_kind == srsp::dynamics::IntegratorKind::kSemiImplicit
-                             ? srsp::record::IntegratorTag::kSemiImplicit
-                             : srsp::record::IntegratorTag::kRk4;
+        run.integrator = effective_semi ? srsp::record::IntegratorTag::kSemiImplicit
+                                        : srsp::record::IntegratorTag::kRk4;
         run.compiler = SRSP_BUILD_COMPILER;
         run.build_flags = SRSP_BUILD_FLAGS;
         run.plugin_lock = plugin_lock_text;
@@ -535,18 +559,19 @@ int main(int argc, char** argv) {
     }
   }
   if (command == "lock") {
-    if (args.size() < 3) {
-      std::fprintf(stderr, "error: lock needs a recording path\n");
+    const std::string* path_ptr = nullptr;
+    if (!srsp::cli::require_positional(args, 0, "lock", "a recording path", &path_ptr)) {
       return kExitFailure;
     }
+    const std::string& path = *path_ptr;
     srsp::record::McapReader reader;
-    if (!reader.open(args[2]) || reader.channels().empty()) {
-      std::fprintf(stderr, "error: cannot read recording '%s'\n", args[1].c_str());
+    if (!reader.open(path) || reader.channels().empty()) {
+      std::fprintf(stderr, "error: cannot read recording '%s'\n", path.c_str());
       return kExitFailure;
     }
     const auto lock = srsp::record::lock_from_metadata(reader.channels().front().metadata);
     const std::string out =
-        option_value(args, "--out").empty() ? args[1] + ".lock" : option_value(args, "--out");
+        option_value(args, "--out").empty() ? path + ".lock" : option_value(args, "--out");
     std::ofstream file(out, std::ios::trunc);
     if (!file) {
       std::fprintf(stderr, "error: cannot write '%s'\n", out.c_str());
@@ -558,13 +583,14 @@ int main(int argc, char** argv) {
   }
 
   if (command == "replay-check") {
-    if (args.size() < 3) {
-      std::fprintf(stderr, "error: replay-check needs a recording path\n");
+    const std::string* path_ptr = nullptr;
+    if (!srsp::cli::require_positional(args, 0, "replay-check", "a recording path", &path_ptr)) {
       return kExitFailure;
     }
+    const std::string& path = *path_ptr;
     srsp::record::McapReader reader;
-    if (!reader.open(args[2])) {
-      std::fprintf(stderr, "error: cannot open '%s'\n", args[1].c_str());
+    if (!reader.open(path)) {
+      std::fprintf(stderr, "error: cannot open '%s'\n", path.c_str());
       return kExitFailure;
     }
     const auto decision = srsp::record::verify_recording(reader.channels());
@@ -598,13 +624,14 @@ int main(int argc, char** argv) {
   }
 
   if (command == "inspect") {
-    if (args.size() < 3) {
-      std::fprintf(stderr, "error: inspect needs a recording path\n");
+    const std::string* path_ptr = nullptr;
+    if (!srsp::cli::require_positional(args, 0, "inspect", "a recording path", &path_ptr)) {
       return kExitFailure;
     }
+    const std::string& path = *path_ptr;
     srsp::record::McapReader reader;
-    if (!reader.open(args[2])) {
-      std::fprintf(stderr, "error: cannot open '%s'\n", args[1].c_str());
+    if (!reader.open(path)) {
+      std::fprintf(stderr, "error: cannot open '%s'\n", path.c_str());
       return kExitFailure;
     }
     const auto decision = srsp::record::verify_recording(reader.channels());

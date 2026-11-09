@@ -82,3 +82,13 @@ ctest --preset win-ucrt64-debug -R "unit.plugin_host"
 
 - `ModuleTest/unit|integration` 下的测试与 CMake 接入；
 - ctest 结果（贴进日志「验证」字段）。
+## 测试夹具自举（2026-11-09）
+
+`tools/ai/Enter-AgentEnv.ps1` 在导出缓存变量之外，还会在**产物存在时**自动设置：
+
+| 变量 | 来源 | 缺失时 |
+|---|---|---|
+| `SRSP_TEST_MODELS` | `<root>/examples/models` | 不设置（依赖模型的用例会跳过） |
+| `SRSP_TEST_PLUGIN` | `<model>/Temp/build/<preset>/{plugins/org.srsp.examples.hello/bin,bin}/srsp_hello.dll`（debug 优先，其次 release） | 显式清除，并提示「plugin tests will skip」 |
+
+因此新开的 shell 只需 `. .\tools\ai\Enter-AgentEnv.ps1 -Model <slug>` 即可直接 `ctest`，不必手工 `export`/`$env:`。

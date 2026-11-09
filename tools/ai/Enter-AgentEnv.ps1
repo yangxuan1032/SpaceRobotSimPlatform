@@ -65,9 +65,41 @@ $env:CCACHE_DIR = Join-Path $srspCache 'ccache'
 $env:NPM_CONFIG_CACHE = Join-Path $srspCache 'npm'
 $env:PYTHONPYCACHEPREFIX = Join-Path $srspCache 'pycache'
 
+# Test fixtures: a fresh shell should be able to run the suite without manual
+# exports. Values are only set when the corresponding artifact exists.
+$srspModels = Join-Path $srspContext.Root 'examples/models'
+if (Test-Path $srspModels) {
+    $env:SRSP_TEST_MODELS = $srspModels
+}
+
+$srspPlugin = $null
+foreach ($srspPreset in @('win-ucrt64-debug', 'win-ucrt64-release')) {
+    foreach ($srspRelative in @(
+        "build/$srspPreset/plugins/org.srsp.examples.hello/bin/srsp_hello.dll",
+        "build/$srspPreset/bin/srsp_hello.dll")) {
+        $srspCandidate = Join-Path $srspContext.Temp $srspRelative
+        if ((-not $srspPlugin) -and (Test-Path $srspCandidate)) {
+            $srspPlugin = $srspCandidate
+        }
+    }
+}
+if ($srspPlugin) {
+    $env:SRSP_TEST_PLUGIN = $srspPlugin
+} else {
+    Remove-Item Env:SRSP_TEST_PLUGIN -ErrorAction SilentlyContinue
+}
+
 Write-Host "AI model namespace : $($srspContext.Model)"
 Write-Host "Model home        : $($srspContext.Home)"
 Write-Host "TEMP/TMP/TMPDIR   : $srspTmp"
 Write-Host "CCACHE_DIR        : $env:CCACHE_DIR"
 Write-Host "PIP_CACHE_DIR     : $env:PIP_CACHE_DIR"
 Write-Host "PYTHONPYCACHEPREFIX: $env:PYTHONPYCACHEPREFIX"
+if (Test-Path Env:SRSP_TEST_MODELS) {
+    Write-Host "SRSP_TEST_MODELS  : $env:SRSP_TEST_MODELS"
+}
+if ($srspPlugin) {
+    Write-Host "SRSP_TEST_PLUGIN  : $srspPlugin"
+} else {
+    Write-Host "SRSP_TEST_PLUGIN  : (not built yet; plugin tests will skip)"
+}

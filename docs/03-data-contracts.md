@@ -250,6 +250,8 @@ orbital_servicer.srm/
 
 ## 4. 状态与 Arrow 表
 
+> **适用范围（A5）**：1.x 的仿真状态面一律使用 **canonical raw-f64/bytes**（见 ADR-0002），Arrow 表与 `ArrowArray*` 快速路径属于 **2.0 预留**；本章的 Arrow 描述是目标形态，不代表当前实现已产出 Arrow。
+
 ### 4.1 状态表
 
 状态按实体类别分表，均为不可变快照的一部分，随快照一起发布。
