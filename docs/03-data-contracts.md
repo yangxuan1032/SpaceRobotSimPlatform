@@ -661,3 +661,17 @@ message SensorFrame {
 | 工具生态（`mcap` CLI、Foxglove 等） | 顺序读取可用，摘要视图缺失 | 同上 |
 
 **结论**：M1 的录制/回放能力成立（`state_hash` 逐步一致已实测），但“可被生态工具完整消费”尚差 Summary 区与压缩两项，列为 1.1 任务。
+---
+
+## 数据面四契约（2026-11-09）
+
+组件、插件、应用之间只有四种交互语义：
+
+| 契约 | 方向 | 内容 | 实现 |
+|---|---|---|---|
+| Snapshot | 读 | 时间/step/generation、按 EntityId 排序的轨道/姿态/关节/质量/执行器/环境摘要/事件 | `SnapshotStore` |
+| Command | 写 | 目标实体/执行器、仿真时间、优先级、source、seq、类型化 payload | `CommandQueue` |
+| Subscription | 推 | `sim.state`、`sim.force`、`sim.eclipse`、`sim.contact`、`sim.sensor.<id>` | B2 订阅注册表 |
+| Record | 存 | Snapshot + 命令 + 力配置与分量 + 环境事件 + 传感器 payload → MCAP | `McapWriter` |
+
+禁止 UI/插件/Renderer 直接持有状态可写指针；下游失败不得回写或半提交。

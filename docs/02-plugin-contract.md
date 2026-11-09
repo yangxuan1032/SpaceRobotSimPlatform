@@ -780,3 +780,15 @@ BlobRef {
 | 派发期间注销 | 派发使用注册表快照，回调内注销不影响当前轮次 |
 
 实现位置 `src/core/src/core_api.cpp`；回归测试 `unit.subscription`（订阅→发布→回调→注销后停止→重复注销幂等→非法参数拒绝）。
+---
+
+## 组件、能力与插件的分层（2026-11-09）
+
+| 概念 | 回答的问题 | 唯一性 |
+|---|---|---|
+| 插件（Plugin） | 谁提供了实现、如何隔离 | 库级 |
+| 能力（Capability） | 提供什么语义、版本是多少 | `(name, major)` |
+| 组件（Component） | 是哪一类可实例化的对象 | ComponentKind 注册 |
+| 实体（Entity） | 这次运行中的哪一个实例 | `entity/<name>` |
+
+解析分两步：`Registry` 按 `(capability, version)` 选实现；`EntityStore` 按 `entity_id` 选实例。同一个实现可以服务多个实例，多种插件可以同时注册不同能力域。组件清单、参数 schema、生命周期与扩展规则见 [12 组件标准](12-component-standard.md)。

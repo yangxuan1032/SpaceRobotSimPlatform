@@ -465,3 +465,20 @@ v1 支持**单进程内 N 个机器人**（起步 N ≤ 8）协同，跨进程/�
 | 快照 | 某一时刻不可变的仿真状态视图（Arrow 表 + 元数据） |
 | 降级 | 某项能力不可用时，平台以受限功能继续运行 |
 | 场景 | 项目（plugins/config） + 模型 + 环境 + 初始状态 + 脚本的集合 |
+---
+
+## 10. 组件化目标架构（2026-11-09）
+
+当前实现是"单机器人 + 渲染球体"的演示形态；目标形态见 [12 组件标准](12-component-standard.md)，要点：
+
+| 层 | 组成 | 约束 |
+|---|---|---|
+| L3 应用 | studio / cli / tests / bench | 只调用 L1/L2 公共接口 |
+| L2 领域 | dynamics · sensors · control · render · record | 不含 L3 头文件 |
+| L1 World | EntityStore · AssemblyGraph · Environment · Dispatcher | 唯一状态写者 |
+| L0 契约 | C ABI · schema · 单位/时间/坐标 | 跨层唯一耦合面 |
+
+- **一条数据面**：Snapshot（读）/ Command（写）/ Subscription（推）/ Record（存）是唯一的跨边界语义；组件之间不共享可写指针。
+- **装配**：`MountSpec` 有向图编译为规范 SRM 树；零质量传感器不改变 `nv`，有质量附件生成 fixed 子体进入同一质量矩阵。
+- **环境**：天体星历、引力、大气、光照与遮挡由 `EnvironmentEvaluator(t, state)` 一次计算；渲染与光压共用同一太阳通量与可见率。
+- **兼容**：新增能力默认关闭，legacy 输入走显式 `legacy_compat` 档，逐位保持一致。

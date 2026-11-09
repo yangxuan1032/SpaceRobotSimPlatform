@@ -126,7 +126,7 @@ core ← bridge ← apps
 
 `core` 不得依赖任何上层；`render`/`record` 互不依赖；插件的 C ABI 只经由 `core_api.h`。
 
-## 5. 测试覆盖（当前 45 项）
+## 5. 测试覆盖（当前 67 项）
 
 | 模块 | 代表测试 |
 |---|---|
@@ -165,3 +165,22 @@ core ← bridge ← apps
 | glTF 网格 | `unit.mesh_loader`、`unit.render_qt_gltf`、`unit.render_rhi_gltf` |
 | 管线内文字（RHI） | `unit.render_rhi_text` |
 | capture 语义（不含 overlay） | `unit.capture_scope` |
+---
+
+## 7. 组件清单（目标形态，2026-11-09）
+
+| 组件 | 状态 | 说明 |
+|---|---|---|
+| `env.celestial` | 规划 | 天体星历/引力/大气/光照/遮挡 |
+| `dynamics.body` | 现有能力 | 由 SRM `Body` 提供，未见独立组件 |
+| `dynamics.joint` | 现有能力 | 由 SRM `Joint` 提供 |
+| `dynamics.force` | 函数已存在、未接入 | 二体/三体/SRP/阻力 |
+| `dynamics.actuator` | 数学已实现、未接入 | `actuator_force()` 无调用者 |
+| `dynamics.propulsion` | 规划 | 推进剂、质量/质心/惯量时变 |
+| `sensor.camera` | 规划 | 挂载位姿 + 渲染器成像 |
+| `sensor.lidar` | 规划 | 方向采样 + 碰撞几何求交 |
+| `sensor.radar` | 规划 | 距离-多普勒近似 |
+| `control.controller` | 现有（插件） | C hello 与 Python PD 两个实现 |
+| `visual.renderer` | 现有（策略） | null/qt/rhi 后端 |
+
+组件规范见 [12 组件标准](12-component-standard.md)。
