@@ -86,6 +86,12 @@ srsp_status SRSP_CALL plugin_call(void* self_ptr, srsp_str method, srsp_bytes /*
   }
   if (name == "controller.update") {
     ++self->steps;
+    // B2: publish an event so hosts can subscribe to controller updates.
+    if (self->host != nullptr && self->host->publish != nullptr) {
+      const char payload[] = "step";
+      (void)self->host->publish(self->host->user, SRSP_STR_LITERAL("hello.tick"),
+                                srsp_bytes{reinterpret_cast<const uint8_t*>(payload), 4}, 0);
+    }
     return reply(self, R"({"commands":[],"steps":)" + std::to_string(self->steps) + "}", response);
   }
 

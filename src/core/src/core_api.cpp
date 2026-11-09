@@ -12,8 +12,12 @@
 #include <srsp/core/time_service.hpp>
 #include <srsp/core_api.h>
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <cstdlib>
 #include <new>
@@ -29,6 +33,15 @@ struct srsp_context {
   srsp::core::Scheduler scheduler{clock, &diagnostics};
   std::unique_ptr<srsp::core::PluginHost> host;
   bool plugin_loaded = false;
+  struct Subscription {
+    uint64_t token = 0;
+    std::string topic;
+    srsp_event_fn callback = nullptr;
+    void* user = nullptr;
+  };
+  std::vector<Subscription> subscriptions;
+  uint64_t next_token = 1;
+  bool dispatching = false;
 };
 
 namespace {
@@ -60,15 +73,35 @@ int64_t SRSP_CALL ctx_time_ns(void* user) {
   return ctx != nullptr ? ctx->clock.now_ns() : 0;
 }
 
-srsp_status SRSP_CALL ctx_subscribe(void*, srsp_str, void (*)(void*, srsp_str, srsp_bytes), void*,
-                                    uint64_t*) {
-  // Reserved (B2): topic routing from plugins is not implemented yet; returning
-  // UNSUPPORTED keeps the field honest instead of silently succeeding.
-  return SRSP_E_UNSUPPORTED;
+srsp_status SRSP_CALL ctx_subscribe(void* user, srsp_str topic, srsp_event_fn callback,
+                                    void* callback_user, uint64_t* out_token) {
+  auto* ctx = static_cast<srsp_context*>(user);
+  if (ctx == nullptr || topic.data == nullptr || topic.size == 0 || callback == nullptr ||
+      out_token == nullptr) {
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+  srsp_context::Subscription entry;
+  entry.token = ctx->next_token++;
+  entry.topic.assign(topic.data, static_cast<size_t>(topic.size));
+  entry.callback = callback;
+  entry.user = callback_user;
+  ctx->subscriptions.push_back(std::move(entry));
+  *out_token = ctx->subscriptions.back().token;
+  return SRSP_OK;
 }
 
-srsp_status SRSP_CALL ctx_unsubscribe(void*, uint64_t) {
-  return SRSP_E_UNSUPPORTED;
+srsp_status SRSP_CALL ctx_unsubscribe(void* user, uint64_t token) {
+  auto* ctx = static_cast<srsp_context*>(user);
+  if (ctx == nullptr || token == 0) {
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+  // Idempotent: removing an unknown token is not an error.
+  ctx->subscriptions.erase(std::remove_if(ctx->subscriptions.begin(), ctx->subscriptions.end(),
+                                          [token](const srsp_context::Subscription& entry) {
+                                            return entry.token == token;
+                                          }),
+                           ctx->subscriptions.end());
+  return SRSP_OK;
 }
 srsp_status SRSP_CALL ctx_alloc(void*, uint64_t size, uint64_t alignment, void** out) {
   if (out == nullptr || size == 0) {
@@ -95,8 +128,29 @@ void SRSP_CALL ctx_free(void*, void* ptr) {
 #endif
 }
 
-srsp_status SRSP_CALL ctx_publish(void*, srsp_str, srsp_bytes, uint64_t) {
-  return SRSP_E_UNSUPPORTED;
+srsp_status SRSP_CALL ctx_publish(void* user, srsp_str topic, srsp_bytes payload,
+                                  uint64_t schema_hash) {
+  auto* ctx = static_cast<srsp_context*>(user);
+  if (ctx == nullptr || topic.data == nullptr || topic.size == 0) {
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+  if (ctx->dispatching) {
+    // A callback that publishes again would recurse without bound.
+    return SRSP_E_INVALID_STATE;
+  }
+  const std::string name(topic.data, static_cast<size_t>(topic.size));
+  std::vector<srsp_context::Subscription> snapshot;
+  for (const auto& entry : ctx->subscriptions) {
+    if (entry.topic == name) {
+      snapshot.push_back(entry);
+    }
+  }
+  ctx->dispatching = true;
+  for (const auto& entry : snapshot) {
+    entry.callback(entry.user, topic, payload, schema_hash);
+  }
+  ctx->dispatching = false;
+  return SRSP_OK;
 }
 
 srsp_status SRSP_CALL ctx_shm_map(void*, srsp_str, uint64_t, int32_t, void**) {
@@ -105,9 +159,12 @@ srsp_status SRSP_CALL ctx_shm_map(void*, srsp_str, uint64_t, int32_t, void**) {
 
 void SRSP_CALL ctx_shm_unmap(void*, void*, uint64_t) {}
 
-srsp_host_v1 make_services() {
+srsp_host_v1 make_services(void* user) {
   srsp_host_v1 services{};
   services.struct_size = sizeof(srsp_host_v1);
+  // Every callback reaches the owning context through this pointer; a
+  // null value silently disables publish and log.
+  services.user = user;
   services.log = ctx_log;
   services.time_tai = ctx_time;
   services.time_tai_ns = ctx_time_ns;
@@ -187,7 +244,7 @@ SRSP_CORE_API srsp_status SRSP_CALL srsp_context_create(const srsp_context_confi
       }
     }
   }
-  ctx->host = std::make_unique<srsp::core::PluginHost>(make_services());
+  ctx->host = std::make_unique<srsp::core::PluginHost>(make_services(ctx));
   *out = ctx;
   return SRSP_OK;
 }
@@ -319,21 +376,21 @@ SRSP_CORE_API void SRSP_CALL srsp_buffer_release(srsp_context* ctx, srsp_buffer*
 SRSP_CORE_API srsp_status SRSP_CALL srsp_subscribe(srsp_context* ctx, srsp_str topic,
                                                    srsp_event_fn callback, void* user,
                                                    srsp_subscription* out, srsp_error* err) {
-  (void)ctx;
-  (void)topic;
-  (void)callback;
-  (void)user;
-  (void)out;
-  set_error(err, SRSP_E_UNSUPPORTED, "subscriptions land in M1");
-  return SRSP_E_UNSUPPORTED;
+  if (ctx == nullptr || out == nullptr) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT, "context or out is null");
+    return SRSP_E_INVALID_ARGUMENT;
+  }
+  const srsp_status status = ctx_subscribe(ctx, topic, callback, user, out);
+  if (status != SRSP_OK) {
+    set_error(err, SRSP_E_INVALID_ARGUMENT, "invalid topic or callback");
+  }
+  return status;
 }
 
 SRSP_CORE_API srsp_status SRSP_CALL srsp_unsubscribe(srsp_context* ctx, srsp_subscription id,
                                                      srsp_error* err) {
-  (void)ctx;
-  (void)id;
-  set_error(err, SRSP_E_UNSUPPORTED, "subscriptions land in M1");
-  return SRSP_E_UNSUPPORTED;
+  (void)err;
+  return ctx_unsubscribe(ctx, id);
 }
 
 SRSP_CORE_API srsp_status SRSP_CALL srsp_plugin_identity(srsp_context* ctx, srsp_buffer* out,

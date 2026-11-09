@@ -699,6 +699,8 @@ BlobRef {
 | 录制自洽：通道含 `integrator`/`solver`/`encoding`，且 `encoding` 属于 `raw-f64`/`arrow` | `allowed=false`，拒绝打开 |
 | 与当前运行一致：`check_selection()` 逐键比对（含 `compiler`/`build_flags`/`plugin_lock_hash`） | `kStrict` 拒绝；`kAllowReadOnly` 降级只读 |
 
+> **对外命名（A3）**：`kStrict` = **recompute**（参与确定性回归，任何选择差异即拒绝）；`kAllowReadOnly` = **view**（只读查看，不进入回归）。代码枚举名保持不变以免破坏 ABI，CLI 帮助与文档统一使用 recompute/view。
+
 只读会话**不得参与回归比对**，其 `state_hash` 只用于人工排查。CLI：`srsp-cli inspect <recording.mcap>` 打印通道元数据与准入结论。
 
 ## 18. Schema Registry 与 schema hash
@@ -766,3 +768,15 @@ BlobRef {
 **锁来源**：`srsp_plugin_identity()` 返回 `id\|version\|api_major`，录制时转成 `canonical_plugin_lock()` 并对空串做 XXH3-128；空锁与真实锁的哈希必然不同（有测试）。
 
 规则：锁文件是录制随附的可复现凭据；**不匹配不得静默回放**。`SRSP_KEEP_MCAP=1` 可让 `soak --workload record` 保留最后一个文件，便于生成锁。
+### 订阅语义（B2 实现，2026-11-09）
+
+| 规则 | 行为 |
+|---|---|
+| 派发线程 | 在调用 `publish` 的线程同步派发（当前即仿真线程） |
+| 回调参数 | `(user, topic, payload, schema_hash)`；`payload` 仅在回调期间有效 |
+| 递归 publish | 回调内再次 `publish` 返回 `SRSP_E_INVALID_STATE`，不会递归派发 |
+| 注册与注销 | 应用侧 `srsp_subscribe` 与插件侧 `host->subscribe` 共用同一注册表 |
+| token | 单调自增且不复用；`unsubscribe` 幂等（未知 token 也返回 `OK`） |
+| 派发期间注销 | 派发使用注册表快照，回调内注销不影响当前轮次 |
+
+实现位置 `src/core/src/core_api.cpp`；回归测试 `unit.subscription`（订阅→发布→回调→注销后停止→重复注销幂等→非法参数拒绝）。

@@ -48,3 +48,11 @@ if(MSVC)
 else()
   target_compile_options(test_fault_policy PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+if(TARGET srsp_core AND TARGET srsp_hello_plugin)
+  add_executable(test_subscription test_subscription.cpp)
+  target_link_libraries(test_subscription PRIVATE srsp_core Catch2::Catch2WithMain)
+  add_test(NAME unit.subscription COMMAND test_subscription)
+  set_tests_properties(unit.subscription PROPERTIES
+    TIMEOUT 60
+    ENVIRONMENT "SRSP_TEST_PLUGIN=$<TARGET_FILE:srsp_hello_plugin>")
+endif()

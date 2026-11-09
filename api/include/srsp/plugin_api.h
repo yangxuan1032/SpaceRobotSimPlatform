@@ -112,7 +112,8 @@ typedef srsp_status(SRSP_CALL* srsp_alloc_fn)(void* user, uint64_t size, uint64_
                                               void** out);
 typedef void(SRSP_CALL* srsp_free_fn)(void* user, void* ptr);
 typedef srsp_status(SRSP_CALL* srsp_subscribe_fn)(void* user, srsp_str topic,
-                                                  void (*callback)(void*, srsp_str, srsp_bytes),
+                                                  void (*callback)(void*, srsp_str, srsp_bytes,
+                                                                   uint64_t schema_hash),
                                                   void* callback_user, uint64_t* out_token);
 typedef srsp_status(SRSP_CALL* srsp_unsubscribe_fn)(void* user, uint64_t token);
 
