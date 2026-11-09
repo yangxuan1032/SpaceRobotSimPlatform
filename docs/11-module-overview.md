@@ -147,6 +147,21 @@ core ← bridge ← apps
 | 双原点投影 | ✅ | ✅ | 相机原点扣除 |
 | 离屏捕获 | ✅ | ✅ | `bench_rhi` 1080p ≈ 5.97 ms |
 | glTF 网格 | ✅ | ✅ | 两后端均接入 `load_glb` + 三角面片/平面着色（B5 完成） |
-| 文字/标签叠加 | ✅（studio 窗口层） | ✅ **混合渲染**：RHI 3D 帧 + QPainter 叠加（B11） | 纯 RHI 文字（字形图集）后置为 B12 |
+| 文字/标签叠加 | ✅（studio 窗口层） | ✅ **两条路径**：studio 用混合叠加（B11，A4 契约）；`renderer.rhi` 另有管线内文字（B12，进入 capture） | 字形覆盖 ASCII 32–90；小写与符号待补 |
+| 截图 / 传感器 capture | renderer-only | renderer-only | **A4 契约**：`capture.hpp` 定义「capture 只含 3D，overlay 由窗口合成」；`unit.capture_scope` 断言 |
 
 规则：表中标记 ❌/⚠️ 的能力不得在验收中按「已支持」计分；新增能力先补本表再加测试。
+### 6.1 覆盖测试映射（A2）
+
+矩阵每一行都必须有对应断言；没有测试的行不得留在表里。
+
+| 能力 | 覆盖测试 |
+|---|---|
+| 后端能力声明（`gpu`/`compute`/`max_viewports`） | `unit.capability_matrix` |
+| 地球 + 星空 | `visual.snapshot_qt`、`unit.render_rhi_gltf`（星空：`unit.render_rhi_gltf` 空场景用例） |
+| box / 球体分发 | `unit.render_qt_mesh`、`unit.render_rhi_gltf` |
+| 双原点投影 | `unit.render_qt_box` |
+| 离屏捕获 | `unit.capture_scope`、`visual.snapshot_{qt,rhi}` |
+| glTF 网格 | `unit.mesh_loader`、`unit.render_qt_gltf`、`unit.render_rhi_gltf` |
+| 管线内文字（RHI） | `unit.render_rhi_text` |
+| capture 语义（不含 overlay） | `unit.capture_scope` |

@@ -50,11 +50,11 @@ find_program(QSB_EXECUTABLE NAMES qsb HINTS "${CMAKE_PREFIX_PATH}/bin")
 if(QSB_EXECUTABLE)
   add_custom_command(
     OUTPUT "${SRSP_TEXT_VS}"
-    COMMAND "${QSB_EXECUTABLE}" --glsl "440" -o "${SRSP_TEXT_VS}" "${SRSP_TEXT_SHADER_DIR}/text.vert"
+    COMMAND "${QSB_EXECUTABLE}" --qt6 -o "${SRSP_TEXT_VS}" "${SRSP_TEXT_SHADER_DIR}/text.vert"
     DEPENDS "${SRSP_TEXT_SHADER_DIR}/text.vert" VERBATIM)
   add_custom_command(
     OUTPUT "${SRSP_TEXT_FS}"
-    COMMAND "${QSB_EXECUTABLE}" --glsl "440" -o "${SRSP_TEXT_FS}" "${SRSP_TEXT_SHADER_DIR}/text.frag"
+    COMMAND "${QSB_EXECUTABLE}" --qt6 -o "${SRSP_TEXT_FS}" "${SRSP_TEXT_SHADER_DIR}/text.frag"
     DEPENDS "${SRSP_TEXT_SHADER_DIR}/text.frag" VERBATIM)
   add_custom_target(srsp_text_shaders DEPENDS "${SRSP_TEXT_VS}" "${SRSP_TEXT_FS}")
   add_dependencies(srsp_render_rhi srsp_text_shaders)

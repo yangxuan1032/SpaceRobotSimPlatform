@@ -7,6 +7,7 @@
 #include <srsp/render/mesh_loader.hpp>
 #include <srsp/render/mesh_source.hpp>
 #include <srsp/render/scene.hpp>
+#include <srsp/render/text_mesh.hpp>
 
 #include <cmath>
 #include <vector>
@@ -26,6 +27,8 @@ namespace {
 constexpr int kMinViewport = 1;
 /// Dynamic vertex buffer capacity: bodies plus one planet, in floats.
 constexpr quint32 kVertexCapacityFloats = 400000;
+/// Enough for a few hundred glyph quads (5 floats each).
+constexpr quint32 kTextVertexCapacity = 4096;
 constexpr int kSlices = 32;
 constexpr int kStacks = 16;
 
@@ -85,8 +88,8 @@ std::vector<std::uint16_t> make_sphere_indices() {
 /// Appends a world-space UV sphere as non-indexed triangles.
 void append_sphere_world(const Sphere& body, const double sun[3], double ambient,
                          std::vector<float>& out) {
-  const int slices = 24;
-  const int stacks = 12;
+  const int slices = 48;
+  const int stacks = 24;
   const double radius = body.radius_m;
   const auto point = [&](int stack, int slice, double xyz[3]) {
     const double phi = 3.14159265358979323846 * static_cast<double>(stack) / stacks;
@@ -375,6 +378,10 @@ void RhiRenderer::set_camera(const CameraView& camera) {
   camera_ = camera;
 }
 
+void RhiRenderer::set_overlay_text(std::string text) {
+  overlay_text_ = std::move(text);
+}
+
 void RhiRenderer::set_scene(const Scene& scene) {
   scene_ = scene;
 }
@@ -480,12 +487,91 @@ bool RhiRenderer::create_offscreen() {
     star_pipeline_.reset();
   }
 
+#if defined(SRSP_TEXT_VS_PATH) && defined(SRSP_TEXT_FS_PATH)
+  // B12 text pass: an R8 coverage atlas sampled by a dedicated pipeline. Any
+  // failure here disables text only; geometry rendering must keep working.
+  const QShader text_vs = load_shader(SRSP_TEXT_VS_PATH);
+  const QShader text_fs = load_shader(SRSP_TEXT_FS_PATH);
+  if (text_vs.isValid() && text_fs.isValid()) {
+    atlas_data_ = srsp::render::build_text_atlas();
+    atlas_texture_.reset(
+        rhi_->newTexture(QRhiTexture::RGBA8, QSize(atlas_data_.width, atlas_data_.height), 1));
+    atlas_sampler_.reset(rhi_->newSampler(QRhiSampler::Nearest, QRhiSampler::Nearest,
+                                          QRhiSampler::None, QRhiSampler::ClampToEdge,
+                                          QRhiSampler::ClampToEdge));
+    text_buffer_.reset(rhi_->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer,
+                                       kTextVertexCapacity * 5u * sizeof(float)));
+    text_uniform_.reset(rhi_->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, 16));
+
+    bool text_ok = atlas_texture_ != nullptr && atlas_texture_->create() &&
+                   atlas_sampler_ != nullptr && atlas_sampler_->create() &&
+                   text_buffer_ != nullptr && text_buffer_->create() && text_uniform_ != nullptr &&
+                   text_uniform_->create();
+    if (text_ok) {
+      text_bindings_.reset(rhi_->newShaderResourceBindings());
+      text_bindings_->setBindings(
+          {QRhiShaderResourceBinding::uniformBuffer(0, QRhiShaderResourceBinding::VertexStage,
+                                                    text_uniform_.get()),
+           QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage,
+                                                     atlas_texture_.get(), atlas_sampler_.get())});
+      text_ok = text_bindings_->create();
+    }
+    if (text_ok) {
+      QRhiVertexInputLayout text_layout;
+      text_layout.setBindings({{5 * sizeof(float)}});
+      text_layout.setAttributes({{0, 0, QRhiVertexInputAttribute::Float2, 0},
+                                 {0, 1, QRhiVertexInputAttribute::Float2, 2 * sizeof(float)},
+                                 {0, 2, QRhiVertexInputAttribute::Float, 4 * sizeof(float)}});
+      QRhiGraphicsPipeline::TargetBlend blend;
+      blend.enable = true;
+      blend.srcColor = QRhiGraphicsPipeline::SrcAlpha;
+      blend.dstColor = QRhiGraphicsPipeline::OneMinusSrcAlpha;
+      blend.srcAlpha = QRhiGraphicsPipeline::One;
+      blend.dstAlpha = QRhiGraphicsPipeline::OneMinusSrcAlpha;
+      text_pipeline_.reset(rhi_->newGraphicsPipeline());
+      text_pipeline_->setShaderStages(
+          {{QRhiShaderStage::Vertex, text_vs}, {QRhiShaderStage::Fragment, text_fs}});
+      text_pipeline_->setVertexInputLayout(text_layout);
+      text_pipeline_->setShaderResourceBindings(text_bindings_.get());
+      text_pipeline_->setRenderPassDescriptor(pass_.get());
+      text_pipeline_->setTopology(QRhiGraphicsPipeline::Triangles);
+      text_pipeline_->setDepthTest(false);
+      text_pipeline_->setDepthWrite(false);
+      text_pipeline_->setTargetBlends({blend});
+      text_ok = text_pipeline_->create();
+      if (!text_ok) {
+        std::fprintf(stderr, "renderer.rhi: text pipeline creation failed (B12)\n");
+      }
+    }
+    if (!text_ok) {
+      text_pipeline_.reset();
+      text_bindings_.reset();
+      text_uniform_.reset();
+      text_buffer_.reset();
+      atlas_sampler_.reset();
+      atlas_texture_.reset();
+    }
+  }
+#endif
   QRhiCommandBuffer* cb = nullptr;
   if (rhi_->beginOffscreenFrame(&cb) == QRhi::FrameOpSuccess && cb != nullptr) {
     QRhiResourceUpdateBatch* upload = rhi_->nextResourceUpdateBatch();
     upload->uploadStaticBuffer(vertex_buffer_.get(), vertices.data());
     upload->uploadStaticBuffer(index_buffer_.get(), indices.data());
     upload->uploadStaticBuffer(star_buffer_.get(), stars.data());
+    if (atlas_texture_ != nullptr && !atlas_data_.pixels.empty()) {
+      // R8 uploads of a grayscale image sampled as 1.0 on D3D11; an explicit
+      // white+alpha image keeps the glyph coverage intact on every backend.
+      QImage atlas_image(atlas_data_.width, atlas_data_.height, QImage::Format_RGBA8888);
+      for (int y = 0; y < atlas_data_.height; ++y) {
+        for (int x = 0; x < atlas_data_.width; ++x) {
+          const std::uint8_t coverage =
+              atlas_data_.pixels[static_cast<std::size_t>(y) * atlas_data_.width + x];
+          atlas_image.setPixelColor(x, y, QColor(255, 255, 255, coverage));
+        }
+      }
+      upload->uploadTexture(atlas_texture_.get(), atlas_image);
+    }
     cb->resourceUpdate(upload);
     rhi_->endOffscreenFrame();
   }
@@ -495,6 +581,13 @@ bool RhiRenderer::create_offscreen() {
 
 void RhiRenderer::destroy_offscreen() {
   pipeline_.reset();
+  text_pipeline_.reset();
+  text_bindings_.reset();
+  text_uniform_.reset();
+  text_buffer_.reset();
+  atlas_sampler_.reset();
+  atlas_texture_.reset();
+  text_vertices_ = 0;
   bindings_.reset();
   uniform_buffer_.reset();
   star_pipeline_.reset();
@@ -583,8 +676,26 @@ bool RhiRenderer::render_frame(bool capture) {
     std::fprintf(stderr, "rhi: bodies=%zu has_earth=%d eclipse=%d verts=%zu drawn=%u\n",
                  scene_.bodies.size(), scene_.has_earth ? 1 : 0, scene_.eclipse ? 1 : 0,
                  box_vertices.size() / 6u, box_vertices_);
+    std::fprintf(stderr, "rhi: text verts=%u pipeline=%d\n", text_vertices_,
+                 text_pipeline_ != nullptr ? 1 : 0);
   }
 
+  // B12: build the overlay text quads and stage them in the same batch as the
+  // geometry, so the draw below only binds and draws.
+  text_vertices_ = 0;
+  if (text_pipeline_ != nullptr && text_buffer_ != nullptr && !overlay_text_.empty()) {
+    std::vector<float> text_quads;
+    const std::size_t emitted = srsp::render::build_text_quads(atlas_data_, overlay_text_, 12.0f,
+                                                               12.0f, 3.0f, 255, &text_quads);
+    if (emitted > 0 && text_quads.size() / 5u <= kTextVertexCapacity) {
+      const quint32 text_bytes = static_cast<quint32>(text_quads.size() * sizeof(float));
+      updates->updateDynamicBuffer(text_buffer_.get(), 0, text_bytes, text_quads.data());
+      const float text_uniform_data[4] = {static_cast<float>(viewport_.width),
+                                          static_cast<float>(viewport_.height), 0.0f, 0.0f};
+      updates->updateDynamicBuffer(text_uniform_.get(), 0, 16, text_uniform_data);
+      text_vertices_ = static_cast<std::uint32_t>(text_quads.size() / 5u);
+    }
+  }
   const QColor clear(8, 10, 16);
   cb->beginPass(target_.get(), clear, {1.0f, 0}, updates);
   if (star_pipeline_ != nullptr && star_buffer_ != nullptr) {
@@ -612,6 +723,15 @@ bool RhiRenderer::render_frame(bool capture) {
     const QRhiCommandBuffer::VertexInput input{vertex_buffer_.get(), 0};
     cb->setVertexInput(0, 1, &input, index_buffer_.get(), 0, QRhiCommandBuffer::IndexUInt16);
     cb->drawIndexed(vertex_count_);
+  }
+  if (text_pipeline_ != nullptr && text_vertices_ > 0) {
+    cb->setGraphicsPipeline(text_pipeline_.get());
+    cb->setViewport(
+        {0.0f, 0.0f, static_cast<float>(viewport_.width), static_cast<float>(viewport_.height)});
+    cb->setShaderResources(text_bindings_.get());
+    const QRhiCommandBuffer::VertexInput text_input{text_buffer_.get(), 0};
+    cb->setVertexInput(0, 1, &text_input);
+    cb->draw(text_vertices_);
   }
   cb->endPass();
 

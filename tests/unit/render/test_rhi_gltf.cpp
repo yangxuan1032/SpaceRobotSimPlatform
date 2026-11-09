@@ -5,6 +5,7 @@
  * Pixel comparisons only make sense on a GPU backend, so the assertions here are
  * that the mesh is loaded, the frame renders and the backend reports success.
  */
+#include <srsp/render/capture.hpp>
 #include <srsp/render/scene.hpp>
 
 #include <cstdint>
@@ -84,6 +85,10 @@ TEST_CASE("RHI renders a glTF mesh scene", "[render_rhi][gltf]") {
   if (!renderer.initialize(nullptr, viewport, &error)) {
     SKIP("RHI backend unavailable: " << error);
   }
+  // A4: a backend must not report a capture before the first frame exists.
+  CHECK(srsp::render::capture_excludes_overlay(srsp::render::kRendererCaptureScope));
+  CHECK(renderer.readback().isNull());
+
   CameraView camera{};
   camera.eye[2] = -4.0;
   camera.up[2] = 1.0;
@@ -104,5 +109,40 @@ TEST_CASE("RHI renders a glTF mesh scene", "[render_rhi][gltf]") {
   CHECK(renderer.frame_count() == 1u);
 
   std::filesystem::remove(path);
+  renderer.shutdown();
+}
+TEST_CASE("RHI draws the star field when no body occludes it", "[render_rhi][stars]") {
+  RhiRenderer renderer;
+  const Viewport viewport{320, 200};
+  std::string error;
+  if (!renderer.initialize(nullptr, viewport, &error)) {
+    SKIP("RHI backend unavailable: " << error);
+  }
+  if (renderer.backend_name() != "d3d11") {
+    SKIP("star points need a GPU backend, backend=" << renderer.backend_name());
+  }
+  CameraView camera{};
+  camera.eye[2] = -6.0;
+  camera.up[2] = 1.0;
+  camera.fov_deg = 45.0;
+  camera.far_m = 1.0e9;
+  renderer.set_camera(camera);
+  Scene empty{};
+  renderer.set_scene(empty);
+  REQUIRE(renderer.resize(viewport));
+  REQUIRE(renderer.render_frame(true));
+
+  const QImage image = renderer.readback();
+  REQUIRE(!image.isNull());
+  int bright = 0;
+  for (int y = 0; y < image.height(); ++y) {
+    for (int x = 0; x < image.width(); ++x) {
+      if (image.pixelColor(x, y).value() > 60) {
+        ++bright;
+      }
+    }
+  }
+  std::printf("rhi star pixels=%d\n", bright);
+  CHECK(bright > 50);
   renderer.shutdown();
 }

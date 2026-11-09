@@ -14,6 +14,7 @@
 #include <srsp/render/mesh_loader.hpp>
 #include <srsp/render/renderer.hpp>
 #include <srsp/render/scene.hpp>
+#include <srsp/render/text_atlas.hpp>
 
 #include <cstdint>
 #include <map>
@@ -30,6 +31,7 @@ class QRhiReadbackResult;
 class QRhiBuffer;
 class QRhiGraphicsPipeline;
 class QRhiShaderResourceBindings;
+class QRhiSampler;
 class QOffscreenSurface;
 
 namespace srsp::render {
@@ -75,6 +77,14 @@ class RhiRenderer final : public Renderer {
   /** @brief_zh 阻塞至已提交的 GPU 工作完成（仅用于基准测试）。 */
   void wait_idle();
 
+  /** @brief Overlay text drawn by the GPU text pass (B12). */
+  /** @brief_zh 由 GPU 文字通道绘制的叠加文本（B12）。 */
+  void set_overlay_text(std::string text);
+
+  /** @brief True when the text pipeline was created on this backend. */
+  /** @brief_zh 该后端已创建文字管线时为真。 */
+  [[nodiscard]] bool has_text_pipeline() const noexcept { return text_pipeline_ != nullptr; }
+
   /** @brief Last frame as an image; empty when the backend cannot read back. */
   /** @brief_zh 上一帧图像；后端无法读回时为空。 */
   [[nodiscard]] QImage readback() const;
@@ -108,6 +118,16 @@ class RhiRenderer final : public Renderer {
   QImage image_;
   /// Parsed GLB meshes, keyed by path.
   std::map<std::string, srsp::render::MeshData> mesh_cache_;
+  /// GPU text pass (B12): R8 coverage atlas, sampler, quads and pipeline.
+  srsp::render::TextAtlas atlas_data_{};
+  std::unique_ptr<QRhiTexture> atlas_texture_;
+  std::unique_ptr<QRhiSampler> atlas_sampler_;
+  std::unique_ptr<QRhiBuffer> text_buffer_;
+  std::unique_ptr<QRhiBuffer> text_uniform_;
+  std::unique_ptr<QRhiShaderResourceBindings> text_bindings_;
+  std::unique_ptr<QRhiGraphicsPipeline> text_pipeline_;
+  std::string overlay_text_ = "SRSP";
+  std::uint32_t text_vertices_ = 0;
   std::uint64_t frames_ = 0;
 };
 
