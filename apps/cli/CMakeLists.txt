@@ -1,5 +1,5 @@
 add_executable(srsp_cli main.cpp)
-target_link_libraries(srsp_cli PRIVATE srsp_core)
+target_link_libraries(srsp_cli PRIVATE srsp_core srsp_kernel)
 
 # The soak command can drive the real solver; keep it optional so toolchains
 # without the model/dynamics dependencies still build the CLI.

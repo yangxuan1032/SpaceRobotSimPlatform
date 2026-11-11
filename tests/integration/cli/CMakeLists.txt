@@ -71,3 +71,38 @@ if(SRSP_PY_SIDECAR_READY)
     ENVIRONMENT "SRSP_SIDECAR_FAULT=first-invoke"
     PASS_REGULAR_EXPRESSION "restarting the sidecar once")
 endif()
+# Component manifest validation (W1): the example manifest must pass, and a
+# deliberately broken one must fail with every problem reported.
+add_test(NAME integration.cli_component_valid
+  COMMAND srsp_cli component validate
+          "${CMAKE_SOURCE_DIR}/examples/hello_plugin/component.json")
+set_tests_properties(integration.cli_component_valid PROPERTIES
+  TIMEOUT 30
+  PASS_REGULAR_EXPRESSION "component valid: kind=control\\.controller")
+
+add_test(NAME integration.cli_component_invalid
+  COMMAND srsp_cli component validate
+          "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/component_invalid.json")
+set_tests_properties(integration.cli_component_invalid PROPERTIES
+  TIMEOUT 30
+  WILL_FAIL TRUE)
+# W3.5: the world path publishes one snapshot and one subscription event per
+# step, and the recorder writes the same generation that inspect reads back.
+add_test(NAME integration.cli_world
+  COMMAND srsp_cli world --steps 5)
+set_tests_properties(integration.cli_world PROPERTIES
+  TIMEOUT 30
+  PASS_REGULAR_EXPRESSION "world steps=5 generation=5 events=5 entities=2")
+
+add_test(NAME integration.cli_world_record
+  COMMAND srsp_cli world --steps 3 --record "${CMAKE_CURRENT_BINARY_DIR}/world.mcap")
+set_tests_properties(integration.cli_world_record PROPERTIES
+  TIMEOUT 30
+  PASS_REGULAR_EXPRESSION "world steps=3 generation=3 events=3")
+
+add_test(NAME integration.cli_world_record_inspect
+  COMMAND srsp_cli inspect "${CMAKE_CURRENT_BINARY_DIR}/world.mcap")
+set_tests_properties(integration.cli_world_record_inspect PROPERTIES
+  TIMEOUT 30
+  DEPENDS integration.cli_world_record
+  PASS_REGULAR_EXPRESSION "channels=1")

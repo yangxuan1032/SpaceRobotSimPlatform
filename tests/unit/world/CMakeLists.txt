@@ -1,0 +1,10 @@
+add_executable(test_world test_world.cpp)
+target_link_libraries(test_world PRIVATE srsp_kernel Catch2::Catch2WithMain)
+add_test(NAME unit.world COMMAND test_world)
+set_tests_properties(unit.world PROPERTIES TIMEOUT 60)
+
+if(MSVC)
+  target_compile_options(test_world PRIVATE /W4)
+else()
+  target_compile_options(test_world PRIVATE -Wall -Wextra -Wpedantic)
+endif()

@@ -101,8 +101,33 @@ src/components/<kind>/<name>/
 
 每个组件至少三条测试：参数校验（含缺必填）、生命周期（init/失败路径）、数据契约（schema 往返）；`docs/11` 能力矩阵新增一行并映射到测试，无测试不得留行。
 
+校验入口：
+
+```powershell
+srsp-cli component validate examples/hello_plugin/component.json
+# component valid: kind=control.controller id=org.srsp.examples.hello ...
+```
+
+清单不合法时一次列出全部问题并按 JSON 路径定位，退出码非零。示例清单见 `examples/hello_plugin/component.json`，反例夹具见 `tests/integration/cli/fixtures/component_invalid.json`。
+
 ## 7. 修订记录
 
 | 日期 | 版本 | 说明 |
 |---|---|---|
 | 2026-11-09 | V1 | 从架构规划同步：组件五要素、11 类清单、manifest、生命周期、扩展规则、目录约定 |
+---
+
+## 8. 装配编译（MountSpec / AssemblySpec）
+
+组件通过挂载关系组成整体，编译产物是**一棵规范化 SRM 树**：
+
+| 挂载类型 | 语义 | 对 `nv` 的影响 |
+|---|---|---|
+| `fixed` + 质量 > 0 | 生成 fixed 子体（`<instance>/body`）并入同一质量矩阵 | +0 DOF，质量与质心参与耦合 |
+| `fixed` + 质量 = 0 | 只记录传感器 frame | 不变 |
+| `jointed` | 生成 revolute 关节 | +1 DOF |
+| `logical` | 无空间贡献（控制器/软件） | 不变 |
+
+装载期校验：实例 ID 唯一、宿主必须存在、frame 可解析、挂载图无环、质量非负；任一项失败即拒绝并列出错误，不做部分装配。
+
+验收测试：`unit.assembly`（基座+双臂+相机合并、零质量不改 `nv`、缺失宿主/成环/重复 ID/负质量均失败）。

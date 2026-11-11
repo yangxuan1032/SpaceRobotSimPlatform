@@ -11,11 +11,15 @@
  */
 #include <srsp/bridge/transport.hpp>
 #include <srsp/core/trust.hpp>
+#include <srsp/core/world.hpp>
 #include <srsp/core_api.h>
+#include <srsp/model/component.hpp>
 #include <srsp/record/lockfile.hpp>
 #include <srsp/record/mcap.hpp>
 #include <srsp/record/replay.hpp>
 #include <srsp/record/run_metadata.hpp>
+
+#include <fstream>
 
 #include "command_line.hpp"
 
@@ -67,6 +71,8 @@ void print_usage() {
   std::fputs(
       "usage:\n"
       "  srsp-cli version\n"
+      "  srsp-cli component validate <manifest.json>\n"
+      "  srsp-cli world [--steps N] [--dt S] [--record <mcap>]\n"
       "  srsp-cli soak --plugin <path> [--minutes N] [--sleep-ms N] [--workload ping|step|record] "
       "[--integrator rk4|semi] "
       "[--model <srm>]\n"
@@ -531,6 +537,113 @@ int run_demo(const std::vector<std::string>& args) {
 
 }  // namespace
 
+/// W1: validates a component manifest and reports every problem with its path.
+int run_component_validate(const std::vector<std::string>& args) {
+  if (args.size() < 4 || args[2] != "validate") {
+    std::fprintf(stderr, "error: usage: srsp-cli component validate <manifest.json>\n");
+    return kExitFailure;
+  }
+  std::ifstream file(args[3]);
+  if (!file) {
+    std::fprintf(stderr, "error: cannot read '%s'\n", args[3].c_str());
+    return kExitFailure;
+  }
+  nlohmann::json document;
+  try {
+    file >> document;
+  } catch (const nlohmann::json::exception& error) {
+    std::fprintf(stderr, "error: invalid JSON in '%s': %s\n", args[3].c_str(), error.what());
+    return kExitFailure;
+  }
+  srsp::model::ComponentManifest manifest{};
+  std::vector<srsp::model::ComponentIssue> issues;
+  if (!srsp::model::validate_component_manifest(document, &manifest, &issues)) {
+    std::fprintf(stderr, "component invalid: %s\n", srsp::model::format_issues(issues).c_str());
+    return kExitFailure;
+  }
+  std::printf("component valid: kind=%s id=%s version=%s capabilities=%zu\n",
+              srsp::model::to_string(manifest.kind), manifest.id.c_str(), manifest.version.c_str(),
+              manifest.capabilities.size());
+  return 0;
+}
+
+/// W3.5: steps a two-entity world, notifies the subscriber and optionally records.
+int run_world(const std::vector<std::string>& args) {
+  int steps = 100;
+  double dt = 0.01;
+  std::string record_path;
+  for (std::size_t i = 2; i + 1 < args.size(); ++i) {
+    if (args[i] == "--steps") {
+      steps = std::atoi(args[i + 1].c_str());
+    } else if (args[i] == "--dt") {
+      dt = std::atof(args[i + 1].c_str());
+    } else if (args[i] == "--record") {
+      record_path = args[i + 1];
+    }
+  }
+  if (steps <= 0) {
+    std::fprintf(stderr, "error: --steps must be positive\n");
+    return kExitFailure;
+  }
+
+  srsp::core::World world(4);
+  std::string error;
+  srsp::core::WorldEntity satellite;
+  satellite.id = "entity/satellite";
+  satellite.velocity_m_s = {1.0, 0.0, 0.0};
+  srsp::core::WorldEntity probe;
+  probe.id = "entity/probe";
+  probe.position_m = {10.0, 0.0, 0.0};
+  probe.velocity_m_s = {-2.0, 0.0, 0.0};
+  if (!world.add_entity(satellite, &error) || !world.add_entity(probe, &error)) {
+    std::fprintf(stderr, "error: %s\n", error.c_str());
+    return kExitFailure;
+  }
+
+  srsp::record::McapWriter writer;
+  std::uint32_t channel_id = 0;
+  bool recording = false;
+  if (!record_path.empty()) {
+    if (!writer.open(record_path, "srsp.world")) {
+      std::fprintf(stderr, "error: cannot open '%s'\n", record_path.c_str());
+      return kExitFailure;
+    }
+    const std::uint32_t schema = writer.add_schema("srsp.world.state/1", "raw-f64", "{}");
+    std::map<std::string, std::string> metadata{
+        {"abi", "1"}, {"integrator", "rk4"}, {"solver", "composite"}, {"encoding", "raw-f64"}};
+    channel_id = writer.add_channel(schema, "sim.state", "raw-f64", metadata);
+    recording = true;
+  }
+
+  std::uint64_t events = 0;
+  world.on_commit = [&](const srsp::core::SnapshotId& id,
+                        const std::vector<srsp::core::WorldEntity>& states) {
+    ++events;
+    if (recording) {
+      const auto bytes = srsp::core::World::encode(states);
+      const auto stamp =
+          static_cast<std::uint64_t>(static_cast<double>(id.step_index) * dt * 1.0e9);
+      writer.write_message(channel_id, id.step_index, stamp, bytes.data(), bytes.size());
+    }
+  };
+
+  for (int i = 0; i < steps; ++i) {
+    if (!world.step(dt, &error)) {
+      std::fprintf(stderr, "error: %s\n", error.c_str());
+      return kExitFailure;
+    }
+  }
+  if (recording) {
+    writer.close();
+  }
+  std::printf("world steps=%llu generation=%llu events=%llu entities=%zu record=%s\n",
+              static_cast<unsigned long long>(world.step_index()),
+              static_cast<unsigned long long>(world.latest_id().generation),
+              static_cast<unsigned long long>(events), world.entities().size(),
+              record_path.empty() ? "none" : record_path.c_str());
+  return 0;
+}
+
 int main(int argc, char** argv) {
   std::vector<std::string> args;
   args.reserve(static_cast<size_t>(argc));
@@ -649,6 +762,12 @@ int main(int argc, char** argv) {
     return decision.allowed ? 0 : kExitFailure;
   }
 
+  if (command == "component") {
+    return run_component_validate(args);
+  }
+  if (command == "world") {
+    return run_world(args);
+  }
   if (command == "version") {
     return run_version();
   }

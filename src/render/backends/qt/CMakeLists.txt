@@ -4,7 +4,7 @@ if(NOT Qt6_FOUND)
   return()
 endif()
 
-add_library(srsp_render_qt STATIC qt_renderer.cpp)
+add_library(srsp_render_qt STATIC qt_renderer.cpp camera_capture.cpp)
 target_include_directories(srsp_render_qt PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(srsp_render_qt PUBLIC srsp_render Qt6::Gui)
 set_target_properties(srsp_render_qt PROPERTIES POSITION_INDEPENDENT_CODE ON)

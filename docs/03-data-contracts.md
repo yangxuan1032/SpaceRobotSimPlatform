@@ -675,3 +675,10 @@ message SensorFrame {
 | Record | 存 | Snapshot + 命令 + 力配置与分量 + 环境事件 + 传感器 payload → MCAP | `McapWriter` |
 
 禁止 UI/插件/Renderer 直接持有状态可写指针；下游失败不得回写或半提交。
+> **W3 实现**：`srsp::core::World`（`src/core/include/srsp/core/world.hpp`）已提供多实体状态、命令队列与「每步一次原子提交 + 发布快照」；`unit.world` 覆盖两实体同快照、命令只作用于目标、坏命令/非有限状态不提交、旧 generation 淘汰。W3.5 已把同一快照接到订阅回调与 MCAP 录制：`srsp-cli world --steps N --record f.mcap` 每步发布一次快照、触发一次订阅、写一条 `sim.state` 记录；录制元数据含 `integrator/solver/encoding`，可被 `inspect` 正常准入。Studio/CLI 主流程接线到 `srsp_context` 仍待后续。
+> **W4 实现**：`srsp::core::evaluate_environment(spec, position)` 一次返回太阳方向、通量、遮挡（本影/受照）与中心+三体+J2 加速度，渲染与 SRP 共用同一采样；`propagate_orbit` 为 RK4 二体传播（`unit.environment` 验证圆轨道一周期闭合漂移 9.99e-5 m）。天体尚未注册为组件实例（W4.5）。
+> **W5 接线**：`World::set_environment(spec)` 后每步用 RK4 采样 `evaluate_environment` 的重力加速度；未设置环境时保持原有常速积分（legacy 路径逐位不变，`unit.world` 同时覆盖两条路径）。圆轨道在 World 内一周期漂移 9.99e-5 m。
+> **W5/W6 接线**：`WorldEntity` 增加 `mass_kg / propellant_kg / thrust_n / isp_s / area_m2 / reflectivity / drag_coefficient / center_of_pressure_m`；推进器按 `mdot = F/(Isp·g0)` 扣质量（受剩余量截断，耗尽自动关推力），SRP 与大气阻力按面积/质量/系数进入 RK4 各阶段，压心偏移产生力矩诊断 `last_torque_nm`；快照每实体编码 64B id + 7×double（位置 3、速度 3、质量 1）。姿态积分与轮动量仍待后续。
+> **W6 补齐**：实体可声明 `dry_mass_kg/dry_com_m/dry_inertia/tank_com_m`；每步按剩余推进剂合成质量、质心（干重与贮箱质心加权）与惯量（平行轴定理），快照布局扩为 `64B id + 7×double + 姿态 4 + 角速度 3`（共 14×double），姿态已可回放。仍待：轮卸载（需控制分配）、快照 schema 版本号。
+> **W5/W6 收尾**：快照带 16 字节头（`@SRSP` + 版本 2 + 步长 + 实体数），`World::decode_header` 可校验；轮饱和后可由推力器卸载（`desaturation_torque_nm`，按 `mdot = τ/(Isp·g0)` 消耗推进剂并给本体等值反向力矩）；气动压心按攻角偏移（`aero_cp_arm_m`），攻角为零时回到对称压心。
+> **W7/W8 核心**：`srsp::core::sensing` 提供相机位姿（实体姿态 → eye/target/up）、轨道相机（yaw/pitch/distance）、LiDAR 环扫（球体求交 + 距离闸门 + 强度）、雷达距离-多普勒近似（RCS、径向速度）与鼠标射线拾取；渲染与传感器共用同一 `CameraPose`。W7 补齐：`capture_camera(view, scene, w, h)` 经 Qt 渲染器输出 RGBA8 帧（`CameraFrame`，接口不含 Qt 类型）；W8 补齐：Studio 支持拖拽旋转、滚轮缩放、点击拾取（状态栏显示实体），相机与 RHI/Qt 共用同一 `CameraView`。

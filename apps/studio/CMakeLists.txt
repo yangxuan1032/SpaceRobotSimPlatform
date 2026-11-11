@@ -13,9 +13,10 @@ endif()
 
 # Renderer library shared by the shell and the offscreen renderer test.
 add_library(srsp_studio_render STATIC
+  studio_camera.cpp
   studio_window.cpp)
 target_include_directories(srsp_studio_render PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(srsp_studio_render PUBLIC srsp_render srsp_render_qt srsp_dynamics srsp_model Qt6::Widgets)
+target_link_libraries(srsp_studio_render PUBLIC srsp_kernel srsp_render srsp_render_qt srsp_dynamics srsp_model Qt6::Widgets)
 
 qt_add_executable(srsp_studio main.cpp)
 set_target_properties(srsp_studio PROPERTIES OUTPUT_NAME srsp-studio)
@@ -32,7 +33,7 @@ endif()
 # The RHI backend is optional; studio_window.cpp lives in srsp_studio_render,
 # so the dependency belongs to that library.
 if(TARGET srsp_render_rhi)
-  target_link_libraries(srsp_studio_render PUBLIC srsp_render_rhi)
+  target_link_libraries(srsp_studio_render PUBLIC srsp_kernel srsp_render_rhi)
   target_include_directories(srsp_studio_render PUBLIC
     "${PROJECT_SOURCE_DIR}/src/render/backends/rhi")
 endif()

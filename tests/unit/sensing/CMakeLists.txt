@@ -1,0 +1,10 @@
+add_executable(test_sensing test_sensing.cpp)
+target_link_libraries(test_sensing PRIVATE srsp_kernel Catch2::Catch2WithMain)
+add_test(NAME unit.sensing COMMAND test_sensing)
+set_tests_properties(unit.sensing PROPERTIES TIMEOUT 60)
+
+if(MSVC)
+  target_compile_options(test_sensing PRIVATE /W4)
+else()
+  target_compile_options(test_sensing PRIVATE -Wall -Wextra -Wpedantic)
+endif()

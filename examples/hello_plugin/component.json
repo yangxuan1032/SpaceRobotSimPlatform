@@ -1,0 +1,17 @@
+{
+  "schema": "srsp.component/1",
+  "kind": "control.controller",
+  "id": "org.srsp.examples.hello",
+  "version": "0.1.0",
+  "capabilities": ["srsp.control/controller@1"],
+  "params": {
+    "type": "object",
+    "required": ["rate_hz"],
+    "properties": {
+      "rate_hz": { "type": "number", "default": 100.0 },
+      "gain": { "type": "number", "default": 1.0 }
+    }
+  },
+  "mount": { "kind": "logical", "default_mass_kg": 0.0 },
+  "checkpoint": true
+}

@@ -126,7 +126,7 @@ core ← bridge ← apps
 
 `core` 不得依赖任何上层；`render`/`record` 互不依赖；插件的 C ABI 只经由 `core_api.h`。
 
-## 5. 测试覆盖（当前 67 项）
+## 5. 测试覆盖（当前 79 项）
 
 | 模块 | 代表测试 |
 |---|---|
@@ -158,6 +158,14 @@ core ← bridge ← apps
 | 能力 | 覆盖测试 |
 |---|---|
 | 后端能力声明（`gpu`/`compute`/`max_viewports`） | `unit.capability_matrix` |
+| 组件清单/实体 ID/参数优先级 | `unit.component_manifest`、`integration.cli_component_valid`、`integration.cli_component_invalid` |
+| 装配编译/挂载校验 | `unit.assembly` |
+| World 多实体/原子提交 | `unit.world` |
+| 环境采样/遮挡/二体传播/天体清单/SRP/梯度力矩 | `unit.environment` |
+| 传感器采样/相机位姿/拾取 | `unit.sensing` |
+| 相机成像（RGBA 帧） | `unit.camera_capture` |
+| World 每步性能（16 实体 + J2/三体/SRP/阻力） | `bench.world`（Debug 50.9 µs，p95 54 µs；性能门用 Release） |
+| World→订阅→录制链路 | `integration.cli_world`、`integration.cli_world_record`、`integration.cli_world_record_inspect` |
 | 地球 + 星空 | `visual.snapshot_qt`、`unit.render_rhi_gltf`（星空：`unit.render_rhi_gltf` 空场景用例） |
 | box / 球体分发 | `unit.render_qt_mesh`、`unit.render_rhi_gltf` |
 | 双原点投影 | `unit.render_qt_box` |

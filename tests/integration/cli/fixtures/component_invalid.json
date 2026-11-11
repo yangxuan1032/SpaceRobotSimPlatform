@@ -1,0 +1,8 @@
+{
+  "schema": "srsp.component/1",
+  "kind": "sensor.magic",
+  "id": "Bad Id",
+  "version": "1.0",
+  "capabilities": ["sensor/device"],
+  "params": { "required": ["missing"] }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "srsp.component/1",
+  "kind": "env.celestial",
+  "id": "org.srsp.env.earth",
+  "version": "1.0.0",
+  "capabilities": ["srsp.env/gravity@1"],
+  "params": {
+    "type": "object",
+    "required": ["mu", "radius_m"],
+    "properties": {
+      "mu": { "type": "number", "default": 3.986004418e14 },
+      "radius_m": { "type": "number", "default": 6371000.0 },
+      "j2": { "type": "number", "default": 1.08263e-3 },
+      "reference_radius_m": { "type": "number", "default": 6378000.0 },
+      "ephemeris": { "type": "string", "default": "fixed:0,0,0" }
+    }
+  },
+  "mount": { "kind": "logical", "default_mass_kg": 0.0 }
+}

@@ -25,7 +25,10 @@ add_library(srsp_kernel STATIC
   src/plugin_host.cpp
   src/registry.cpp
   src/scheduler.cpp
-  src/time_service.cpp)
+  src/environment.cpp
+  src/sensing.cpp
+  src/time_service.cpp
+  src/world.cpp)
 
 target_include_directories(srsp_kernel PUBLIC include)
 target_link_libraries(srsp_kernel PUBLIC SRSP::api ${CMAKE_DL_LIBS})

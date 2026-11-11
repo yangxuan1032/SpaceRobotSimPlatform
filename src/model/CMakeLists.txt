@@ -7,6 +7,8 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 
 add_library(srsp_model STATIC
+  src/assembly.cpp
+  src/component.cpp
   src/mjcf_importer.cpp
   src/srm.cpp
   src/urdf_importer.cpp)

@@ -20,6 +20,8 @@
 
 #include <QImage>
 #include <QMainWindow>
+#include <QPoint>
+#include <QString>
 #include <rhi_renderer.hpp>
 
 #include "qt_renderer.hpp"
@@ -63,6 +65,12 @@ class StudioWindow final : public QMainWindow {
   /** @brief Frames rendered by the RHI backend (0 when not in use). */
   [[nodiscard]] std::uint64_t rhi_frames() const;
 
+  /** @brief Sets the orbit camera (yaw/pitch in degrees, distance in metres). */
+  void set_orbit_camera(double yaw_deg, double pitch_deg, double distance);
+
+  /** @brief Picks the entity under a normalised device coordinate. */
+  [[nodiscard]] QString pick_at(double ndc_x, double ndc_y) const;
+
   /** @brief Bodies rendered with a mesh (procedural box) in the current scene. */
   [[nodiscard]] int mesh_body_count() const;
   [[nodiscard]] int tree_joint_count() const;
@@ -76,6 +84,11 @@ class StudioWindow final : public QMainWindow {
   void refresh_properties();
   void update_scene();
   void on_timeline_moved(int value);
+  void apply_camera();
+  void mousePressEvent(QMouseEvent* event) override;
+  void mouseMoveEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event) override;
+  void wheelEvent(QWheelEvent* event) override;
 
   QtRenderer* renderer_ = nullptr;
   std::unique_ptr<srsp::render::RhiRenderer> rhi_;
@@ -97,6 +110,12 @@ class StudioWindow final : public QMainWindow {
   bool playing_ = false;
   long long steps_ = 0;
   int mesh_bodies_ = 0;
+  double yaw_deg_ = 0.0;
+  double pitch_deg_ = 0.0;
+  double distance_m_ = 12.0;
+  bool dragging_ = false;
+  QPoint last_mouse_;
+  QString picked_;
 };
 
 }  // namespace srsp::studio

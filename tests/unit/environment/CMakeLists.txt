@@ -1,0 +1,10 @@
+add_executable(test_environment test_environment.cpp)
+target_link_libraries(test_environment PRIVATE srsp_kernel Catch2::Catch2WithMain)
+add_test(NAME unit.environment COMMAND test_environment)
+set_tests_properties(unit.environment PROPERTIES TIMEOUT 120)
+
+if(MSVC)
+  target_compile_options(test_environment PRIVATE /W4)
+else()
+  target_compile_options(test_environment PRIVATE -Wall -Wextra -Wpedantic)
+endif()

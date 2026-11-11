@@ -329,3 +329,21 @@ tag v1.0.0
 - 发布分支保护；制品只从 tag 构建；
 - 每个制品记录可复现信息（编译器、依赖版本、源码 commit）；
 - 符号文件单独归档并保留至少 2 个版本，用于崩溃回溯。
+## 发布门禁（2026-11-11）
+
+发布或声明"完成"前必须全部通过，任一失败即阻断：
+
+| 门 | 命令 | 阈值 |
+|---|---|---|
+| 全量测试 | `ctest --preset win-ucrt64-debug` | 全绿（当前 79 项） |
+| 文档 | `ctest -R docs_check` | 通过 |
+| 格式 | `ctest -R format_check` | 通过 |
+| 动力学性能 | `bench_dynamics semi` | 半隐式 ≤ 300 µs，`verdict=PASS` |
+| 世界性能 | `bench_world` | 16 实体 + 扰动 ≤ 1000 µs，`verdict=PASS` |
+
+一键执行：`pwsh -File tools/ci/release_gate.ps1`（失败时列出具体门并返回非零）。
+
+基线记录（2026-11-11，UCRT64 Debug）：`bench_dynamics semi` 216 µs、`bench_world` 50.9 µs（p95 54 µs）、`ctest` 79/79。
+
+**禁止**为通过门禁而放宽阈值或跳过测试；阈值调整需单独提案并记录理由。
+> **性能门必须用 Release 预设**：Debug 构建未优化，`bench_dynamics` 实测约 24.5 ms，不代表真实性能；`tools/ci/release_gate.ps1` 在缺少 `win-ucrt64-release` 构建时跳过性能门并提示配置命令，而不是把 Debug 数字当作失败。
